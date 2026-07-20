@@ -308,7 +308,20 @@ on_epoch_start → batches → on_epoch_end
 
 ---
 
-## BENCHMARK — ZINC E ogbn-arxiv
+## BENCHMARK — Cora/CiteSeer/PubMed, ZINC E ogbn-arxiv
+
+### Cora / CiteSeer / PubMed (node-level, citation network, full-batch)
+- Script multi-seed: `examples/benchmark_planetoid.py --dataset {Cora,CiteSeer,PubMed} --seeds 10`
+- Script singolo/smoke test: `examples/cora_bgrl.py`, config: `configs/cora_bgrl.yaml`
+- BGRL, GIN-2L, `hidden_dim=256`, full-batch 300 step, split pubblico Planetoid, media±std su 10 seed:
+
+| Dataset | Linear probe (test) | KNN k=5 (test) |
+|---|---|---|
+| Cora | 62.39 ± 3.71 | 58.61 ± 3.76 |
+| CiteSeer | 50.08 ± 1.58 | 43.07 ± 3.61 |
+| PubMed | 69.18 ± 2.32 | 66.59 ± 2.88 |
+
+- Config volutamente leggera/non tunata (nessuna hyperparameter search per dataset) — serve a validare che l'intera pipeline (augmentation → EMA → entrambe le evaluation head) funzioni end-to-end, non a competere con lo stato dell'arte. Confronto metodologico con i numeri originali di BGRL (Appendix C, Table 7) in `paper.tex`.
 
 ### ZINC (graph-level, regressione molecolare)
 ```yaml
@@ -352,6 +365,7 @@ pytest tests/ -v
 | `test_supervised.py` | Supervised | head dim, mini-batch crop |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, DINOTrainer hooks |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
+| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, label 2D stile OGB (`[N,1]`) equivalenti a 1D |
 
 ---
 

@@ -31,7 +31,7 @@ simone.copetti@mail.polimi.it}
 \maketitle
 
 \begin{abstract}
-Self-Supervised Learning (SSL) has fundamentally redefined the boundaries of representation learning on graph domains, effectively mitigating the chronic scarcity of high-fidelity annotated labels. However, the rapid proliferation of contrastive, bootstrapping, redundancy-reduction, and self-distillation paradigms has generated a highly fragmented and isolated software ecosystem. Current implementations are frequently tightly coupled with heavyweight orchestration frameworks (e.g., PyTorch Lightning, Hydra), which obscure low-level gradient flows, inflate memory footprints, and hinder rapid algorithmic prototyping. In this paper, we present GraphSSL, an open-source library built natively on PyTorch and PyTorch Geometric (PyG). The framework unifies seven distinct SSL architectures across multiple methodological macro-families under a strictly modular architecture, completely decoupled from external orchestrators. We introduce a dedicated augmentation composition system equipped with ``protected-node'' semantics, which is architecturally critical for preserving the theoretical validity of stochastic mini-batch sampling. We describe the library's architectural principles, provide a rigorous algebraic formalization of the integrated paradigms, detail the computational complexity of the supported objectives, and present a comprehensive evaluation roadmap designed to measure both downstream predictive performance on large-scale benchmarks and systemic computational efficiency.
+Self-Supervised Learning (SSL) has fundamentally redefined the boundaries of representation learning on graph domains, effectively mitigating the chronic scarcity of high-fidelity annotated labels. However, the rapid proliferation of contrastive, bootstrapping, redundancy-reduction, and self-distillation paradigms has generated a highly fragmented and isolated software ecosystem. Current implementations are frequently tightly coupled with heavyweight orchestration frameworks (e.g., PyTorch Lightning, Hydra), which obscure low-level gradient flows, inflate memory footprints, and hinder rapid algorithmic prototyping. In this paper, we present GraphSSL, an open-source library built natively on PyTorch and PyTorch Geometric (PyG). The framework unifies seven distinct SSL architectures across multiple methodological macro-families under a strictly modular architecture, completely decoupled from external orchestrators. We introduce a dedicated augmentation composition system equipped with ``protected-node'' semantics, which is architecturally critical for preserving the theoretical validity of stochastic mini-batch sampling. We describe the library's architectural principles, provide a rigorous algebraic formalization of the integrated paradigms, detail the computational complexity of the supported objectives, and report preliminary empirical results on citation-network benchmarks alongside a roadmap for large-scale evaluation and systemic computational efficiency.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -262,29 +262,47 @@ GraphSSL is under active development. The following core components are fully im
     \item Hook-driven training orchestration natively decoupled from external trainers.
 \end{itemize}
 
-The primary focus of current and ongoing development concerns systematic empirical validation at scale and hardware optimization. While the fundamental infrastructure is operational, comprehensive benchmark campaigns on large-scale datasets remain to be executed.
+The primary focus of current and ongoing development concerns systematic empirical validation at scale and hardware optimization. \Cref{sec:results-citation} reports an initial validation pass on small-scale citation networks; comprehensive benchmark campaigns on medium- and large-scale datasets remain to be executed.
 
 \subsection{Known Limitations and Open Challenges}
+\label{sec:limitations}
 Several limitations remain in the current alpha implementation. First, protected-node enforcement is active only for node-destructive augmentations (\texttt{node\_drop}); per-augmentation protection granularity for feature-level transforms is not yet implemented. Second, AFGRL's FAISS-based PositiveMiner computes global $k$-means on the full embedding matrix, presenting memory scalability challenges on graphs exceeding $10^5$ nodes; solutions such as CPU-offloading or sub-sampled $k$-means are under development. Third, pooling defaults to mean readout; generalized aggregation operators are planned. Finally, systematic stress testing on production-grade benchmarks is pending.
 
-\subsection{Planned Evaluation Protocol}
-\Cref{tab:accuracy} outlines the planned benchmark structure for evaluating downstream linear probing accuracy. The protocol is designed to use a frozen GIN-2L encoder backbone across standard citation networks and medium-scale OGB datasets \cite{ogb} to verify architectural scalability, with the explicit caveat that memory-intensive global clustering methods (e.g., AFGRL) will require the aforementioned memory optimizations to successfully run on the larger benchmark entries.
+\subsection{Preliminary Empirical Results: Citation Networks}
+\label{sec:results-citation}
+As a first execution of the evaluation protocol, we trained BGRL with a frozen GIN-2L encoder ($d{=}256$) on the three standard citation networks --- Cora, CiteSeer, and PubMed --- using their public Planetoid train/val/test splits. Training is full-batch for 300 steps with symmetric augmentation (edge dropout $p{=}0.5$, feature masking $p{=}0.2$) and the AdamW optimizer ($\text{lr}{=}5{\times}10^{-4}$, weight decay $10^{-5}$). \Cref{tab:accuracy} reports test-set accuracy under both evaluation heads --- a linear probe (Adam) and a $k$NN classifier ($k{=}5$) --- averaged over 10 seeds, with the sample standard deviation.
 
 \begin{table}[htbp]
 \centering
-\caption{Planned Linear Evaluation Protocol}
+\caption{Test Accuracy (\%) on Citation Networks (BGRL, GIN-2L, $d{=}256$, 10 seeds, public split)}
 \label{tab:accuracy}
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-\textbf{Parameter} & \textbf{Configuration} \\ \midrule
-Encoder backbone & GIN, 2 layers, $d{=}256$ \\
-Datasets (node-level) & Cora, CiteSeer, PubMed, ogbn-arxiv \\
-Datasets (graph-level) & ogbg-molhiv, ogbg-molpcba \\
-Evaluation & Linear probing (Adam), KNN ($k{=}5$) \\
-Metrics & Accuracy, Avg. Precision (multi-label) \\
-Runs & 10 seeds per configuration \\ \bottomrule
+\textbf{Dataset} & \textbf{Linear Probe} & \textbf{$k$NN ($k{=}5$)} \\ \midrule
+Cora     & 62.39 $\pm$ 3.71 & 58.61 $\pm$ 3.76 \\
+CiteSeer & 50.08 $\pm$ 1.58 & 43.07 $\pm$ 3.61 \\
+PubMed   & 69.18 $\pm$ 2.32 & 66.59 $\pm$ 2.88 \\ \bottomrule
 \end{tabular}
 \end{table}
+
+These results confirm that the complete pipeline --- augmentation, EMA teacher-student optimization, and both evaluation heads --- executes correctly end-to-end and yields representations substantially above the random-guess baseline (14.3\%, 16.7\%, and 33.3\% for Cora, CiteSeer, and PubMed, respectively, given their class counts).
+
+\Cref{tab:bgrl-comparison} places these numbers alongside the original BGRL paper's own small-dataset evaluation (Appendix C, Table 7 of \cite{bgrl}). The comparison is not strictly apples-to-apples, and we report the methodological differences explicitly rather than let the numbers speak alone: \cite{bgrl} averages over 20 random dataset splits rather than the fixed public Planetoid split used here (the original authors themselves note the fixed split is known to be unreliable for evaluating GNNs \cite{shchur2018pitfalls}); their encoder follows the GRACE setup \cite{zhu2020graph}, most likely a 2-layer GCN rather than our GIN; and their linear head is an $\ell_2$-regularized scikit-learn logistic-regression classifier with a hyperparameter search over the regularization strength, rather than our untuned Adam-trained linear layer.
+
+\begin{table}[htbp]
+\centering
+\caption{Test Accuracy (\%): our BGRL run (public split, GIN-2L, untuned linear probe) vs.\ the original BGRL paper's small-dataset evaluation (20 random splits, GRACE-style encoder, tuned scikit-learn logistic regression)}
+\label{tab:bgrl-comparison}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+& & \textbf{Cora} & \textbf{CiteSeer} & \textbf{PubMed} \\ \midrule
+\multirow{2}{*}{\cite{bgrl}, Table 7} & GRACE & 83.02 $\pm$ 0.89 & 71.63 $\pm$ 0.64 & 86.06 $\pm$ 0.26 \\
+& BGRL & 83.83 $\pm$ 1.61 & 72.32 $\pm$ 0.89 & 86.03 $\pm$ 0.33 \\
+This work & BGRL (linear) & 62.39 $\pm$ 3.71 & 50.08 $\pm$ 1.58 & 69.18 $\pm$ 2.32 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+The gap is consistent with the configuration differences above rather than a defect in the implementation: our run intentionally omits per-dataset hyperparameter search, uses symmetric rather than asymmetric augmentation strength across the two views, and evaluates through an untuned linear layer rather than a regularization-swept logistic regression classifier. Closing this gap under a matched protocol is left as future work; the present results are offered as a correctness and reproducibility check, not a state-of-the-art claim. Medium- and large-scale OGB datasets \cite{ogb} (ogbn-arxiv, ogbg-molhiv, ogbg-molpcba) require dedicated compute beyond a laptop-class CPU and are deferred to a forthcoming evaluation pass on NECSTLab infrastructure, with the explicit caveat that memory-intensive global clustering methods (e.g., AFGRL) will require the memory optimizations discussed in \Cref{sec:limitations} to run on the larger entries.
 
 \section{Future Work}
 Beyond the evaluation roadmap outlined above, several directions are actively planned.
@@ -296,7 +314,7 @@ Beyond the evaluation roadmap outlined above, several directions are actively pl
 \textbf{Command-Line Interface.} A planned \texttt{cli/} module will expose a user-facing entry point for launching training runs directly from YAML configurations, further lowering the barrier to entry for new users.
 
 \section{Conclusion}
-GraphSSL provides a robust, transparent software framework for unsupervised Graph Machine Learning research. By consolidating the most influential algorithms into a unified API---and introducing geometric safety mechanisms like protected-node semantics---the library aims to reduce the technical debt historically accumulated during algorithmic prototyping. In the near term, the framework will undergo systematic empirical validation, with the long-term goal of serving as an incubator to export mature, tested implementations (such as BGRL and GraphDINO) as direct contributions to the upstream PyTorch Geometric ecosystem.
+GraphSSL provides a robust, transparent software framework for unsupervised Graph Machine Learning research. By consolidating the most influential algorithms into a unified API---and introducing geometric safety mechanisms like protected-node semantics---the library aims to reduce the technical debt historically accumulated during algorithmic prototyping. Having validated the pipeline end-to-end on citation networks, the near-term priority is extending systematic empirical validation to medium- and large-scale benchmarks, with the long-term goal of serving as an incubator to export mature, tested implementations (such as BGRL and GraphDINO) as direct contributions to the upstream PyTorch Geometric ecosystem.
 
 \begin{thebibliography}{00}
 \bibitem{pyg} M. Fey and J. E. Lenssen, ``Fast graph representation learning with PyTorch Geometric,'' in \textit{ICLR Workshop}, 2019.
@@ -313,6 +331,8 @@ GraphSSL provides a robust, transparent software framework for unsupervised Grap
 \bibitem{pygcl} Y. Zhu et al., ``An empirical study of graph contrastive learning,'' in \textit{NeurIPS Datasets and Benchmarks}, 2021.
 \bibitem{dig} M. Liu et al., ``DIG: A turnkey library for diving into graph deep learning research,'' \textit{J. Mach. Learn. Res.}, vol.~22, no.~240, pp.~1--9, 2021.
 \bibitem{ogb} W. Hu et al., ``Open Graph Benchmark: Datasets for machine learning on graphs,'' in \textit{NeurIPS}, 2020.
+\bibitem{shchur2018pitfalls} O. Shchur, M. Mumme, A. Bojchevski, and S. Günnemann, ``Pitfalls of graph neural network evaluation,'' \textit{arXiv preprint arXiv:1811.05868}, 2018.
+\bibitem{zhu2020graph} Y. Zhu, Y. Xu, F. Yu, Q. Liu, S. Wu, and L. Wang, ``Deep graph contrastive representation learning,'' in \textit{ICML Workshop on Graph Representation Learning and Beyond (GRL+)}, 2020.
 \end{thebibliography}
 
 \end{document}

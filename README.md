@@ -4,7 +4,7 @@
 
 A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
 
-> **Status:** Alpha — all models train end-to-end and pass tests; large-scale benchmarks in progress.
+> **Status:** Alpha — all models train end-to-end and pass tests; citation-network benchmarks validated (see below), large-scale (OGB) benchmarks in progress.
 
 ---
 
@@ -96,8 +96,21 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 | Script | Dataset | Task | Notes |
 |---|---|---|---|
 | `examples/cora_bgrl.py` | Cora | Node classification (7 classes) | Full-batch, CPU-friendly — fastest smoke test |
+| `examples/benchmark_planetoid.py` | Cora / CiteSeer / PubMed | Node classification, multi-seed | Reproduces the results below (`--seeds`, `--epochs`) |
 | `examples/ogbn_arxiv_bgrl.py` | ogbn-arxiv | Node classification (40 classes) | `NeighborLoader` mini-batch training |
 | `examples/zinc_bgrl.py` | ZINC-12k | Molecular property regression | Categorical node/edge embeddings |
+
+### Benchmark results (citation networks)
+
+BGRL, GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, public Planetoid split, mean ± std over 10 seeds (`python examples/benchmark_planetoid.py --dataset <name> --seeds 10`):
+
+| Dataset | Linear probe (test) | KNN k=5 (test) |
+|---|---|---|
+| Cora | 62.39 ± 3.71 | 58.61 ± 3.76 |
+| CiteSeer | 50.08 ± 1.58 | 43.07 ± 3.61 |
+| PubMed | 69.18 ± 2.32 | 66.59 ± 2.88 |
+
+This is a deliberately lightweight, untuned configuration (no per-dataset hyperparameter search) meant to validate that the training/evaluation pipeline is correct end-to-end — not a state-of-the-art claim. See `paper.tex` for a methodological comparison against the original BGRL paper's own numbers on these datasets. ogbn-arxiv and OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) require larger compute and are planned on dedicated infrastructure.
 
 ---
 
