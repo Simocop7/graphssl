@@ -1,0 +1,27 @@
+# BGRL configuration for Cora (node-level SSL, 7-class classification)
+#
+# 1,433-dim bag-of-words node features; no categorical embeddings needed.
+# pool: false — node-level task, no graph pooling.
+# The full graph fits in memory: train full-batch (see examples/cora_bgrl.py).
+
+name: bgrl
+
+encoder:
+  name: gin
+  hidden_dim: 128
+  num_layers: 2
+  norm_type: batch
+  pool: false
+  drop: 0.0
+  mlp_ratio: 2
+
+augment:
+  - name: edge_drop
+    p: 0.5
+  - name: feat_mask
+    p: 0.2
+
+pred_hidden: 128
+ema_tau: 0.99
+ema_tau_end: 1.0
+total_steps: 300

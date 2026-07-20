@@ -1,0 +1,29 @@
+# BGRL configuration for ZINC-12k (graph-level SSL, molecular regression)
+#
+# ZINC features: 28 integer atom types (nodes), 4 integer bond types (edges).
+# edge_dim sets the projected embedding dimension fed to GINEConv.
+
+name: bgrl
+
+encoder:
+  name: gin
+  hidden_dim: 64
+  num_layers: 4
+  norm_type: layer
+  pool: true
+  drop: 0.0
+  mlp_ratio: 2
+  node_emb_num_classes: 28
+  edge_dim: 64
+  edge_emb_num_classes: 4
+
+augment:
+  - name: edge_drop
+    p: 0.3
+  - name: feat_mask
+    p: 0.1
+
+pred_hidden: 128
+ema_tau: 0.99
+ema_tau_end: 1.0
+total_steps: 95000

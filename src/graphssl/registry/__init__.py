@@ -1,0 +1,1 @@
+from .registry import Registry, ENCODERS, HEADS, AUGMENTS, OBJECTIVES, DATASETS, LOADERS, LOSSES

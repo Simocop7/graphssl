@@ -1,0 +1,318 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% --- Essential Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts,bm}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{multirow}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{A Unified and Framework-Agnostic Library for Self-Supervised Graph Learning
+}
+
+\author{\IEEEauthorblockN{Simone Copetti\thanks{Code available at: \url{https://github.com/Simocop7/graphssl}}}
+\IEEEauthorblockA{\textit{NECSTLab, Politecnico di Milano (DEIB)} \\
+Milan, Italy \\
+simone.copetti@mail.polimi.it}
+}
+
+\maketitle
+
+\begin{abstract}
+Self-Supervised Learning (SSL) has fundamentally redefined the boundaries of representation learning on graph domains, effectively mitigating the chronic scarcity of high-fidelity annotated labels. However, the rapid proliferation of contrastive, bootstrapping, redundancy-reduction, and self-distillation paradigms has generated a highly fragmented and isolated software ecosystem. Current implementations are frequently tightly coupled with heavyweight orchestration frameworks (e.g., PyTorch Lightning, Hydra), which obscure low-level gradient flows, inflate memory footprints, and hinder rapid algorithmic prototyping. In this paper, we present GraphSSL, an open-source library built natively on PyTorch and PyTorch Geometric (PyG). The framework unifies seven distinct SSL architectures across multiple methodological macro-families under a strictly modular architecture, completely decoupled from external orchestrators. We introduce a dedicated augmentation composition system equipped with ``protected-node'' semantics, which is architecturally critical for preserving the theoretical validity of stochastic mini-batch sampling. We describe the library's architectural principles, provide a rigorous algebraic formalization of the integrated paradigms, detail the computational complexity of the supported objectives, and present a comprehensive evaluation roadmap designed to measure both downstream predictive performance on large-scale benchmarks and systemic computational efficiency.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Graph Neural Networks, Self-Supervised Learning, PyTorch Geometric, Contrastive Learning, Representation Learning, Software Engineering
+\end{IEEEkeywords}
+
+\section{Introduction}
+The effectiveness of Graph Neural Networks (GNNs) in extracting knowledge from non-Euclidean relational domains is historically constrained by the availability of massive supervised datasets. In critical domains where node or graph-level labeling requires expensive, time-consuming laboratory evaluations (such as molecular property prediction, protein-protein interaction modeling, or financial network analysis), Self-Supervised Learning (SSL) has emerged as the premier algorithmic solution. By formulating pretext tasks based solely on topological structure and innate node features, models learn robust, generalizable latent representations without human-in-the-loop annotations.
+
+The transfer of SSL methodologies from the computer vision domain to graph analysis has yielded a heterogeneous and highly mathematically diverse taxonomy: mutual information maximization (DGI), multi-view contrastive learning (GraphCL), asymmetric teacher-student bootstrapping (BGRL, AFGRL), statistical redundancy reduction (VICReg, Barlow Twins), and prototypical self-distillation (GraphDINO). 
+
+From a software engineering perspective, however, the comparative implementation of these disparate methods forces researchers into a cycle of continuously rewriting complex structural blocks. Tasks such as synchronizing weights via Exponential Moving Averages (EMA), segregating the gradient space between \textit{online} and \textit{target} architectures, and safely extracting static embeddings for downstream linear evaluation are rarely standardized. Existing tools, such as PyGCL, focus almost exclusively on classical contrastive learning, often lacking support for modern negative-free evolutions. Other repositories rely heavily on invasive experiment-management systems, precluding microscopic control over the computational graph and unnecessarily inflating Video RAM (VRAM) consumption.
+
+To bridge this structural gap, we introduce \textit{GraphSSL}, a methodological library designed to provide a unified, lightweight, modular, and strictly \textit{framework-agnostic} software layer. The central contributions of this work are articulated as follows:
+\begin{itemize}
+    \item \textbf{Architectural Unification}: The seamless integration of seven distinct SSL architectures, spanning five methodological macro-families, under a single abstract programming interface (API), driven by programmatically validated configurations.
+    \item \textbf{Decoupled Engineering}: A strictly compartmentalized software structure (core abstractions, encoders, models, augmentations, losses, callbacks) that accelerates algorithmic extension without cascading side effects.
+    \item \textbf{Topologically Safe Semantics}: The formal introduction of \textit{``protected-node''} semantics in the data augmentation module, a critical architectural contribution to prevent the mathematical corruption of \textit{seed nodes} during \texttt{NeighborLoader} sampling.
+    \item \textbf{Computational Efficiency}: The deliberate removal of heavyweight training wrappers, structurally designed to minimize VRAM footprints and accelerate epoch times for rapid academic prototyping.
+\end{itemize}
+
+\section{Background and Related Work}
+
+\subsection{The Complexity of Graph SSL vs. Vision SSL}
+While Vision SSL operates on fixed-grid tensors (images), Graph SSL must contend with variable-sized neighborhoods, permutation invariance, and structural dependencies (edges). In vision, applying a random crop to an image simply reduces the pixel matrix. In a graph, applying a stochastic node drop alters the message-passing trajectory for all $k$-hop neighbors. This fundamental difference means that augmentation pipelines cannot be blindly ported from libraries like \texttt{torchvision}; they require graph-native safety mechanisms.
+
+\subsection{Existing Software Ecosystem}
+Several libraries have addressed portions of the graph SSL landscape.
+
+\textbf{PyGCL} \cite{pygcl} provides a modularized framework specifically for Graph Contrastive Learning, offering composable augmentation strategies, contrasting architectures, and standardized evaluation protocols. However, its scope is limited to the contrastive paradigm: teacher-student bootstrapping methods (BGRL, AFGRL), redundancy-reduction objectives (VICReg, Barlow Twins), and self-distillation architectures (DINO) are not natively supported.
+
+\textbf{DIG} (Dive into Graphs) \cite{dig} offers a broader research platform spanning SSL, graph generation, explainability, and 3D molecular learning via its \texttt{sslgraph} module. While comprehensive in breadth, its SSL component focuses primarily on contrastive and generative paradigms, and the tightly integrated multi-task architecture can make it difficult to isolate and extend individual SSL algorithms without cascading dependencies across the platform.
+
+\textbf{PyTorch Geometric} \cite{pyg} itself includes reference SSL examples in its documentation, but these are intentionally minimal and pedagogical. They do not provide the shared abstractions (EMA management, gradient hook orchestration, protected augmentation semantics) required for rigorous comparative experimentation across diverse SSL families.
+
+\Cref{tab:libraries} summarizes the methodological coverage of existing tools.
+
+\begin{table}[htbp]
+\centering
+\caption{Feature Comparison with Existing Libraries}
+\label{tab:libraries}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Feature} & \textbf{PyGCL} & \textbf{DIG} & \textbf{Ours} \\ \midrule
+Contrastive (NT-Xent) & \checkmark & \checkmark & \checkmark \\
+Mutual Information (DGI) & \checkmark & \checkmark & \checkmark \\
+Bootstrapping (BGRL) & -- & -- & \checkmark \\
+Aug-Free Mining (AFGRL) & -- & -- & \checkmark \\
+Redundancy Red. (VICReg) & -- & -- & \checkmark \\
+Self-Distillation (DINO) & -- & -- & \checkmark \\
+Protected-node augment. & -- & -- & \checkmark \\
+Framework-agnostic & -- & -- & \checkmark \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The Burden of Heavyweight Orchestration}
+Beyond methodological coverage, a practical concern is the training infrastructure. Previous codebases relied heavily on wrappers like PyTorch Lightning paired with Hydra. While excellent for industrial deployment, these wrappers mask the \texttt{backward()} pass. Lighter alternatives such as Lightning Fabric expose the gradients but remain domain-agnostic, lacking graph-specific requirements like topologically safe mini-batching or geometric readouts. In advanced SSL, researchers often need to intercept gradients mid-cycle---for instance, to clip only specific projector layers or freeze prototype layers during early epochs (a crucial stabilization step in DINO). GraphSSL strips away these abstractions, returning full control via native PyTorch.
+
+\section{System Architecture and Design Principles}
+Having established the shortcomings of existing tools, we now describe how GraphSSL is structured to address them. The library's design adheres to the SOLID principles of object-oriented programming, minimizing internal state mutations and strictly prohibiting cyclic imports.
+
+\subsection{Registry Pattern and Schema Validation}
+Abandoning the rigidity of complex YAML parsers, GraphSSL adopts a robust, Python-native configuration system based on \texttt{dataclasses}, located within \texttt{src/graphssl/config/schema.py}. Each SSL algorithm possesses an explicitly associated configuration (e.g., \texttt{BGRLConfig}, \texttt{VICRegConfig}). These schemas parametrically validate the architecture (ranging from the EMA temperature schedule to specific covariance penalty coefficients), significantly reducing configuration-related runtime errors.
+
+Structural instantiation is delegated to a \textit{Registry Pattern}. The library maintains domain-specific registries (\texttt{ENCODERS}, \texttt{AUGMENTS}, \texttt{HEADS}, among others), each mapping string names to builder callables via a \texttt{@register} decorator. During construction, Python's signature inspection (\texttt{inspect.signature}) filters the input dictionary: parameters like \textit{number of heads} are absorbed by a Transformer constructor but silently ignored when injected into a GCN, ensuring fault-tolerant initialization.
+
+\subsection{Hook-Driven Orchestration}
+To avoid the unnecessary abstraction overhead of external trainers, the \texttt{training/} module is condensed into a minimal infrastructure. Models inherit from \texttt{BaseSSLModel} and independently manage the gradient lifecycle via sequential \textit{hooks} executed by the orchestrator in a fixed order:
+\begin{equation}
+\begin{split}
+\texttt{loss} &\rightarrow \texttt{zero\_grad} \rightarrow \texttt{backward} \rightarrow \texttt{clip} \rightarrow \\
+&\quad \texttt{post\_backward} \rightarrow \texttt{step} \rightarrow \texttt{post\_step}
+\end{split}
+\end{equation}
+This granular control injection is critical. It allows GraphDINO to locally zero out the gradients of the prototype layer within the \texttt{post\_backward} stage (mitigating divergence during early epochs), and enables BGRL to advance the cosine-annealed EMA momentum---managed by a shared \texttt{CosineEMAScheduler} utility---within the \texttt{post\_step} stage. All callbacks (described in \Cref{sec:callbacks}) are invoked at epoch and batch boundaries by the same orchestrator, without requiring an external framework.
+
+The dataset interface is provided by a lightweight \texttt{DataModule} abstraction that wraps a PyG \texttt{Data} or \texttt{Dataset} object and exposes factory methods for \texttt{train\_dataloader()}, \texttt{eval\_dataloader()}, and \texttt{neighbor\_loader()}. It unifies node-level and graph-level tasks under a single API, carrying the split indices (\texttt{train\_idx}, \texttt{val\_idx}, \texttt{test\_idx}) and labels required by the evaluation callbacks.
+
+\section{The Geometric Challenge: Safe Mini-Batching}
+With the registry and hook-driven architecture in place, the next challenge lies in making the data pipeline itself graph-aware. Processing geometric data requires topological precautions entirely absent in standard computer vision frameworks.
+
+\subsection{The Threat to Multi-View Consistency}
+The \texttt{augmentation/} module implements seven stochastic mutations registered via the \texttt{AUGMENTS} registry: \texttt{edge\_drop}, \texttt{edge\_add}, \texttt{node\_drop}, \texttt{subgraph}, \texttt{feat\_mask}, \texttt{feat\_noise}, and \texttt{feat\_shuffle}. Each function is available both as a registry-style callable and as a class-based transform following the \texttt{torchvision} convention. A \texttt{MultiView} helper generates $n$ independent augmented views by composing any combination of these transforms, propagating the \texttt{protected\_nodes} tensor automatically.
+
+A critical vulnerability emerges when scaling SSL to massive graphs using PyG's \texttt{NeighborLoader}. The loader extracts a computational sub-graph batch comprising central \textit{seed nodes} (the target nodes upon which the loss is computed) and a halo of peripheral neighbors required purely for message passing.
+
+Blindly applying the \texttt{node\_drop} augmentation across the entire batch risks probabilistically deleting the seed nodes. If a seed node $v_i$ is dropped in augmented view $G_1$ but remains in view $G_2$, the element-wise bijective correspondence required for metrics like NT-Xent is destroyed. This mathematical collapse invalidates the vector parallelism of the entire batch.
+
+\subsection{Protected-Node Semantics}
+GraphSSL resolves this anomaly by propagating a \texttt{protected\_nodes} tensor parameter through all augmentation functions via a uniform API signature. The enforcement is specifically active in node-destructive transformations (e.g., \texttt{node\_drop}), where the deletion of a seed node would irrecoverably break the bijective correspondence between views. Let $\mathcal{B} = \mathcal{V}_{\text{seed}} \cup \mathcal{V}_{\text{sampled}}$ be the nodes in a batch. For any node-destructive transformation $\mathcal{T}$, GraphSSL enforces:
+\begin{equation}
+\mathcal{T}(v) = v, \quad \forall v \in \mathcal{V}_{\text{seed}}
+\end{equation}
+Feature-level augmentations (e.g., \texttt{feat\_mask}, \texttt{feat\_shuffle}) may still modify the attributes of seed nodes, as these transformations preserve node membership and do not violate the element-wise correspondence required by the loss function. The uniform signature ensures that extending protection to additional augmentation types requires no API changes.
+
+\subsection{Graph-Level Projection Abstraction}
+For graph-level representation learning (e.g., molecular property prediction), GraphSSL avoids redundantly duplicating readout logic within each registered encoder. Instead, it executes a global mean pooling operation on the node embeddings strictly downstream of the encoder. The embeddings are condensed into a single latent vector $\bm{z}_g$ for each isolated graph in the batch:
+\begin{equation}
+\bm{z}_g = \frac{1}{|V_g|} \sum_{v \in V_g} \bm{h}_v
+\end{equation}
+
+\section{Modeling the Encoder Backbones}
+Once graph data flows safely through the augmentation pipeline, it is consumed by an encoder backbone that maps it into a latent representation. A defining engineering trait of GraphSSL is the total interchangeability of this feature extraction module: all SSL models project node feature matrices $\bm{X} \in \mathbb{R}^{N \times F}$ and adjacency matrices $\bm{A}$ into a dense latent space $\bm{H} \in \mathbb{R}^{N \times d}$ via the encoder $f_\theta$, and any registered backbone can be substituted without altering the downstream loss computation.
+
+\subsection{Graph Convolutional Network (GCN)}
+Implemented as a two-layer stack of approximated spectral convolutions \cite{gcn}. Each layer $l$ performs the update:
+\begin{equation}
+\bm{H}^{(l+1)} = \sigma\left( \tilde{\bm{D}}^{-\frac{1}{2}} \tilde{\bm{A}} \tilde{\bm{D}}^{-\frac{1}{2}} \bm{H}^{(l)} \bm{W}^{(l)} \right)
+\end{equation}
+where $\tilde{\bm{A}} = \bm{A} + \bm{I}_N$ denotes the adjacency matrix with added self-loops ($\bm{I}_N$ being the identity matrix), and $\tilde{\bm{D}}$ represents the diagonal degree matrix defined as $\tilde{\bm{D}}_{ii} = \sum_{j} \tilde{\bm{A}}_{ij}$. The implementation enriches the classical Kipf \& Welling formulation by selectively integrating \texttt{BatchNorm} or \texttt{LayerNorm}, \texttt{PReLU} activations to prevent dead gradients in unsupervised settings, and optional weight standardization.
+
+\subsection{Graph Isomorphism Network (GIN)}
+To maximize expressive power up to the Weisfeiler-Lehman (WL) test limit \cite{wl,gin}, the GIN encoder defines message passing as:
+\begin{equation}
+\bm{h}_v^{(l)} = \text{MLP}^{(l)} \left( (1 + \epsilon^{(l)}) \bm{h}_v^{(l-1)} + \sum_{u \in \mathcal{N}(v)} \bm{h}_u^{(l-1)} \right)
+\end{equation}
+The infrastructure utilizes multi-layer GIN architectures augmented by spatial residual connections and \textit{pre-norm} strategies to stabilize deep gradients. This backbone serves as the standard baseline for the repository's test suite.
+
+\subsection{Graph Transformer}
+The framework natively supports \texttt{TransformerConv} blocks. Through multi-head attention, the encoder dynamically weights graph edges, allowing the aggregation process to focus on neighbors with the highest semantic relevance, thereby naturally mitigating over-smoothing during deep SSL training.
+
+\section{Mathematical Formulations of Integrated Paradigms}
+The encoder backbones described above produce latent embeddings that are then consumed by a self-supervised objective. In GraphSSL, each mathematical objective resides in an isolated \texttt{Loss} module, independently unit-tested to guarantee algebraic correctness. This separation ensures that swapping the objective function requires no changes to the encoder or training orchestration.
+
+\subsection{Deep Graph Infomax (DGI)}
+DGI \cite{dgi} maximizes the mutual information between local patch representations $\bm{h}_i$ and a global summary vector $\bm{s} = \sigma(\text{mean}(\bm{H}))$, where $\sigma$ represents a non-linear activation function. Corrupted embeddings $\tilde{\bm{h}}_j$ are extracted via feature scrambling. A bilinear discriminator $\mathcal{D}(\bm{h}, \bm{s}) = \bm{h}^\top \bm{W} \bm{s}$ minimizes the binary cross-entropy. To avoid margin overflow, this objective is defined as:
+\begin{equation}
+\begin{split}
+\mathcal{L}_{\text{DGI}} = &-\frac{1}{2N} \Bigg[ \sum_{i=1}^{N} \log \mathcal{D}(\bm{h}_i, \bm{s}) \\
+&+ \sum_{j=1}^{N} \log (1 - \mathcal{D}(\tilde{\bm{h}}_j, \bm{s})) \Bigg]
+\end{split}
+\end{equation}
+
+\subsection{Contrastive Learning: GraphCL}
+GraphCL \cite{graphcl} optimizes the NT-Xent loss between two stochastic views. Defining $\bm{z}_i^1$ and $\bm{z}_i^2$ as the L2-normalized projections generated by a two-layer MLP, the model enforces intra-pair attraction and inter-sample repulsion:
+\begin{equation}
+\mathcal{L}_{\text{NT-Xent}} = -\log \frac{\exp(\text{sim}(\bm{z}_i^1, \bm{z}_i^2)/\tau)}{\sum_{k \neq i} \exp(\text{sim}(\bm{z}_i^1, \bm{z}_k^2)/\tau)}
+\end{equation}
+where $\tau$ represents the temperature scalar.
+
+\subsection{Teacher-Student Bootstrapping: BGRL}
+To eliminate the computationally expensive requirement of negative sampling, BGRL \cite{bgrl} utilizes an asymmetric EMA architecture. An \textit{online} (student) encoder produces predictions $\bm{p}$ via a predictor MLP, while a \textit{target} (teacher) encoder produces targets $\bm{t}$ with frozen gradients. The symmetric cosine regression objective is:
+\begin{equation}
+\mathcal{L}_{\text{BGRL}} = 2 - \text{sim}(\bm{p}_1, \bm{t}_2) - \text{sim}(\bm{p}_2, \bm{t}_1)
+\end{equation}
+A critical implementation detail concerns the initialization of the target encoder. Following Appendix~B of \cite{bgrl}, the target network is deep-copied from the student but immediately re-initialized via \texttt{reset\_parameters()}, producing intentionally \textit{different} initial weights. This parametric asymmetry is essential: without it, the two networks start in an identical region of the loss landscape, providing no learning signal and leading to immediate representational collapse. The target weights are then progressively aligned to the student via EMA with a cosine-annealed momentum $\tau$ updated in the \texttt{post\_step} hook.
+
+\subsection{Augmentation-Free Bootstrapping: AFGRL}
+AFGRL \cite{afgrl} shares BGRL's teacher-student EMA architecture but introduces two fundamental departures. First, the target encoder is initialized as an \textit{exact copy} of the online encoder (\texttt{deepcopy} without reset), since the learning signal diversity is instead provided by the positive mining mechanism described below. Second, AFGRL eliminates stochastic graph augmentations entirely, replacing them with a deterministic \textit{PositiveMiner} module that identifies semantically meaningful positive pairs through two complementary strategies:
+\begin{itemize}
+    \item \textbf{Local positives} (kNN $\cap$ adjacency): For each node $v$, the top-$k$ most similar nodes by cosine similarity in the embedding space are intersected with the graph adjacency, retaining only pairs that are both semantically close and topologically connected.
+    \item \textbf{Global positives} (cluster membership): $R$ independent $k$-means clustering runs are executed on the teacher embeddings via FAISS. A pair $(v_i, v_j)$ is a global positive if they share a cluster assignment in \textit{any} of the $R$ runs.
+\end{itemize}
+The final positive set is the union $\mathcal{P} = \mathcal{P}_{\text{local}} \cup \mathcal{P}_{\text{global}}$. The loss is computed symmetrically over the mined pairs:
+\begin{equation}
+\mathcal{L}_{\text{AFGRL}} = \frac{1}{|\mathcal{P}|} \sum_{(i,j) \in \mathcal{P}} \left( 2 - \text{sim}(\bm{p}_i, \bm{t}_j) + 2 - \text{sim}(\bm{p}_j, \bm{t}_i) \right)
+\end{equation}
+
+\subsection{Redundancy Reduction: VICReg and Barlow Twins}
+By imposing statistical constraints directly on the projected space, Barlow Twins \cite{barlow} guides the cross-correlation matrix $C$ toward the identity matrix:
+\begin{equation}
+\mathcal{L}_{\text{BT}} = \sum_{i}(1 - C_{ii})^2 + \lambda \sum_{i} \sum_{j \neq i} C_{ij}^2
+\end{equation}
+VICReg \cite{vicreg} balances three parallel penalties on the independent matrices $Z_1, Z_2$:
+\begin{equation}
+\mathcal{L}_{\text{VICReg}} = \lambda_{\text{inv}}\text{MSE} + \lambda_{\text{var}}\mathcal{L}_{\text{var}} + \lambda_{\text{cov}}\mathcal{L}_{\text{cov}}
+\end{equation}
+where the variance function $\mathcal{L}_{\text{var}}$ utilizes a hinge-loss on the standard deviation to prevent complete dimensional collapse.
+
+\subsection{Self-Distillation: GraphDINO}
+GraphDINO is our adaptation of the DINO self-distillation paradigm \cite{dino} to graph-structured data. Unlike the original formulation designed for Vision Transformers, our implementation operates on variable-size graph batches and integrates with the library's augmentation and pooling infrastructure. The teacher transforms the embedding into a sharpened, centered probability distribution:
+\begin{equation}
+\bm{q}_i^{(t)} = \text{softmax}\left(\frac{g_{t}(\bm{h}_i) - \bm{c}}{\tau_{t}}\right)
+\end{equation}
+The student, processing intense local geometric augmentations, predicts the teacher's distribution by minimizing the cross-entropy over divergent pairs $\Omega$:
+\begin{equation}
+\mathcal{L}_{\text{DINO}} = -\frac{1}{| \Omega |} \sum_{(i,j) \in \Omega} \left( \bm{q}_i^{(t)} \right)^\top \log \bm{p}_j^{(s)}
+\end{equation}
+
+\section{Computational Complexity Analysis}
+The diversity of objectives presented in the previous section naturally raises the question of computational cost. A critical factor in selecting an SSL methodology is its algorithmic complexity, particularly regarding memory allocation during large-batch training.
+
+\begin{table}[htbp]
+\centering
+\caption{Space and Time Complexity Analysis per Batch}
+\label{tab:complexity}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Methodology} & \textbf{Time Complexity} & \textbf{Space Complexity} \\ \midrule
+GraphCL (Contrastive) & $\mathcal{O}(B^2 d)$ & $\mathcal{O}(B^2)$ \\
+DGI (Mutual Info) & $\mathcal{O}(B d)$ & $\mathcal{O}(B d)$ \\
+BGRL (Bootstrapping) & $\mathcal{O}(B d)$ & $\mathcal{O}(B d)$ \\
+AFGRL (Aug-Free) & $\mathcal{O}(NKR + Bd)$ & $\mathcal{O}(Nd)$ \\
+Barlow Twins & $\mathcal{O}(B d^2)$ & $\mathcal{O}(B d + d^2)$ \\
+VICReg & $\mathcal{O}(B d^2)$ & $\mathcal{O}(B d + d^2)$ \\
+GraphDINO (Distill.) & $\mathcal{O}(V B d)$ & $\mathcal{O}(V B d)$ \\ \bottomrule
+\end{tabular}
+\end{table}
+
+As shown in \Cref{tab:complexity}, contrastive methods like GraphCL suffer from a quadratic bottleneck $\mathcal{O}(B^2 d)$ due to pairwise similarity computation. Bootstrapping methods (BGRL) scale linearly at $\mathcal{O}(B d)$. AFGRL replaces augmentation cost with a FAISS-based mining step at $\mathcal{O}(NKR)$ ($N$: graph size, $K$: centroids, $R$: $k$-means runs), which dominates per-batch cost and requires the full embedding matrix in memory. GraphDINO scales linearly with the number of views $V$. Redundancy-reduction methods scale as $\mathcal{O}(B d^2)$, remaining efficient for large graphs provided the projector width $d$ stays within reasonable limits (e.g., $d \le 8192$). This diversity motivates GraphSSL's modular loss design, allowing researchers to swap objectives to match their hardware budget.
+
+A primary design objective of GraphSSL is the systematic reduction of runtime overhead. By eliminating the abstraction layers introduced by external training orchestrators (callback dispatchers, automatic device placement, internal state tracking), the framework is structurally positioned to yield measurable reductions in peak VRAM consumption and improvements in epoch throughput. A benchmarking campaign comparing identical training configurations across GraphSSL and equivalent wrapped implementations is actively planned to empirically validate these theoretical advantages.
+
+\section{Callback System and Validation Suite}
+\label{sec:callbacks}
+Training an SSL model is only meaningful if the quality of the learned representations can be assessed during and after the process. To this end, the framework exposes a high-frequency extraction and profiling system to monitor latent space evolution. All evaluation callbacks inherit from a common \texttt{Callback} base class that defines no-op hooks (\texttt{on\_train\_start}, \texttt{on\_epoch\_start}, \texttt{on\_batch\_end}, \texttt{on\_epoch\_end}, \texttt{on\_train\_end}); subclasses override only the hooks they require.
+
+\subsection{LogRegEvaluator and KNN Probing}
+The \texttt{LinearEvalCallback} periodically trains a linear classifier on frozen embeddings using \texttt{Adam}. It automatically selects the appropriate loss: Cross-Entropy for single-label classification, or BCE with Average Precision (AP) for multi-label tasks (e.g., molecular property prediction), masking \texttt{NaN} targets. The \texttt{KNNEvaluator} provides complementary cosine-similarity profiling at zero training cost. An \texttt{EmbeddingLoggerCallback} periodically serializes embeddings and labels to \texttt{.pt} files for offline analysis.
+
+\subsection{Latent Space Visualization (UMAP)}
+For visual topological investigations, GraphSSL integrates a \texttt{VisualizationCallback} that generates non-linear projections of the latent space via UMAP at predetermined epochs, enabling qualitative observation of cluster separation trajectories over time.
+
+\subsection{Unit Testing and Software Validation}
+Through its automated unit testing suite (\texttt{pytest}), the repository isolates and validates key functional components: the dimensional compatibility of configurable backbones, the asymptotic stability and positivity of standalone losses, the initial parametric asymmetry in teacher-student paradigms, and the correctness of protected-node guarantees during mini-batch forward passes. The suite is enforced through continuous integration, running automatically on every push and pull request against the main branch across multiple supported Python versions, so architectural regressions are caught before they reach the codebase.
+
+\section{Current Status and Evaluation Roadmap}
+\label{sec:results}
+Having described the full architectural pipeline---from configuration and training orchestration, through safe augmentation and encoder backbones, to the loss objectives and evaluation callbacks---we now summarize the current maturity of the implementation and outline the planned empirical validation.
+
+\subsection{Current Development Status}
+GraphSSL is under active development. The following core components are fully implemented and functionally validated:
+\begin{itemize}
+    \item Seven core SSL model architectures (DGI, GraphCL, BGRL, AFGRL, VICReg, Barlow Twins, GraphDINO) and a supervised baseline, each with end-to-end forward and loss logic implemented.
+    \item Three interchangeable encoder backbones (GCN, GIN, Graph Transformer) utilizing registry-based instantiation.
+    \item The geometric augmentation pipeline equipped with protected-node semantics for seed-node preservation.
+    \item The callback-based evaluation suite (linear probing, KNN, UMAP visualization).
+    \item Hook-driven training orchestration natively decoupled from external trainers.
+\end{itemize}
+
+The primary focus of current and ongoing development concerns systematic empirical validation at scale and hardware optimization. While the fundamental infrastructure is operational, comprehensive benchmark campaigns on large-scale datasets remain to be executed.
+
+\subsection{Known Limitations and Open Challenges}
+Several limitations remain in the current alpha implementation. First, protected-node enforcement is active only for node-destructive augmentations (\texttt{node\_drop}); per-augmentation protection granularity for feature-level transforms is not yet implemented. Second, AFGRL's FAISS-based PositiveMiner computes global $k$-means on the full embedding matrix, presenting memory scalability challenges on graphs exceeding $10^5$ nodes; solutions such as CPU-offloading or sub-sampled $k$-means are under development. Third, pooling defaults to mean readout; generalized aggregation operators are planned. Finally, systematic stress testing on production-grade benchmarks is pending.
+
+\subsection{Planned Evaluation Protocol}
+\Cref{tab:accuracy} outlines the planned benchmark structure for evaluating downstream linear probing accuracy. The protocol is designed to use a frozen GIN-2L encoder backbone across standard citation networks and medium-scale OGB datasets \cite{ogb} to verify architectural scalability, with the explicit caveat that memory-intensive global clustering methods (e.g., AFGRL) will require the aforementioned memory optimizations to successfully run on the larger benchmark entries.
+
+\begin{table}[htbp]
+\centering
+\caption{Planned Linear Evaluation Protocol}
+\label{tab:accuracy}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Configuration} \\ \midrule
+Encoder backbone & GIN, 2 layers, $d{=}256$ \\
+Datasets (node-level) & Cora, CiteSeer, PubMed, ogbn-arxiv \\
+Datasets (graph-level) & ogbg-molhiv, ogbg-molpcba \\
+Evaluation & Linear probing (Adam), KNN ($k{=}5$) \\
+Metrics & Accuracy, Avg. Precision (multi-label) \\
+Runs & 10 seeds per configuration \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{Future Work}
+Beyond the evaluation roadmap outlined above, several directions are actively planned.
+
+\textbf{Distributed Scalability.} The next major architectural milestone is native support for Distributed Data Parallel (DDP) training on multi-GPU setups. Because GraphSSL does not rely on automated external wrappers, DDP must be explicitly integrated. This presents a unique advantage: it allows for the precise, manual implementation of \textit{SyncBatchNorm} (crucial for contrastive methods to prevent batch-wise information leakage) and distributed cross-GPU negative gathering, significantly increasing the effective batch size for models like GraphCL. This scalability upgrade will allow GraphSSL to seamlessly handle the Open Graph Benchmark Large-Scale Challenge (OGB-LSC) datasets.
+
+\textbf{Generative and Reconstructive Paradigms.} The codebase already reserves a \texttt{models/decoder/} module for graph autoencoder and masked-reconstruction objectives (e.g., GraphMAE). Populating this module will extend the library's coverage beyond discriminative SSL families.
+
+\textbf{Command-Line Interface.} A planned \texttt{cli/} module will expose a user-facing entry point for launching training runs directly from YAML configurations, further lowering the barrier to entry for new users.
+
+\section{Conclusion}
+GraphSSL provides a robust, transparent software framework for unsupervised Graph Machine Learning research. By consolidating the most influential algorithms into a unified API---and introducing geometric safety mechanisms like protected-node semantics---the library aims to reduce the technical debt historically accumulated during algorithmic prototyping. In the near term, the framework will undergo systematic empirical validation, with the long-term goal of serving as an incubator to export mature, tested implementations (such as BGRL and GraphDINO) as direct contributions to the upstream PyTorch Geometric ecosystem.
+
+\begin{thebibliography}{00}
+\bibitem{pyg} M. Fey and J. E. Lenssen, ``Fast graph representation learning with PyTorch Geometric,'' in \textit{ICLR Workshop}, 2019.
+\bibitem{gcn} T. N. Kipf and M. Welling, ``Semi-supervised classification with graph convolutional networks,'' in \textit{ICLR}, 2017.
+\bibitem{gin} K. Xu, W. Hu, J. Leskovec, and S. Jegelka, ``How powerful are graph neural networks?'' in \textit{ICLR}, 2019.
+\bibitem{wl} B. Weisfeiler and A. Leman, ``The reduction of a graph to canonical form and the algebra which appears therein,'' \textit{Nauchno-Technicheskaya Informatsia}, vol.~2, no.~9, pp.~12--16, 1968.
+\bibitem{dgi} P. Veličković et al., ``Deep Graph Infomax,'' in \textit{ICLR}, 2019.
+\bibitem{graphcl} Y. You et al., ``Graph contrastive learning with augmentations,'' in \textit{NeurIPS}, 2020.
+\bibitem{bgrl} S. Thakoor et al., ``Large-scale representation learning on graphs via bootstrapping,'' in \textit{ICLR}, 2022.
+\bibitem{afgrl} N. Lee, J. Lee, and C. Park, ``Augmentation-free self-supervised learning on graphs,'' in \textit{AAAI}, 2022.
+\bibitem{vicreg} A. Bardes, J. Ponce, and Y. LeCun, ``VICReg: Variance-invariance-covariance regularization for self-supervised learning,'' in \textit{ICLR}, 2022.
+\bibitem{barlow} J. Zbontar et al., ``Barlow Twins: Self-supervised learning via redundancy reduction,'' in \textit{ICML}, 2021.
+\bibitem{dino} M. Caron et al., ``Emerging properties in self-supervised vision transformers,'' in \textit{ICCV}, 2021.
+\bibitem{pygcl} Y. Zhu et al., ``An empirical study of graph contrastive learning,'' in \textit{NeurIPS Datasets and Benchmarks}, 2021.
+\bibitem{dig} M. Liu et al., ``DIG: A turnkey library for diving into graph deep learning research,'' \textit{J. Mach. Learn. Res.}, vol.~22, no.~240, pp.~1--9, 2021.
+\bibitem{ogb} W. Hu et al., ``Open Graph Benchmark: Datasets for machine learning on graphs,'' in \textit{NeurIPS}, 2020.
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,27 @@
+# BGRL configuration for ogbn-arxiv (node-level SSL, 40-class classification)
+#
+# 128-dim continuous node features; no categorical embeddings needed.
+# pool: false — node-level task, no graph pooling.
+# Use NeighborLoader for mini-batch training (see examples/ogbn_arxiv_bgrl.py).
+
+name: bgrl
+
+encoder:
+  name: gin
+  hidden_dim: 256
+  num_layers: 3
+  norm_type: batch
+  pool: false
+  drop: 0.0
+  mlp_ratio: 2
+
+augment:
+  - name: edge_drop
+    p: 0.5
+  - name: feat_mask
+    p: 0.1
+
+pred_hidden: 256
+ema_tau: 0.99
+ema_tau_end: 1.0
+total_steps: 100000
