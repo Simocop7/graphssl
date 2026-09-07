@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Optional, Protocol, runtime_checkable
+
 from torch import Tensor
 
 
@@ -11,8 +13,6 @@ class BaseEncoder(Protocol):
     inheriting from this class — structural subtyping only.
     """
 
-    def forward(
-        self, x: Tensor, edge_index: Tensor, batch: Optional[Tensor] = None
-    ) -> Tensor: ...
+    def forward(self, x: Tensor, edge_index: Tensor, batch: Optional[Tensor] = None) -> Tensor: ...
 
     def reset_parameters(self) -> None: ...

@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Iterator
+
 import torch.nn as nn
 from torch import Tensor
 from torch_geometric.data import Data

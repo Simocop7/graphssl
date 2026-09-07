@@ -1,9 +1,10 @@
 """Weight standardization utility for GNN layers."""
 
 from __future__ import annotations
+
 import torch
-from torch import Tensor
 import torch.nn as nn
+from torch import Tensor
 
 
 def weight_standardize(weight: Tensor, eps: float = 1e-5) -> Tensor:

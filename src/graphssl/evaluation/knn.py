@@ -1,8 +1,9 @@
 """k-NN evaluator for node/graph classification."""
 
 from __future__ import annotations
+
 from typing import Dict
-import torch
+
 import torch.nn.functional as F
 from torch import Tensor
 
@@ -43,8 +44,8 @@ class KNNEvaluator:
             # [|split|, |train|] cosine similarity
             sim = z_s @ z_train.T
             k = min(self.k, z_train.size(0))
-            topk_idx = sim.topk(k, dim=-1).indices   # [S, k]
-            nn_labels = y_train[topk_idx]            # [S, k]
+            topk_idx = sim.topk(k, dim=-1).indices  # [S, k]
+            nn_labels = y_train[topk_idx]  # [S, k]
             pred = nn_labels.mode(dim=-1).values
             results[f"{split}_acc"] = (pred == y_s).float().mean().item()
 

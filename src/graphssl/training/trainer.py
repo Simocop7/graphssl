@@ -8,8 +8,8 @@ import torch
 from torch.optim import Optimizer
 from torch_geometric.loader import DataLoader
 
-from graphssl.core.model import BaseSSLModel
 from graphssl.core.callback import Callback
+from graphssl.core.model import BaseSSLModel
 
 
 class DINOTrainer:

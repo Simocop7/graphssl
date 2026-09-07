@@ -8,8 +8,9 @@ import torch
 from torch import Tensor
 
 try:
-    import umap
     import matplotlib.pyplot as plt
+    import umap
+
     HAS_VIZ = True
 except ImportError:
     HAS_VIZ = False
@@ -65,7 +66,7 @@ def extract_embeddings(
     model = model.to(_device)
     model.eval()
 
-    use_model_forward = (encoder_source == "auto")
+    use_model_forward = encoder_source == "auto"
     if not use_model_forward:
         _enc = _select_encoder(model, encoder_source)
 
@@ -85,6 +86,7 @@ def extract_embeddings(
 # ---------------------------------------------------------------------------
 # Internal extraction helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_graph_level(datamodule, extract_fn, device) -> Tuple[Tensor, Optional[Tensor]]:
     emb_list: list[Tensor] = []
@@ -144,6 +146,7 @@ def _extract_node_mini_batch(
 # Encoder selector (used when encoder_source != "auto")
 # ---------------------------------------------------------------------------
 
+
 def _select_encoder(model: "torch.nn.Module", source: str) -> "torch.nn.Module":
     if source in ("student", "online"):
         for attr in ("student_enc", "online_enc"):
@@ -162,6 +165,7 @@ def _select_encoder(model: "torch.nn.Module", source: str) -> "torch.nn.Module":
 # Visualization
 # ---------------------------------------------------------------------------
 
+
 def plot_embeddings(
     embeddings: Tensor,
     labels: Optional[Tensor] = None,
@@ -173,9 +177,7 @@ def plot_embeddings(
     Requires optional dependencies: ``pip install umap-learn matplotlib``
     """
     if not HAS_VIZ:
-        raise ImportError(
-            "Visualization requires optional deps: pip install umap-learn matplotlib"
-        )
+        raise ImportError("Visualization requires optional deps: pip install umap-learn matplotlib")
 
     reducer = umap.UMAP(n_components=2)
     z2d = reducer.fit_transform(embeddings.cpu().numpy())
@@ -183,8 +185,12 @@ def plot_embeddings(
     plt.figure(figsize=(8, 8))
     if labels is not None:
         scatter = plt.scatter(
-            z2d[:, 0], z2d[:, 1],
-            c=labels.cpu().numpy(), cmap="tab10", s=3, alpha=0.7,
+            z2d[:, 0],
+            z2d[:, 1],
+            c=labels.cpu().numpy(),
+            cmap="tab10",
+            s=3,
+            alpha=0.7,
         )
         plt.colorbar(scatter)
     else:

@@ -1,13 +1,16 @@
 """FAISS-based positive pair miner for AFGRL: local (kNN∩adj) + global (same cluster)."""
 
 from __future__ import annotations
+
 from typing import Tuple
+
 import torch
 from torch import Tensor
 
 try:
     import faiss
     import numpy as np
+
     HAS_FAISS = True
 except ImportError:
     HAS_FAISS = False
@@ -97,7 +100,7 @@ class PositiveMiner:
         # a pair is a global positive if they share a cluster in ANY run
         same_cluster = np.zeros(N * topk, dtype=bool)
         for labels in labels_np:
-            same_cluster |= (labels[row_np] == labels[col_np])
+            same_cluster |= labels[row_np] == labels[col_np]
 
         mask = torch.from_numpy(same_cluster).to(device)
         g_row = row[mask]

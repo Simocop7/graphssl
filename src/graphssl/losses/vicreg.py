@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn.functional as F
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from graphssl.registry import LOSSES
 
@@ -40,10 +40,7 @@ class VICRegLoss(nn.Module):
         # 2. Variance: push each dimension's std toward gamma
         std_z1 = torch.sqrt(z1.var(dim=0) + 1e-4)
         std_z2 = torch.sqrt(z2.var(dim=0) + 1e-4)
-        var_loss = (
-            F.relu(self.gamma - std_z1).mean() / 2
-            + F.relu(self.gamma - std_z2).mean() / 2
-        )
+        var_loss = F.relu(self.gamma - std_z1).mean() / 2 + F.relu(self.gamma - std_z2).mean() / 2
 
         # 3. Covariance: penalise off-diagonal entries
         z1_c = z1 - z1.mean(dim=0)

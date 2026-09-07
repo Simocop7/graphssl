@@ -2,37 +2,36 @@
 
 from __future__ import annotations
 
-import sys, os
 import pytest
 import torch
-from torch_geometric.data import Data, Batch
+from torch_geometric.data import Batch, Data
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from graphssl.encoders import GINEncoder, GCNEncoder, TransformerEncoder
-from graphssl.losses import CombinedLoss, NTXentLoss, VICRegLoss, BarlowTwinsLoss
 from graphssl.config.schema import EncoderConfig
-
+from graphssl.encoders import GCNEncoder, GINEncoder, TransformerEncoder
+from graphssl.losses import BarlowTwinsLoss, CombinedLoss, NTXentLoss, VICRegLoss
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_zinc_batch(n_graphs: int = 4, n_nodes: int = 8, n_edge_types: int = 4):
     """Mimics a ZINC batch: integer node features, integer edge features."""
     graphs = []
     for _ in range(n_graphs):
         n_edges = n_nodes * 2
-        graphs.append(Data(
-            x=torch.randint(0, 28, (n_nodes, 1)),        # atom type (categorical, 28 classes)
-            edge_index=torch.stack([
-                torch.randint(0, n_nodes, (n_edges,)),
-                torch.randint(0, n_nodes, (n_edges,)),
-            ]),
-            edge_attr=torch.randint(0, n_edge_types, (n_edges, 1)),   # bond type (categorical)
-        ))
+        graphs.append(
+            Data(
+                x=torch.randint(0, 28, (n_nodes, 1)),  # atom type (categorical, 28 classes)
+                edge_index=torch.stack(
+                    [
+                        torch.randint(0, n_nodes, (n_edges,)),
+                        torch.randint(0, n_nodes, (n_edges,)),
+                    ]
+                ),
+                edge_attr=torch.randint(0, n_edge_types, (n_edges, 1)),  # bond type (categorical)
+            )
+        )
     return Batch.from_data_list(graphs)
 
 
@@ -41,13 +40,17 @@ def _make_continuous_batch(n_graphs: int = 4, n_nodes: int = 8, n_feat: int = 12
     graphs = []
     for _ in range(n_graphs):
         n_edges = n_nodes * 2
-        graphs.append(Data(
-            x=torch.randn(n_nodes, n_feat),
-            edge_index=torch.stack([
-                torch.randint(0, n_nodes, (n_edges,)),
-                torch.randint(0, n_nodes, (n_edges,)),
-            ]),
-        ))
+        graphs.append(
+            Data(
+                x=torch.randn(n_nodes, n_feat),
+                edge_index=torch.stack(
+                    [
+                        torch.randint(0, n_nodes, (n_edges,)),
+                        torch.randint(0, n_nodes, (n_edges,)),
+                    ]
+                ),
+            )
+        )
     return Batch.from_data_list(graphs)
 
 
@@ -55,12 +58,12 @@ def _make_continuous_batch(n_graphs: int = 4, n_nodes: int = 8, n_feat: int = 12
 # GINEncoder: edge_emb_num_classes (ZINC-style)
 # ---------------------------------------------------------------------------
 
-class TestGINEncoderEdgeEmbedding:
 
+class TestGINEncoderEdgeEmbedding:
     def test_zinc_forward_shape(self):
         """GINEncoder with node + edge embeddings produces correct output shape."""
         enc = GINEncoder(
-            in_channels=1,      # ignored when node_emb_num_classes is set
+            in_channels=1,  # ignored when node_emb_num_classes is set
             hidden_dim=32,
             num_layers=3,
             pool=True,
@@ -95,7 +98,7 @@ class TestGINEncoderEdgeEmbedding:
                 hidden_dim=32,
                 num_layers=2,
                 edge_emb_num_classes=4,
-                edge_dim=None,    # missing → must raise
+                edge_dim=None,  # missing → must raise
             )
 
     def test_edge_emb_config_validation(self):
@@ -129,8 +132,8 @@ class TestGINEncoderEdgeEmbedding:
 # GCNEncoder: uniform norm_type API
 # ---------------------------------------------------------------------------
 
-class TestGCNEncoderNormType:
 
+class TestGCNEncoderNormType:
     @pytest.mark.parametrize("norm_type", ["batch", "layer", "none"])
     def test_norm_type_api(self, norm_type):
         enc = GCNEncoder(in_channels=7, hidden_dim=32, norm_type=norm_type)
@@ -158,8 +161,8 @@ class TestGCNEncoderNormType:
 # TransformerEncoder: edge features, norm_type, node embedding
 # ---------------------------------------------------------------------------
 
-class TestTransformerEncoderNewFeatures:
 
+class TestTransformerEncoderNewFeatures:
     def test_norm_type_batch(self):
         enc = TransformerEncoder(in_channels=7, hidden_dim=16, heads=2, norm_type="batch")
         batch = _make_continuous_batch(n_feat=7, n_graphs=2)
@@ -195,8 +198,8 @@ class TestTransformerEncoderNewFeatures:
 # CombinedLoss
 # ---------------------------------------------------------------------------
 
-class TestCombinedLoss:
 
+class TestCombinedLoss:
     def _make_embeddings(self, n: int = 8, d: int = 16):
         z1 = torch.randn(n, d)
         z2 = torch.randn(n, d)
@@ -225,7 +228,13 @@ class TestCombinedLoss:
         z1, z2 = self._make_embeddings()
         config = [
             {"name": "nt_xent", "weight": 0.6, "tau": 0.5},
-            {"name": "vicreg",  "weight": 0.4, "invariance": 25.0, "variance": 25.0, "covariance": 1.0},
+            {
+                "name": "vicreg",
+                "weight": 0.4,
+                "invariance": 25.0,
+                "variance": 25.0,
+                "covariance": 1.0,
+            },
         ]
         fn = CombinedLoss.from_config(config)
         loss = fn(z1, z2)
@@ -237,8 +246,10 @@ class TestCombinedLoss:
 
     def test_output_is_finite(self):
         z1, z2 = self._make_embeddings()
-        fn = CombinedLoss([
-            (NTXentLoss(tau=0.5), 0.5),
-            (BarlowTwinsLoss(), 0.5),
-        ])
+        fn = CombinedLoss(
+            [
+                (NTXentLoss(tau=0.5), 0.5),
+                (BarlowTwinsLoss(), 0.5),
+            ]
+        )
         assert torch.isfinite(fn(z1, z2))

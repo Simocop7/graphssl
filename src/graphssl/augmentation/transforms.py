@@ -5,6 +5,7 @@ They satisfy the BaseAugmentation Protocol and can be used with Compose/MultiVie
 """
 
 from torch_geometric.data import Data
+
 from graphssl.augmentation import functional as F
 
 

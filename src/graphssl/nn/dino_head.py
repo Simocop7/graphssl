@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Sequential, Linear, ReLU, BatchNorm1d as BN
+from torch.nn import BatchNorm1d as BN
+from torch.nn import Linear, ReLU, Sequential
 
 from graphssl.registry import HEADS
 
@@ -72,9 +73,8 @@ class DINOHead(nn.Module):
             self._current_teacher_temp = self.teacher_temp
         else:
             frac = epoch / self.warmup_teacher_temp_epochs
-            self._current_teacher_temp = (
-                self.warmup_teacher_temp
-                + frac * (self.teacher_temp - self.warmup_teacher_temp)
+            self._current_teacher_temp = self.warmup_teacher_temp + frac * (
+                self.teacher_temp - self.warmup_teacher_temp
             )
 
     def forward(self, x: torch.Tensor, use_teacher_temp: bool = False) -> torch.Tensor:
@@ -89,9 +89,8 @@ class DINOHead(nn.Module):
 
     @torch.no_grad()
     def update_center(self, teacher_out: torch.Tensor) -> None:
-        self.center = (
-            self.center * self.center_momentum
-            + teacher_out.mean(0, keepdim=True) * (1 - self.center_momentum)
+        self.center = self.center * self.center_momentum + teacher_out.mean(0, keepdim=True) * (
+            1 - self.center_momentum
         )
 
     def cancel_last_layer_gradients(self) -> None:

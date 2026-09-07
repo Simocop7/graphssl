@@ -1,17 +1,12 @@
 """Smoke tests for the VICReg pipeline."""
 
-import sys, os
 import pytest
 import torch
 import torch.nn as nn
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
 from graphssl.models import VICReg
-from helpers import make_batch as _make_batch, make_graph as _make_graph
-
+from helpers import make_batch as _make_batch
+from helpers import make_graph as _make_graph
 
 _AUG = [{"name": "edge_drop", "p": 0.2}, {"name": "feat_mask", "p": 0.1}]
 
@@ -30,7 +25,6 @@ def _make_config(**overrides):
 
 
 class TestVICReg:
-
     def setup_method(self):
         self.config = _make_config()
         self.in_channels = 7
@@ -92,7 +86,6 @@ class TestVICReg:
 
 
 class TestVICRegNodeLevel:
-
     def setup_method(self):
         cfg = _make_config()
         cfg["encoder"]["pool"] = False

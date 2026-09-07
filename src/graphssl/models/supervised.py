@@ -9,8 +9,8 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch_geometric.data import Data
 
-from graphssl.core.model import BaseSSLModel
 from graphssl.config.schema import SupervisedConfig
+from graphssl.core.model import BaseSSLModel
 
 
 class Supervised(BaseSSLModel):

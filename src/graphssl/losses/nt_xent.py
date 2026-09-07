@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn.functional as F
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from graphssl.registry import LOSSES
 
@@ -25,9 +25,9 @@ class NTXentLoss(nn.Module):
         N = z1.size(0)
         z1 = F.normalize(z1, dim=-1)
         z2 = F.normalize(z2, dim=-1)
-        z = torch.cat([z1, z2], dim=0)          # [2N, D]
+        z = torch.cat([z1, z2], dim=0)  # [2N, D]
 
-        sim = (z @ z.T) / self.tau              # [2N, 2N]
+        sim = (z @ z.T) / self.tau  # [2N, 2N]
 
         # Mask self-similarities so they don't contribute as negatives
         mask = torch.eye(2 * N, dtype=torch.bool, device=z.device)

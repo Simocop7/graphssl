@@ -1,16 +1,11 @@
 """Smoke tests for the BGRL pipeline."""
 
-import sys, os
 import pytest
 import torch
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
 from graphssl.models import BGRL
-from helpers import make_batch as _make_batch, make_graph as _make_graph
-
+from helpers import make_batch as _make_batch
+from helpers import make_graph as _make_graph
 
 _AUG = [{"name": "edge_drop", "p": 0.2}, {"name": "feat_mask", "p": 0.1}]
 
@@ -29,7 +24,6 @@ def _make_config(**overrides):
 
 
 class TestBGRL:
-
     def setup_method(self):
         self.config = _make_config()
         self.in_channels = 7
@@ -51,7 +45,7 @@ class TestBGRL:
         any_different = any(
             not torch.equal(po.data, pt.data)
             for po, pt in zip(
-                model.online_enc.parameters(), model.target_enc.parameters()
+                model.online_enc.parameters(), model.target_enc.parameters(), strict=True
             )
         )
         assert any_different, "Target encoder must have different weights after reset"
@@ -81,8 +75,7 @@ class TestBGRL:
         before = {n: p.data.clone() for n, p in model.target_enc.named_parameters()}
         model.post_step()
         any_changed = any(
-            not torch.equal(before[n], p.data)
-            for n, p in model.target_enc.named_parameters()
+            not torch.equal(before[n], p.data) for n, p in model.target_enc.named_parameters()
         )
         assert any_changed, "post_step() must update target_enc via EMA"
 
@@ -100,7 +93,6 @@ class TestBGRL:
 
 
 class TestBGRLNodeLevel:
-
     def setup_method(self):
         cfg = _make_config()
         cfg["encoder"]["pool"] = False
@@ -122,7 +114,6 @@ class TestBGRLNodeLevel:
 
 
 class TestBGRLEMAScheduler:
-
     def test_tau_increases_over_steps(self):
         """CosineEMAScheduler must produce monotonically increasing tau."""
         cfg = _make_config()

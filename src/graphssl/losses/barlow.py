@@ -1,7 +1,6 @@
 """Barlow Twins cross-correlation loss."""
 
-import torch.nn.functional as F
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from graphssl.registry import LOSSES
 
@@ -28,7 +27,7 @@ class BarlowTwinsLoss(nn.Module):
         z1_n = (z1 - z1.mean(0)) / (z1.std(0) + 1e-5)
         z2_n = (z2 - z2.mean(0)) / (z2.std(0) + 1e-5)
 
-        C = z1_n.T @ z2_n / N          # [D, D] cross-correlation matrix
+        C = z1_n.T @ z2_n / N  # [D, D] cross-correlation matrix
 
         on_diag = (1 - C.diagonal()).pow(2).sum()
         off_diag = C.pow(2).sum() - C.diagonal().pow(2).sum()

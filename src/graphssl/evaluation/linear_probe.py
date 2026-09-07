@@ -1,7 +1,9 @@
 """Logistic regression linear probe evaluator in pure PyTorch."""
 
 from __future__ import annotations
+
 from typing import Dict
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,6 +11,7 @@ from torch import Tensor
 
 try:
     from sklearn.metrics import average_precision_score
+
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
@@ -90,6 +93,7 @@ class LogRegEvaluator:
                 if self.multilabel:
                     if HAS_SKLEARN:
                         import numpy as np
+
                         probs = torch.sigmoid(logits).cpu().numpy()
                         y_np = y_s.cpu().numpy()
                         nan_mask = ~torch.isnan(y_s).cpu().numpy()
@@ -100,7 +104,9 @@ class LogRegEvaluator:
                                 ap_scores.append(
                                     average_precision_score(y_np[col, i], probs[col, i])
                                 )
-                        results[f"{split}_ap"] = float(np.mean(ap_scores)) if ap_scores else float("nan")
+                        results[f"{split}_ap"] = (
+                            float(np.mean(ap_scores)) if ap_scores else float("nan")
+                        )
                     else:
                         results[f"{split}_ap"] = float("nan")
                 else:

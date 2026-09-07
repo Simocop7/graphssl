@@ -1,7 +1,9 @@
 """Graph-level pooling utilities."""
 
 from __future__ import annotations
+
 from typing import Optional
+
 from torch import Tensor
 from torch_geometric.nn import global_mean_pool
 

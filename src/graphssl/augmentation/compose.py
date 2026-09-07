@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import List, Optional
+
 import torch
 from torch_geometric.data import Data
 
@@ -36,9 +38,7 @@ class MultiView:
         self.n_views = n_views
         # Detect which API is being used
         self._registry_style = (
-            transforms
-            and isinstance(transforms[0], tuple)
-            and isinstance(transforms[0][0], str)
+            transforms and isinstance(transforms[0], tuple) and isinstance(transforms[0][0], str)
         )
 
     def __call__(

@@ -1,7 +1,9 @@
 """Pure-Python DataModule (no PyTorch Lightning)."""
 
 from __future__ import annotations
+
 from typing import List, Optional
+
 import torch
 from torch_geometric.data import Data, Dataset
 from torch_geometric.loader import DataLoader, NeighborLoader

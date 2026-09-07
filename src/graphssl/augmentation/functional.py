@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Optional
 
 import torch
@@ -32,7 +33,9 @@ def edge_add(data: Data, p=0.1, protected_nodes: Optional[Tensor] = None):
     out.edge_index = torch.cat([data.edge_index, torch.stack([src, dst])], dim=1)
     if data.edge_attr is not None:
         # Synthetic edges have no known features — pad with zeros.
-        pad = torch.zeros(n_add, data.edge_attr.size(1), dtype=data.edge_attr.dtype, device=data.edge_attr.device)
+        pad = torch.zeros(
+            n_add, data.edge_attr.size(1), dtype=data.edge_attr.dtype, device=data.edge_attr.device
+        )
         out.edge_attr = torch.cat([data.edge_attr, pad], dim=0)
     return out
 

@@ -1,13 +1,8 @@
 """Tests for LogRegEvaluator and KNNEvaluator, incl. OGB-style 2D labels."""
 
-import sys, os
 import torch
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from graphssl.evaluation import LogRegEvaluator, KNNEvaluator
+from graphssl.evaluation import KNNEvaluator, LogRegEvaluator
 
 
 def _make_splits(n=60, num_classes=3, seed=0):
@@ -20,7 +15,6 @@ def _make_splits(n=60, num_classes=3, seed=0):
 
 
 class TestLogRegEvaluator:
-
     def test_1d_labels_planetoid_style(self):
         embeddings, labels, train_idx, val_idx, test_idx = _make_splits()
         results = LogRegEvaluator(epochs=5).evaluate(
@@ -60,7 +54,6 @@ class TestLogRegEvaluator:
 
 
 class TestKNNEvaluator:
-
     def test_1d_labels_planetoid_style(self):
         embeddings, labels, train_idx, val_idx, test_idx = _make_splits()
         results = KNNEvaluator(k=5).evaluate(embeddings, labels, train_idx, val_idx, test_idx)

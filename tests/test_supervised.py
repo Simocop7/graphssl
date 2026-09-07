@@ -1,13 +1,7 @@
 """Smoke tests for the Supervised pipeline."""
 
-import sys, os
-import pytest
 import torch
-from torch_geometric.data import Data, Batch
-
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+from torch_geometric.data import Batch, Data
 
 from graphssl.models import Supervised
 
@@ -23,10 +17,12 @@ def _make_config(**overrides):
 def _make_graph(n_nodes=20, n_feat=7, num_classes=3):
     return Data(
         x=torch.randn(n_nodes, n_feat),
-        edge_index=torch.stack([
-            torch.randint(0, n_nodes, (n_nodes * 3,)),
-            torch.randint(0, n_nodes, (n_nodes * 3,)),
-        ]),
+        edge_index=torch.stack(
+            [
+                torch.randint(0, n_nodes, (n_nodes * 3,)),
+                torch.randint(0, n_nodes, (n_nodes * 3,)),
+            ]
+        ),
         y=torch.randint(0, num_classes, (n_nodes,)),
     )
 
@@ -34,19 +30,22 @@ def _make_graph(n_nodes=20, n_feat=7, num_classes=3):
 def _make_batch(n_graphs=4, n_nodes=10, n_feat=7, num_classes=3):
     graphs = []
     for _ in range(n_graphs):
-        graphs.append(Data(
-            x=torch.randn(n_nodes, n_feat),
-            edge_index=torch.stack([
-                torch.randint(0, n_nodes, (n_nodes * 2,)),
-                torch.randint(0, n_nodes, (n_nodes * 2,)),
-            ]),
-            y=torch.randint(0, num_classes, (n_nodes,)),
-        ))
+        graphs.append(
+            Data(
+                x=torch.randn(n_nodes, n_feat),
+                edge_index=torch.stack(
+                    [
+                        torch.randint(0, n_nodes, (n_nodes * 2,)),
+                        torch.randint(0, n_nodes, (n_nodes * 2,)),
+                    ]
+                ),
+                y=torch.randint(0, num_classes, (n_nodes,)),
+            )
+        )
     return Batch.from_data_list(graphs)
 
 
 class TestSupervised:
-
     def setup_method(self):
         self.config = _make_config()
         self.in_channels = 7

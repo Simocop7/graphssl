@@ -1,13 +1,8 @@
 """Smoke tests for the GraphDINO pipeline."""
 
-import sys, os
 import pytest
 import torch
 from torch_geometric.data import Data
-
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
 
 from graphssl.models import GraphDINO
 from graphssl.training import DINOTrainer
@@ -53,7 +48,6 @@ def _make_config(**overrides):
 
 
 class TestGraphDINO:
-
     def setup_method(self):
         self.config = _make_config()
         self.in_channels = 7
@@ -99,13 +93,13 @@ class TestGraphDINO:
     def test_student_parameters_excludes_teacher(self):
         model = GraphDINO(self.config, in_channels=self.in_channels)
         student_ids = {id(p) for p in model.student_parameters()}
-        teacher_ids = {id(p) for p in model.teacher_enc.parameters()} | \
-                      {id(p) for p in model.teacher_head.parameters()}
+        teacher_ids = {id(p) for p in model.teacher_enc.parameters()} | {
+            id(p) for p in model.teacher_head.parameters()
+        }
         assert student_ids.isdisjoint(teacher_ids)
 
 
 class TestFreezeLastLayer:
-
     def test_proto_grads_zeroed_during_freeze(self):
         """post_backward() cancels proto gradients when epoch < freeze_last_layer_epochs."""
         cfg = _make_config()
@@ -154,7 +148,6 @@ class TestFreezeLastLayer:
 
 
 class TestTeacherTempWarmup:
-
     def test_warmup_starts_at_warmup_temp(self):
         """At epoch 0 the effective teacher temp equals warmup_teacher_temp."""
         cfg = _make_config()
@@ -195,7 +188,6 @@ class TestTeacherTempWarmup:
 
 
 class TestEMAUpdate:
-
     def test_teacher_moves_toward_student(self):
         student = torch.nn.Linear(4, 4)
         teacher = torch.nn.Linear(4, 4)
@@ -211,7 +203,6 @@ class TestEMAUpdate:
 
 
 class TestDINOTrainer:
-
     def test_train_epoch_runs(self):
         from torch_geometric.loader import DataLoader
 
@@ -221,10 +212,12 @@ class TestDINOTrainer:
         graphs = [
             Data(
                 x=torch.randn(10, 7),
-                edge_index=torch.stack([
-                    torch.randint(0, 10, (20,)),
-                    torch.randint(0, 10, (20,)),
-                ]),
+                edge_index=torch.stack(
+                    [
+                        torch.randint(0, 10, (20,)),
+                        torch.randint(0, 10, (20,)),
+                    ]
+                ),
             )
             for _ in range(8)
         ]
@@ -246,10 +239,12 @@ class TestDINOTrainer:
         graphs = [
             Data(
                 x=torch.randn(10, 7),
-                edge_index=torch.stack([
-                    torch.randint(0, 10, (20,)),
-                    torch.randint(0, 10, (20,)),
-                ]),
+                edge_index=torch.stack(
+                    [
+                        torch.randint(0, 10, (20,)),
+                        torch.randint(0, 10, (20,)),
+                    ]
+                ),
             )
             for _ in range(8)
         ]

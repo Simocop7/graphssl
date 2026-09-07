@@ -1,6 +1,7 @@
 """Graph Transformer encoder: stack of TransformerConv blocks with pre-norm."""
 
 from __future__ import annotations
+
 import torch.nn as nn
 from torch import Tensor
 from torch_geometric.nn import TransformerConv

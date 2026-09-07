@@ -1,8 +1,9 @@
 """Cosine regression loss for bootstrapped SSL (BGRL / AFGRL)."""
 
 from __future__ import annotations
+
 import torch.nn.functional as F
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 from graphssl.registry import LOSSES
 
@@ -39,9 +40,5 @@ class CosineRegressionLoss(nn.Module):
             assert p2 is not None and t2 is not None
             p2_n = F.normalize(p2, dim=-1)
             t2_n = F.normalize(t2, dim=-1)
-            return (
-                2
-                - (p1_n * t2_n).sum(-1).mean()
-                - (p2_n * t1_n).sum(-1).mean()
-            )
+            return 2 - (p1_n * t2_n).sum(-1).mean() - (p2_n * t1_n).sum(-1).mean()
         return 1 - (p1_n * t1_n).sum(-1).mean()

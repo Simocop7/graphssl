@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Callable, Dict, Generic, Iterator, TypeVar
 
 T = TypeVar("T")
@@ -25,13 +26,12 @@ class Registry(Generic[T]):
                 raise KeyError(f"Duplicate registration: {name!r}")
             self._builders[name] = fn
             return fn
+
         return deco
 
     def get_builder(self, name: str) -> Callable[..., T]:
         if name not in self._builders:
-            raise KeyError(
-                f"Unknown component {name!r}. Available: {list(self._builders)}"
-            )
+            raise KeyError(f"Unknown component {name!r}. Available: {list(self._builders)}")
         return self._builders[name]
 
     def build(self, name: str, **kwargs) -> T:

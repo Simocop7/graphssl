@@ -1,6 +1,7 @@
 """Projection and predictor heads for SSL models."""
 
 from __future__ import annotations
+
 import torch.nn as nn
 from torch import Tensor
 

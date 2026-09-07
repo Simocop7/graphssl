@@ -11,14 +11,14 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch_geometric.data import Data
 
-from graphssl.core.model import BaseSSLModel
 from graphssl.config.schema import AFGRLConfig
-from graphssl.utils.ema import update_ema_params
-from graphssl.utils.schedulers import CosineEMAScheduler
-from graphssl.utils.positive_miner import PositiveMiner
+from graphssl.core.model import BaseSSLModel
 from graphssl.losses.regression import CosineRegressionLoss
 from graphssl.nn.mlp import Predictor
 from graphssl.nn.pooling import pool_graph_embeddings
+from graphssl.utils.ema import update_ema_params
+from graphssl.utils.positive_miner import PositiveMiner
+from graphssl.utils.schedulers import CosineEMAScheduler
 
 
 class AFGRL(BaseSSLModel):

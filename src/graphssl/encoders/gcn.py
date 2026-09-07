@@ -1,12 +1,13 @@
 """GCN encoder: GCNConv stack with configurable norm, PReLU, weight standardization."""
 
 from __future__ import annotations
+
 import torch.nn as nn
 from torch import Tensor
 from torch_geometric.nn import GCNConv
 
-from graphssl.registry import ENCODERS
 from graphssl.nn.norm import apply_weight_standardization
+from graphssl.registry import ENCODERS
 
 
 def _make_norm(norm_type: str, dim: int, batchnorm_mm: float = 0.01) -> nn.Module:
@@ -78,7 +79,13 @@ class GCNEncoder(nn.Module):
         self.act1 = nn.PReLU()
         self.act2 = nn.PReLU()
 
-    def forward(self, x: Tensor, edge_index: Tensor, batch: Tensor | None = None, edge_attr: Tensor | None = None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        edge_index: Tensor,
+        batch: Tensor | None = None,
+        edge_attr: Tensor | None = None,
+    ) -> Tensor:
         x = self.act1(self.norm1(self.conv1(x, edge_index)))
 
         if self.weight_standardization:

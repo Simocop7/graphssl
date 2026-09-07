@@ -4,20 +4,15 @@ Requires faiss-cpu: pip install faiss-cpu
 All tests in this file are skipped automatically if faiss is not available.
 """
 
-import sys, os
 import pytest
 
 faiss = pytest.importorskip("faiss", reason="faiss-cpu not installed — skipping AFGRL tests")
 
-import torch
-from torch_geometric.data import Data
+import torch  # noqa: E402
+from torch_geometric.data import Data  # noqa: E402
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from graphssl.models import AFGRL
-from helpers import make_batch as _make_batch
+from graphssl.models import AFGRL  # noqa: E402
+from helpers import make_batch as _make_batch  # noqa: E402
 
 
 def _make_config(**overrides):
@@ -40,15 +35,16 @@ def _make_graph(n_nodes=30, n_feat=7):
     # Denser graph (4x edges) needed for AFGRL's kNN mining to find valid positives.
     return Data(
         x=torch.randn(n_nodes, n_feat),
-        edge_index=torch.stack([
-            torch.randint(0, n_nodes, (n_nodes * 4,)),
-            torch.randint(0, n_nodes, (n_nodes * 4,)),
-        ]),
+        edge_index=torch.stack(
+            [
+                torch.randint(0, n_nodes, (n_nodes * 4,)),
+                torch.randint(0, n_nodes, (n_nodes * 4,)),
+            ]
+        ),
     )
 
 
 class TestAFGRL:
-
     def setup_method(self):
         self.config = _make_config()
         self.in_channels = 7
@@ -71,7 +67,7 @@ class TestAFGRL:
         all_equal = all(
             torch.equal(po.data, pt.data)
             for po, pt in zip(
-                model.online_enc.parameters(), model.target_enc.parameters()
+                model.online_enc.parameters(), model.target_enc.parameters(), strict=True
             )
         )
         assert all_equal, "AFGRL target encoder must start with same weights as online"
@@ -116,8 +112,7 @@ class TestAFGRL:
         before = {n: p.data.clone() for n, p in model.target_enc.named_parameters()}
         model.post_step()
         any_changed = any(
-            not torch.equal(before[n], p.data)
-            for n, p in model.target_enc.named_parameters()
+            not torch.equal(before[n], p.data) for n, p in model.target_enc.named_parameters()
         )
         assert any_changed, "post_step() must update target_enc via EMA"
 

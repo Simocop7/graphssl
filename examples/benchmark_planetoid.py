@@ -23,22 +23,22 @@ from torch_geometric.datasets import Planetoid
 
 from graphssl.config.load import build_model
 from graphssl.data import DataModule
-from graphssl.evaluation import LogRegEvaluator, KNNEvaluator, extract_embeddings
+from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, extract_embeddings
 from graphssl.training import DINOTrainer
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-seed BGRL benchmark on Planetoid datasets")
-    p.add_argument("--dataset",  default="Cora", choices=["Cora", "CiteSeer", "PubMed"])
-    p.add_argument("--encoder",  default="gin", choices=["gin", "gcn", "transformer"])
-    p.add_argument("--hidden",   type=int, default=256)
-    p.add_argument("--layers",   type=int, default=2)
-    p.add_argument("--epochs",   type=int, default=300)
-    p.add_argument("--lr",       type=float, default=5e-4)
-    p.add_argument("--seeds",    type=int, default=10)
-    p.add_argument("--knn-k",    type=int, default=5)
+    p.add_argument("--dataset", default="Cora", choices=["Cora", "CiteSeer", "PubMed"])
+    p.add_argument("--encoder", default="gin", choices=["gin", "gcn", "transformer"])
+    p.add_argument("--hidden", type=int, default=256)
+    p.add_argument("--layers", type=int, default=2)
+    p.add_argument("--epochs", type=int, default=300)
+    p.add_argument("--lr", type=float, default=5e-4)
+    p.add_argument("--seeds", type=int, default=10)
+    p.add_argument("--knn-k", type=int, default=5)
     p.add_argument("--data-dir", default="data")
-    p.add_argument("--device",   default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
 
 
@@ -50,7 +50,7 @@ def make_config(args: argparse.Namespace) -> dict:
             "hidden_dim": args.hidden,
             "num_layers": args.layers,
             "norm_type": "batch",
-            "pool": False,   # node-level task: no graph pooling
+            "pool": False,  # node-level task: no graph pooling
             "drop": 0.0,
         },
         "augment": [
@@ -103,21 +103,30 @@ def main() -> None:
     num_classes = dataset.num_classes
 
     train_idx = data.train_mask.nonzero(as_tuple=True)[0]
-    val_idx   = data.val_mask.nonzero(as_tuple=True)[0]
-    test_idx  = data.test_mask.nonzero(as_tuple=True)[0]
+    val_idx = data.val_mask.nonzero(as_tuple=True)[0]
+    test_idx = data.test_mask.nonzero(as_tuple=True)[0]
 
-    print(f"\n{args.dataset} / BGRL | encoder={args.encoder} d={args.hidden} | "
-          f"seeds={args.seeds} | epochs={args.epochs} | {device}")
-    print(f"Nodes: {data.num_nodes:,} | Edges: {data.num_edges:,} | "
-          f"Features: {data.num_features} | Classes: {num_classes}")
+    print(
+        f"\n{args.dataset} / BGRL | encoder={args.encoder} d={args.hidden} | "
+        f"seeds={args.seeds} | epochs={args.epochs} | {device}"
+    )
+    print(
+        f"Nodes: {data.num_nodes:,} | Edges: {data.num_edges:,} | "
+        f"Features: {data.num_features} | Classes: {num_classes}"
+    )
     print(f"Train: {len(train_idx)} | Val: {len(val_idx)} | Test: {len(test_idx)}\n")
 
     lin_val, lin_test, knn_val, knn_test = [], [], [], []
     t0 = time.time()
     for seed in range(args.seeds):
         ts = time.time()
-        lv, lt, kv, kt = run_seed(args, data, num_classes, train_idx, val_idx, test_idx, seed, device)
-        lin_val.append(lv); lin_test.append(lt); knn_val.append(kv); knn_test.append(kt)
+        lv, lt, kv, kt = run_seed(
+            args, data, num_classes, train_idx, val_idx, test_idx, seed, device
+        )
+        lin_val.append(lv)
+        lin_test.append(lt)
+        knn_val.append(kv)
+        knn_test.append(kt)
         print(f"  seed {seed}: linear test={lt:.4f} | knn test={kt:.4f} | {time.time() - ts:.1f}s")
 
     print(f"\n{args.dataset} results over {args.seeds} seeds ({time.time() - t0:.1f}s total):")

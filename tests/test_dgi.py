@@ -1,15 +1,11 @@
 """Smoke tests for the DGI pipeline."""
 
-import sys, os
 import pytest
 import torch
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
 from graphssl.models import DGI
-from helpers import make_batch as _make_batch, make_graph as _make_graph
+from helpers import make_batch as _make_batch
+from helpers import make_graph as _make_graph
 
 
 def _make_config(**overrides):
@@ -23,7 +19,6 @@ def _make_config(**overrides):
 
 
 class TestDGI:
-
     def setup_method(self):
         self.config = _make_config()
         self.in_channels = 7
@@ -60,7 +55,6 @@ class TestDGI:
 
 
 class TestDGIGraphLevel:
-
     def setup_method(self):
         cfg = _make_config()
         cfg["encoder"]["pool"] = True
@@ -76,7 +70,6 @@ class TestDGIGraphLevel:
 
 
 class TestDGICorruption:
-
     def test_shuffle_nodes_mode(self):
         cfg = _make_config(corruption="shuffle_nodes")
         model = DGI(cfg, in_channels=7)

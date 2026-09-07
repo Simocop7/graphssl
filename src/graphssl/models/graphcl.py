@@ -9,9 +9,9 @@ import torch.nn as nn
 from torch import Tensor
 from torch_geometric.data import Data
 
-from graphssl.core.model import BaseSSLModel
-from graphssl.config.schema import GraphCLConfig
 from graphssl.augmentation.compose import compose
+from graphssl.config.schema import GraphCLConfig
+from graphssl.core.model import BaseSSLModel
 from graphssl.losses.nt_xent import NTXentLoss
 from graphssl.nn.mlp import Projector
 from graphssl.nn.pooling import pool_graph_embeddings

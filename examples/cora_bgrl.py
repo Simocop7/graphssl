@@ -28,13 +28,13 @@ from graphssl.training import DINOTrainer
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="BGRL on Cora")
-    p.add_argument("--encoder",  default="gin", choices=["gin", "gcn", "transformer"])
-    p.add_argument("--hidden",   type=int, default=128)
-    p.add_argument("--layers",   type=int, default=2)
-    p.add_argument("--epochs",   type=int, default=300)
-    p.add_argument("--lr",       type=float, default=5e-4)
+    p.add_argument("--encoder", default="gin", choices=["gin", "gcn", "transformer"])
+    p.add_argument("--hidden", type=int, default=128)
+    p.add_argument("--layers", type=int, default=2)
+    p.add_argument("--epochs", type=int, default=300)
+    p.add_argument("--lr", type=float, default=5e-4)
     p.add_argument("--data-dir", default="data/Cora")
-    p.add_argument("--device",   default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
 
 
@@ -46,7 +46,7 @@ def make_config(args: argparse.Namespace) -> dict:
             "hidden_dim": args.hidden,
             "num_layers": args.layers,
             "norm_type": "batch",
-            "pool": False,   # node-level task: no graph pooling
+            "pool": False,  # node-level task: no graph pooling
             "drop": 0.0,
         },
         "augment": [
@@ -70,8 +70,8 @@ def main() -> None:
     num_classes = dataset.num_classes
 
     train_idx = data.train_mask.nonzero(as_tuple=True)[0]
-    val_idx   = data.val_mask.nonzero(as_tuple=True)[0]
-    test_idx  = data.test_mask.nonzero(as_tuple=True)[0]
+    val_idx = data.val_mask.nonzero(as_tuple=True)[0]
+    test_idx = data.test_mask.nonzero(as_tuple=True)[0]
 
     print(f"Nodes: {data.num_nodes:,} | Edges: {data.num_edges:,} | Features: {data.num_features}")
     print(f"Train: {len(train_idx):,} | Val: {len(val_idx):,} | Test: {len(test_idx):,}\n")
@@ -83,7 +83,7 @@ def main() -> None:
         val_idx=val_idx,
         test_idx=test_idx,
     )
-    loader = dm.train_dataloader()   # full-batch: single Data object per "batch"
+    loader = dm.train_dataloader()  # full-batch: single Data object per "batch"
 
     model = build_model(make_config(args), in_channels=data.num_features)
     optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=1e-5)

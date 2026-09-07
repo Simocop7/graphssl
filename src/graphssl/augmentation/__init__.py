@@ -1,11 +1,11 @@
 from . import functional
-from .compose import compose, MultiView
+from .compose import MultiView, compose
 from .transforms import (
-    EdgeDrop,
     EdgeAdd,
-    Subgraph,
+    EdgeDrop,
     FeatMask,
     FeatNoise,
     FeatShuffle,
     NodeDrop,
+    Subgraph,
 )

@@ -5,17 +5,17 @@ from __future__ import annotations
 from typing import Dict, Iterator, List, Optional, Tuple
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 from torch_geometric.data import Data
 
-from graphssl.core.model import BaseSSLModel
-from graphssl.losses.dino import DINOLoss
-from graphssl.registry import ENCODERS, HEADS
 from graphssl.augmentation import compose
 from graphssl.config.schema import EncoderConfig, GraphDINOConfig, HeadConfig
+from graphssl.core.model import BaseSSLModel
+from graphssl.losses.dino import DINOLoss
+from graphssl.nn.pooling import pool_graph_embeddings
+from graphssl.registry import ENCODERS, HEADS
 from graphssl.utils import update_ema_params
 from graphssl.utils.schedulers import CosineEMAScheduler
-from graphssl.nn.pooling import pool_graph_embeddings
 
 
 class GraphDINO(BaseSSLModel):
@@ -132,14 +132,16 @@ class GraphDINO(BaseSSLModel):
         all_views = global_views + local_views
 
         student_logits = [
-            self._encode(self.student_enc, self.student_head, v, batch_size)
-            for v in all_views
+            self._encode(self.student_enc, self.student_head, v, batch_size) for v in all_views
         ]
 
         with torch.no_grad():
             teacher_logits = [
                 self._encode(
-                    self.teacher_enc, self.teacher_head, v, batch_size,
+                    self.teacher_enc,
+                    self.teacher_head,
+                    v,
+                    batch_size,
                     use_teacher_temp=True,
                 )
                 for v in global_views

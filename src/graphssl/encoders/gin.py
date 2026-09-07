@@ -1,11 +1,11 @@
 """GIN encoder: GINConv or GINEConv (edge features) stack with configurable norm."""
 
 from __future__ import annotations
-import torch
+
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-from torch.nn import Sequential, Linear, ReLU
+from torch.nn import Linear, ReLU, Sequential
 from torch_geometric.nn import GINConv, GINEConv
 
 from graphssl.registry import ENCODERS
@@ -129,10 +129,18 @@ class GINEncoder(nn.Module):
             else None
         )
 
-        self.layers = nn.ModuleList([
-            GINLayer(hidden_dim, mlp_ratio=mlp_ratio, drop=drop, norm_type=norm_type, edge_dim=edge_dim)
-            for _ in range(num_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                GINLayer(
+                    hidden_dim,
+                    mlp_ratio=mlp_ratio,
+                    drop=drop,
+                    norm_type=norm_type,
+                    edge_dim=edge_dim,
+                )
+                for _ in range(num_layers)
+            ]
+        )
         self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, out_dim)
         self.activation = ReLU()

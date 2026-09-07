@@ -53,8 +53,66 @@ full = ["faiss-cpu", "umap-learn", "matplotlib", "seaborn", "ogb", "pyyaml"]
 # Minimal extras needed to run the benchmark example scripts
 benchmark = ["ogb", "pyyaml"]
 # Development: testing, building and publishing
-dev = ["pytest", "pytest-cov", "build", "twine", "pyyaml"]
+dev = ["pytest", "pytest-cov", "build", "twine", "pyyaml", "ruff", "mypy", "pre-commit"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["graphssl*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests", "examples"]
+# Don't reformat Python snippets embedded in prose docs (CLAUDE.md, README.md) —
+# ruff format's Markdown support would touch documentation content unrelated
+# to this tooling change.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, UP: pyupgrade, B: bugbear, C4: comprehensions
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",  # line length is handled by the formatter, not worth hard-failing on
+    # Typing modernization (List -> list, Optional[X] -> X | None) touches nearly
+    # every file for a purely cosmetic gain; deferred to a dedicated follow-up
+    # instead of bundling it into an unrelated tooling change. See CONTRIBUTING.md.
+    "UP006", "UP007", "UP035", "UP037", "UP045",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["graphssl"]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py files intentionally re-export names for the public API surface.
+"**/__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.coverage.run]
+source = ["src/graphssl"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+# Incremental adoption: start lenient (no error on untyped defs across the whole
+# codebase yet), tightened module-by-module over time. See CONTRIBUTING.md.
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# Third-party deps without bundled type stubs.
+module = ["torch_geometric.*", "faiss.*", "sklearn.*", "umap.*", "ogb.*"]
+ignore_missing_imports = true

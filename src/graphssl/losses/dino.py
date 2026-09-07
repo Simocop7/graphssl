@@ -1,6 +1,6 @@
 """DINO multi-view cross-entropy loss."""
 
-from torch import nn, Tensor
+from torch import Tensor, nn
 
 
 class DINOLoss(nn.Module):

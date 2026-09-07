@@ -1,8 +1,10 @@
 """Built-in Trainer callbacks."""
 
 from __future__ import annotations
+
 import os
 from typing import Any, Dict
+
 import torch
 import torch.nn as nn
 
@@ -39,6 +41,7 @@ class EmbeddingLoggerCallback(Callback):
         if epoch % self.every_n_epochs != 0:
             return
         from graphssl.evaluation.visualization import extract_embeddings
+
         os.makedirs(self.save_dir, exist_ok=True)
         embeddings, labels = extract_embeddings(model, self.datamodule, device=self.device)
         path = os.path.join(self.save_dir, f"epoch_{epoch:04d}.pt")
@@ -80,8 +83,8 @@ class LinearEvalCallback(Callback):
     ) -> None:
         if epoch % self.every_n_epochs != 0:
             return
-        from graphssl.evaluation.visualization import extract_embeddings
         from graphssl.evaluation.linear_probe import LogRegEvaluator
+        from graphssl.evaluation.visualization import extract_embeddings
 
         embeddings, labels = extract_embeddings(model, self.datamodule, device=self.device)
         evaluator = LogRegEvaluator(multilabel=self.multilabel)
@@ -128,6 +131,7 @@ class VisualizationCallback(Callback):
         if epoch % self.every_n_epochs != 0:
             return
         from graphssl.evaluation.visualization import extract_embeddings, plot_embeddings
+
         os.makedirs(self.save_dir, exist_ok=True)
         embeddings, labels = extract_embeddings(model, self.datamodule, device=self.device)
         path = os.path.join(self.save_dir, f"epoch_{epoch:04d}.png")

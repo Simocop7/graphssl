@@ -27,14 +27,14 @@ from graphssl.training import DINOTrainer
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="BGRL on ogbn-arxiv")
-    p.add_argument("--encoder",  default="gin", choices=["gin", "gcn", "transformer"])
-    p.add_argument("--hidden",   type=int, default=256)
-    p.add_argument("--layers",   type=int, default=3)
-    p.add_argument("--epochs",   type=int, default=1000)
-    p.add_argument("--batch",    type=int, default=1024)
-    p.add_argument("--lr",       type=float, default=1e-3)
+    p.add_argument("--encoder", default="gin", choices=["gin", "gcn", "transformer"])
+    p.add_argument("--hidden", type=int, default=256)
+    p.add_argument("--layers", type=int, default=3)
+    p.add_argument("--epochs", type=int, default=1000)
+    p.add_argument("--batch", type=int, default=1024)
+    p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--data-dir", default="data/ogbn-arxiv")
-    p.add_argument("--device",   default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
 
 
@@ -46,7 +46,7 @@ def make_config(args: argparse.Namespace) -> dict:
             "hidden_dim": args.hidden,
             "num_layers": args.layers,
             "norm_type": "batch",
-            "pool": False,   # node-level task: no graph pooling
+            "pool": False,  # node-level task: no graph pooling
             "drop": 0.0,
         },
         "augment": [
@@ -67,19 +67,22 @@ def main() -> None:
 
     try:
         from ogb.nodeproppred import PygNodePropPredDataset
-    except ImportError:
-        raise ImportError("Install ogb: pip install ogb")
+    except ImportError as e:
+        raise ImportError("Install ogb: pip install ogb") from e
 
     dataset = PygNodePropPredDataset(name="ogbn-arxiv", root=args.data_dir)
     data = dataset[0]
     from torch_geometric.transforms import ToUndirected
-    data = ToUndirected()(data)   # convert directed citation edges to undirected
 
-    split_idx   = dataset.get_idx_split()
+    data = ToUndirected()(data)  # convert directed citation edges to undirected
+
+    split_idx = dataset.get_idx_split()
     num_classes = dataset.num_classes
 
     print(f"Nodes: {data.num_nodes:,} | Edges: {data.num_edges:,} | Features: {data.num_features}")
-    print(f"Train: {len(split_idx['train']):,} | Val: {len(split_idx['valid']):,} | Test: {len(split_idx['test']):,}\n")
+    print(
+        f"Train: {len(split_idx['train']):,} | Val: {len(split_idx['valid']):,} | Test: {len(split_idx['test']):,}\n"
+    )
 
     dm = DataModule(
         data=data,
@@ -109,7 +112,8 @@ def main() -> None:
 
     evaluator = LogRegEvaluator()
     results = evaluator.evaluate(
-        z_full, y_full,
+        z_full,
+        y_full,
         train_idx=split_idx["train"],
         val_idx=split_idx["valid"],
         test_idx=split_idx["test"],

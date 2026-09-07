@@ -22,20 +22,20 @@ from torch_geometric.datasets import ZINC
 
 from graphssl.config.load import build_model
 from graphssl.data import DataModule
-from graphssl.training import DINOTrainer
 from graphssl.evaluation import extract_embeddings
+from graphssl.training import DINOTrainer
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="BGRL on ZINC-12k")
-    p.add_argument("--encoder",  default="gin", choices=["gin", "transformer"])
-    p.add_argument("--hidden",   type=int, default=64)
-    p.add_argument("--layers",   type=int, default=4)
-    p.add_argument("--epochs",   type=int, default=100)
-    p.add_argument("--batch",    type=int, default=128)
-    p.add_argument("--lr",       type=float, default=1e-4)
+    p.add_argument("--encoder", default="gin", choices=["gin", "transformer"])
+    p.add_argument("--hidden", type=int, default=64)
+    p.add_argument("--layers", type=int, default=4)
+    p.add_argument("--epochs", type=int, default=100)
+    p.add_argument("--batch", type=int, default=128)
+    p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--data-dir", default="data/ZINC")
-    p.add_argument("--device",   default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
 
 
@@ -76,16 +76,18 @@ def linear_probe_mae(
     """Fit a linear regression head on frozen embeddings and return test MAE."""
     model.eval()
     z_train, y_train = extract_embeddings(model, train_dm, device=device)
-    z_test,  y_test  = extract_embeddings(model, test_dm,  device=device)
+    z_test, y_test = extract_embeddings(model, test_dm, device=device)
     y_train = y_train.float().view(-1, 1)
-    y_test  = y_test.float().view(-1, 1)
+    y_test = y_test.float().view(-1, 1)
 
     head = nn.Linear(hidden, 1).to(device)
-    opt  = AdamW(head.parameters(), lr=1e-3, weight_decay=1e-5)
+    opt = AdamW(head.parameters(), lr=1e-3, weight_decay=1e-5)
     for _ in range(epochs):
         head.train()
         loss = nn.functional.l1_loss(head(z_train), y_train)
-        opt.zero_grad(); loss.backward(); opt.step()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
 
     head.eval()
     with torch.no_grad():
@@ -98,10 +100,14 @@ def main() -> None:
     print(f"\nZINC-12k / BGRL | encoder={args.encoder} | {device}\n")
 
     train_ds = ZINC(root=args.data_dir, subset=True, split="train")
-    test_ds  = ZINC(root=args.data_dir, subset=True, split="test")
+    test_ds = ZINC(root=args.data_dir, subset=True, split="test")
 
-    train_dm = DataModule(dataset_obj=train_ds, is_graph_level=True, batch_size=args.batch, num_workers=4)
-    test_dm  = DataModule(dataset_obj=test_ds,  is_graph_level=True, batch_size=args.batch, num_workers=4)
+    train_dm = DataModule(
+        dataset_obj=train_ds, is_graph_level=True, batch_size=args.batch, num_workers=4
+    )
+    test_dm = DataModule(
+        dataset_obj=test_ds, is_graph_level=True, batch_size=args.batch, num_workers=4
+    )
     train_loader = train_dm.train_dataloader()
 
     # in_channels is ignored when node_emb_num_classes is set

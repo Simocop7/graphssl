@@ -19,6 +19,7 @@ def build_graph_loader(*, dataset, params):
         num_workers=params.get("num_workers", 0),
     )
 
+
 @LOADERS.register("neighbor")
 def build_neighbor_loader(*, dataset, params):
     # Samples neighbor subgraphs per node; useful for large single-graph datasets.
@@ -34,6 +35,7 @@ def build_neighbor_loader(*, dataset, params):
 # Config loading and model construction
 # ---------------------------------------------------------------------------
 
+
 def load_config(path: Union[str, Path]) -> dict:
     """Load a GraphSSL YAML config file and return it as a plain dict.
 
@@ -44,10 +46,8 @@ def load_config(path: Union[str, Path]) -> dict:
     """
     try:
         import yaml
-    except ImportError:
-        raise ImportError(
-            "PyYAML is required to load config files: pip install pyyaml"
-        )
+    except ImportError as e:
+        raise ImportError("PyYAML is required to load config files: pip install pyyaml") from e
     with open(path) as f:
         return yaml.safe_load(f)
 
@@ -82,9 +82,16 @@ def build_model(
     """
     # Deferred import to avoid circular dependency (models import from config).
     from graphssl.models import (
-        DGI, GraphCL, VICReg, BarlowTwins,
-        BGRL, AFGRL, GraphDINO, Supervised,
+        AFGRL,
+        BGRL,
+        DGI,
+        BarlowTwins,
+        GraphCL,
+        GraphDINO,
+        Supervised,
+        VICReg,
     )
+
     _MODELS = {
         "dgi": DGI,
         "graphcl": GraphCL,
@@ -98,9 +105,7 @@ def build_model(
 
     name = config.get("name", "").lower().replace("-", "_")
     if name not in _MODELS:
-        raise ValueError(
-            f"Unknown model '{name}'. Available: {sorted(_MODELS)}"
-        )
+        raise ValueError(f"Unknown model '{name}'. Available: {sorted(_MODELS)}")
     cls = _MODELS[name]
     if name == "supervised":
         if num_classes is None:

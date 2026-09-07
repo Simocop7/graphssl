@@ -39,12 +39,12 @@ class CombinedLoss(nn.Module):
         super().__init__()
         if not losses:
             raise ValueError("CombinedLoss requires at least one (loss, weight) pair.")
-        self._loss_modules = nn.ModuleList([l for l, _ in losses])
+        self._loss_modules = nn.ModuleList([m for m, _ in losses])
         self._weights = [w for _, w in losses]
 
     def forward(self, *args, **kwargs) -> Tensor:
         total: Tensor | float = 0.0
-        for module, weight in zip(self._loss_modules, self._weights):
+        for module, weight in zip(self._loss_modules, self._weights, strict=True):
             total = total + weight * module(*args, **kwargs)
         return total  # type: ignore[return-value]
 
@@ -54,12 +54,14 @@ class CombinedLoss(nn.Module):
         pairs: List[Tuple[nn.Module, float]] = []
         for entry in config_list:
             entry = dict(entry)
-            name   = entry.pop("name")
+            name = entry.pop("name")
             weight = float(entry.pop("weight", 1.0))
             pairs.append((LOSSES.build(name, **entry), weight))
         return cls(pairs)
 
     def __repr__(self) -> str:
-        parts = [f"  ({w:.3g}) {m.__class__.__name__}"
-                 for m, w in zip(self._loss_modules, self._weights)]
+        parts = [
+            f"  ({w:.3g}) {m.__class__.__name__}"
+            for m, w in zip(self._loss_modules, self._weights, strict=True)
+        ]
         return "CombinedLoss(\n" + "\n".join(parts) + "\n)"

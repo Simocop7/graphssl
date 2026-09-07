@@ -12,14 +12,15 @@ Usage (config-driven construction, uniform across all models)::
 
 from __future__ import annotations
 
-import torch.nn as nn
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+import torch.nn as nn
 
 # ---------------------------------------------------------------------------
 # Shared building blocks
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EncoderConfig:
@@ -29,16 +30,21 @@ class EncoderConfig:
     Fields that don't apply to a given encoder are silently ignored during
     build() via introspection — no extra per-encoder config class needed.
     """
+
     name: str
     hidden_dim: int
     num_layers: int
     mlp_ratio: float = 2.0
     drop: float = 0.2
     pool: bool = True
-    norm_type: str = "batch"                    # 'batch', 'layer', or 'none'
-    edge_dim: Optional[int] = None              # enables edge-feature-aware conv (GINEConv / TransformerConv)
-    node_emb_num_classes: Optional[int] = None  # categorical node features (e.g. ZINC: 28 atom types)
-    edge_emb_num_classes: Optional[int] = None  # categorical edge features (e.g. ZINC: 4 bond types)
+    norm_type: str = "batch"  # 'batch', 'layer', or 'none'
+    edge_dim: Optional[int] = None  # enables edge-feature-aware conv (GINEConv / TransformerConv)
+    node_emb_num_classes: Optional[int] = (
+        None  # categorical node features (e.g. ZINC: 28 atom types)
+    )
+    edge_emb_num_classes: Optional[int] = (
+        None  # categorical edge features (e.g. ZINC: 4 bond types)
+    )
 
     def __post_init__(self):
         if self.hidden_dim <= 0:
@@ -48,7 +54,9 @@ class EncoderConfig:
         if not (0.0 <= self.drop < 1.0):
             raise ValueError(f"drop must be in [0, 1), got {self.drop}")
         if self.norm_type not in ("batch", "layer", "none"):
-            raise ValueError(f"norm_type must be 'batch', 'layer', or 'none', got {self.norm_type!r}")
+            raise ValueError(
+                f"norm_type must be 'batch', 'layer', or 'none', got {self.norm_type!r}"
+            )
         if self.edge_dim is not None and self.edge_dim <= 0:
             raise ValueError(f"edge_dim must be > 0, got {self.edge_dim}")
         if self.node_emb_num_classes is not None and self.node_emb_num_classes <= 0:
@@ -69,7 +77,9 @@ class EncoderConfig:
         without breaking encoders that don't expose those parameters (e.g. GCN).
         """
         import inspect
+
         from graphssl.registry import ENCODERS
+
         cls = ENCODERS.get_builder(self.name)
         valid = set(inspect.signature(cls.__init__).parameters) - {"self"}
         kwargs = {k: v for k, v in vars(self).items() if k != "name" and k in valid}
@@ -79,6 +89,7 @@ class EncoderConfig:
 @dataclass
 class HeadConfig:
     """Validated configuration for the DINOHead projection head."""
+
     name: str
     proj_hidden: int
     bottleneck_dim: int
@@ -108,18 +119,16 @@ class HeadConfig:
             )
         if self.warmup_teacher_temp_epochs < 0:
             raise ValueError(
-                f"warmup_teacher_temp_epochs must be >= 0, "
-                f"got {self.warmup_teacher_temp_epochs}"
+                f"warmup_teacher_temp_epochs must be >= 0, got {self.warmup_teacher_temp_epochs}"
             )
         if not (0.0 <= self.center_momentum < 1.0):
-            raise ValueError(
-                f"center_momentum must be in [0, 1), got {self.center_momentum}"
-            )
+            raise ValueError(f"center_momentum must be in [0, 1), got {self.center_momentum}")
 
 
 @dataclass
 class AugmentConfig:
     """Name and keyword arguments for a single augmentation step."""
+
     name: str
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -138,9 +147,11 @@ class AugmentConfig:
 # Per-model configs
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DGIConfig:
     """Validated configuration for DGI."""
+
     encoder: EncoderConfig
     corruption: str = "shuffle_nodes"
     shuffle_ratio: float = 1.0
@@ -148,13 +159,10 @@ class DGIConfig:
     def __post_init__(self):
         if self.corruption not in ("shuffle_nodes", "shuffle_edges"):
             raise ValueError(
-                f"corruption must be 'shuffle_nodes' or 'shuffle_edges', "
-                f"got {self.corruption!r}"
+                f"corruption must be 'shuffle_nodes' or 'shuffle_edges', got {self.corruption!r}"
             )
         if not (0.0 < self.shuffle_ratio <= 1.0):
-            raise ValueError(
-                f"shuffle_ratio must be in (0, 1], got {self.shuffle_ratio}"
-            )
+            raise ValueError(f"shuffle_ratio must be in (0, 1], got {self.shuffle_ratio}")
 
     @classmethod
     def from_dict(cls, d: dict) -> DGIConfig:
@@ -168,6 +176,7 @@ class DGIConfig:
 @dataclass
 class GraphCLConfig:
     """Validated configuration for GraphCL."""
+
     encoder: EncoderConfig
     augment: List[AugmentConfig] = field(default_factory=list)
     proj_dim: int = 128
@@ -192,6 +201,7 @@ class GraphCLConfig:
 @dataclass
 class VICRegConfig:
     """Validated configuration for VICReg."""
+
     encoder: EncoderConfig
     augment: List[AugmentConfig] = field(default_factory=list)
     proj_dim: int = 256
@@ -225,6 +235,7 @@ class VICRegConfig:
 @dataclass
 class BarlowTwinsConfig:
     """Validated configuration for Barlow Twins."""
+
     encoder: EncoderConfig
     augment: List[AugmentConfig] = field(default_factory=list)
     proj_dim: int = 256
@@ -249,6 +260,7 @@ class BarlowTwinsConfig:
 @dataclass
 class BGRLConfig:
     """Validated configuration for BGRL."""
+
     encoder: EncoderConfig
     augment: List[AugmentConfig] = field(default_factory=list)
     pred_hidden: int = 512
@@ -285,6 +297,7 @@ class BGRLConfig:
 @dataclass
 class AFGRLConfig:
     """Validated configuration for AFGRL."""
+
     encoder: EncoderConfig
     pred_hidden: int = 512
     ema_tau: float = 0.99
@@ -335,6 +348,7 @@ class AFGRLConfig:
 @dataclass
 class SupervisedConfig:
     """Validated configuration for the supervised baseline."""
+
     encoder: EncoderConfig
 
     @classmethod
@@ -345,6 +359,7 @@ class SupervisedConfig:
 @dataclass
 class GraphDINOConfig:
     """Validated top-level configuration for GraphDINO."""
+
     encoder: EncoderConfig
     head: HeadConfig
     augment_teacher: List[AugmentConfig] = field(default_factory=list)
@@ -369,8 +384,7 @@ class GraphDINOConfig:
             raise ValueError(f"total_steps must be >= 0, got {self.total_steps}")
         if self.freeze_last_layer_epochs < 0:
             raise ValueError(
-                f"freeze_last_layer_epochs must be >= 0, "
-                f"got {self.freeze_last_layer_epochs}"
+                f"freeze_last_layer_epochs must be >= 0, got {self.freeze_last_layer_epochs}"
             )
         if self.n_global_views < 1:
             raise ValueError(f"n_global_views must be >= 1, got {self.n_global_views}")

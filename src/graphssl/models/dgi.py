@@ -11,8 +11,8 @@ from torch import Tensor
 from torch_geometric.data import Data
 from torch_geometric.nn import global_mean_pool
 
-from graphssl.core.model import BaseSSLModel
 from graphssl.config.schema import DGIConfig
+from graphssl.core.model import BaseSSLModel
 
 
 class DGI(BaseSSLModel):

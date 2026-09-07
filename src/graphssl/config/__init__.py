@@ -1,14 +1,14 @@
+from .load import LOADERS, build_model, load_config
 from .schema import (
-    EncoderConfig,
-    HeadConfig,
+    AFGRLConfig,
     AugmentConfig,
-    DGIConfig,
-    GraphCLConfig,
-    VICRegConfig,
     BarlowTwinsConfig,
     BGRLConfig,
-    AFGRLConfig,
-    SupervisedConfig,
+    DGIConfig,
+    EncoderConfig,
+    GraphCLConfig,
     GraphDINOConfig,
+    HeadConfig,
+    SupervisedConfig,
+    VICRegConfig,
 )
-from .load import LOADERS, load_config, build_model
