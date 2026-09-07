@@ -1,6 +1,10 @@
 # GraphSSL
 
 [![Tests](https://github.com/Simocop7/graphssl/actions/workflows/tests.yml/badge.svg)](https://github.com/Simocop7/graphssl/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/Simocop7/graphssl/branch/main/graph/badge.svg)](https://codecov.io/gh/Simocop7/graphssl)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
 
@@ -42,10 +46,12 @@ pip install "graphssl[full]"       # faiss-cpu + viz + benchmark
 git clone https://github.com/Simocop7/graphssl.git
 cd graphssl
 pip install -e ".[dev]"
+pre-commit install   # ruff on every commit
 pytest tests/ -v
 ```
 
 All 107 unit tests should pass. AFGRL tests are auto-skipped if `faiss-cpu` is not installed.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev workflow (lint, type checking, adding a model).
 
 ---
 
