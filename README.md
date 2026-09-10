@@ -41,6 +41,14 @@ pip install "graphssl[benchmark]"  # ogb + pyyaml (for ZINC / ogbn-arxiv)
 pip install "graphssl[full]"       # faiss-cpu + viz + benchmark
 ```
 
+> **No GPU?** `pip install graphssl` pulls in PyTorch's default CUDA-enabled build, which is
+> large (1-2GB+ with bundled NVIDIA runtime libraries). On a CPU-only machine, install the
+> CPU build first — it's a fraction of the size and installs much faster:
+> ```bash
+> pip install torch --index-url https://download.pytorch.org/whl/cpu
+> pip install graphssl
+> ```
+
 **Development:**
 ```bash
 git clone https://github.com/Simocop7/graphssl.git

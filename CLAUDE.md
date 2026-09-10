@@ -1,41 +1,41 @@
-GraphSSL è una libreria Python per Graph Machine Learning (GML).
-Implementa i principali algoritmi SSL su grafi in PyTorch puro,
-con un'architettura modulare e riutilizzabile.
+GraphSSL is a Python library for Graph Machine Learning (GML).
+It implements the main SSL algorithms on graphs in pure PyTorch,
+with a modular, reusable architecture.
 
 ---
 
-## STACK TECNOLOGICO
+## TECH STACK
 
 - Python 3.10+
 - PyTorch + PyTorch Geometric (PyG)
-- Solo PyTorch puro nel core: zero dipendenze da PyTorch Lightning, Hydra, OmegaConf
-- FAISS-cpu per il positive mining (AFGRL) — opzionale
-- UMAP + matplotlib + seaborn per visualizzazione — opzionale
-- ogb + pyyaml per benchmark e config YAML — opzionali
+- Pure PyTorch only in the core: zero dependencies on PyTorch Lightning, Hydra, OmegaConf
+- FAISS-cpu for positive mining (AFGRL) — optional
+- UMAP + matplotlib + seaborn for visualization — optional
+- ogb + pyyaml for benchmarks and YAML configs — optional
 
 ---
 
-## PUBLIC API — COSTRUZIONE UNIFORME
+## PUBLIC API — UNIFORM CONSTRUCTION
 
-**Tutti i modelli usano la stessa firma pubblica:**
+**Every model uses the same public signature:**
 ```python
 model = ModelClass(config: Dict, in_channels: int)
-# Supervised aggiunge: num_classes: int
+# Supervised adds: num_classes: int
 model = Supervised(config, in_channels, num_classes)
 ```
 
-Il `config` dict viene validato da un dataclass dedicato in `src/config/schema.py`.
-`EncoderConfig.build(in_channels)` istanzia l'encoder tramite il registry `ENCODERS`.
+The `config` dict is validated by a dedicated dataclass in `src/graphssl/config/schema.py`.
+`EncoderConfig.build(in_channels)` instantiates the encoder through the `ENCODERS` registry.
 
-**Factory da YAML:**
+**YAML factory:**
 ```python
 from graphssl.config.load import load_config, build_model
 cfg = load_config("configs/bgrl.yaml")
 model = build_model(cfg, in_channels=dataset.num_features)
 ```
 
-**Dataclass per modello:**
-| Modello      | Config dataclass    |
+**Per-model config dataclass:**
+| Model        | Config dataclass    |
 |--------------|---------------------|
 | DGI          | `DGIConfig`         |
 | GraphCL      | `GraphCLConfig`     |
@@ -46,167 +46,167 @@ model = build_model(cfg, in_channels=dataset.num_features)
 | Supervised   | `SupervisedConfig`  |
 | GraphDINO    | `GraphDINOConfig`   |
 
-Tutti in `src/graphssl/config/schema.py`.
+All defined in `src/graphssl/config/schema.py`.
 
 ---
 
-## ALGORITMI IMPLEMENTATI
+## IMPLEMENTED ALGORITHMS
 
-Tutti i modelli sono `nn.Module` puri con `forward()` e `compute_loss()`.
-Nessun accesso a trainer, logger, o datamodule dall'interno del modello.
+Every model is a pure `nn.Module` with `forward()` and `compute_loss()`.
+No access to the trainer, logger, or datamodule from inside a model.
 
 ### Supervised
 - Encoder + linear head `nn.Linear(hidden_dim, num_classes)`, CrossEntropyLoss
-- Supporto full-batch e mini-batch (crop a `[:batch_size]` per seed nodes)
-- `graph_level` derivato da `cfg.encoder.pool`
+- Supports full-batch and mini-batch (crop to `[:batch_size]` for seed nodes)
+- `graph_level` derived from `cfg.encoder.pool`
 
 ### DGI (Deep Graph Infomax)
-- Discrimina embedding reale vs corrotto tramite un discriminatore con matrice W learnable
-  (`nn.Parameter`, inizializzata con `xavier_uniform_`)
-- Corruzione: shuffle dei nodi (permutazione di x) o shuffle delle edge destinations
-- Summary globale `s = sigmoid(mean(h_pos))` per node-level, `global_mean_pool` per graph-level
+- Discriminates real vs. corrupted embeddings via a discriminator with a learnable matrix W
+  (`nn.Parameter`, initialized with `xavier_uniform_`)
+- Corruption: node shuffling (permutation of x) or edge-destination shuffling
+- Global summary `s = sigmoid(mean(h_pos))` for node-level, `global_mean_pool` for graph-level
 - Discriminator: `pos_logits = (h_pos * W@s).sum(-1)`
-- Loss: BCEWithLogitsLoss su [pos_logits, neg_logits] con label [1,1,...,0,0,...]
-- Iperparametri: `corruption="shuffle_nodes", shuffle_ratio=1.0`
+- Loss: BCEWithLogitsLoss over [pos_logits, neg_logits] with labels [1,1,...,0,0,...]
+- Hyperparameters: `corruption="shuffle_nodes", shuffle_ratio=1.0`
 
 ### GraphCL (Graph Contrastive Learning)
-- NT-Xent loss su 2 viste augmentate
-- Encoder + projector 2-layer `Projector(hidden_dim, hidden_dim, proj_dim)`
-- `protected_nodes` passato a `compose()` per i seed nodes in mini-batch node training
-- Iperparametri: `proj_dim=128, tau=0.5`
+- NT-Xent loss over 2 augmented views
+- Encoder + 2-layer projector `Projector(hidden_dim, hidden_dim, proj_dim)`
+- `protected_nodes` passed to `compose()` for seed nodes in mini-batch node training
+- Hyperparameters: `proj_dim=128, tau=0.5`
 
 ### BGRL (Bootstrapped Graph Representation Learning)
-- Teacher-student con EMA update sul target encoder
+- Teacher-student with an EMA update on the target encoder
 - Online encoder (student) + predictor MLP `Predictor(hidden_dim, pred_hidden, hidden_dim)`; target encoder (teacher, no grad)
 - Loss: `2 - cos(pred1, target2) - cos(pred2, target1)` — `CosineRegressionLoss(symmetric=True)`
-  - Chiamata corretta: `loss_fn(p1, t1, p2, t2)` → la loss internamente usa t2 con p1 e t1 con p2
-- EMA update del target encoder in `post_step()` via `update_ema_params()`
-- Momentum τ cosine-annealed da `ema_tau` a `ema_tau_end` su `total_steps` — `CosineEMAScheduler`.
-  Se `total_steps=0`, τ fisso.
-- Target encoder: `deepcopy(encoder)` + `reset_parameters()` — pesi intenzionalmente diversi
-  dall'online encoder (cruciale per la convergenza, App. B del paper BGRL)
-- Iperparametri: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, pred_hidden=512`
+  - Correct call: `loss_fn(p1, t1, p2, t2)` → internally the loss pairs t2 with p1 and t1 with p2
+- EMA update of the target encoder in `post_step()` via `update_ema_params()`
+- Momentum τ cosine-annealed from `ema_tau` to `ema_tau_end` over `total_steps` — `CosineEMAScheduler`.
+  If `total_steps=0`, τ is fixed.
+- Target encoder: `deepcopy(encoder)` + `reset_parameters()` — weights intentionally differ
+  from the online encoder (critical for convergence, Appendix B of the BGRL paper)
+- Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, pred_hidden=512`
 
 ### AFGRL (Augmentation-Free Graph Representation Learning)
-- Come BGRL ma senza augmentation strutturale: positive pairs minati da struttura del grafo
+- Like BGRL but without structural augmentation: positive pairs are mined from graph structure
 - Online encoder (student) + predictor MLP; target encoder (EMA, no grad)
-- **Differenza da BGRL**: target encoder inizia con stessi pesi dell'online (`deepcopy` senza reset)
-- **PositiveMiner** (`utils/positive_miner.py`): unione di due tipi di positivi per ogni nodo:
-  - Local: top-k vicini per cosine similarity CHE SONO ANCHE adiacenti nel grafo (kNN ∩ adj)
-  - Global: top-k vicini che condividono un cluster k-means in ALMENO UNA delle `num_kmeans` run
-- Loss graph-level: nessun miner; teacher-student semplice su embeddings poolati
-- EMA: identico a BGRL — `CosineEMAScheduler` in `post_step()`
-- Iperparametri: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, topk=5,
+- **Difference from BGRL**: the target encoder starts with the same weights as the online encoder (`deepcopy` without reset)
+- **PositiveMiner** (`utils/positive_miner.py`): union of two kinds of positives per node:
+  - Local: top-k cosine-similarity neighbors that are ALSO adjacent in the graph (kNN ∩ adj)
+  - Global: top-k neighbors sharing a k-means cluster in AT LEAST ONE of the `num_kmeans` runs
+- Graph-level loss: no miner; a simple teacher-student loss on pooled embeddings
+- EMA: identical to BGRL — `CosineEMAScheduler` in `post_step()`
+- Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, topk=5,
   num_centroids=50, num_kmeans=4, clus_num_iters=20, pred_hidden=512`
 
 ### GraphDINO
-- Adattamento di DINO (ViT) ai grafi
+- Adaptation of DINO (ViT) to graphs
 - Student encoder + student head; teacher encoder + teacher head (EMA, no grad)
-- `n_views` viste totali; le prime `n_global_views` vanno al teacher, tutte allo student
-- **DINOLoss**: cross-entropy su tutti i pari (teacher_i, student_j) con i ≠ j, mediata per numero di termini
-  - Student output: `log_softmax(logits / student_temp)` — calcolato in `DINOHead`
-  - Teacher output: `softmax((logits − center) / teacher_temp_eff)` — calcolato in `DINOHead`
-- **Teacher temperature warmup**: `teacher_temp_eff` cresce linearmente da `warmup_teacher_temp`
-  a `teacher_temp` in `warmup_teacher_temp_epochs` epoche. `DINOHead.set_epoch(epoch)` aggiorna il valore.
+- `n_views` total views; the first `n_global_views` go to the teacher, all views go to the student
+- **DINOLoss**: cross-entropy over every pair (teacher_i, student_j) with i ≠ j, averaged over the number of terms
+  - Student output: `log_softmax(logits / student_temp)` — computed inside `DINOHead`
+  - Teacher output: `softmax((logits − center) / teacher_temp_eff)` — computed inside `DINOHead`
+- **Teacher temperature warmup**: `teacher_temp_eff` grows linearly from `warmup_teacher_temp`
+  to `teacher_temp` over `warmup_teacher_temp_epochs` epochs. `DINOHead.set_epoch(epoch)` updates the value.
 - **Center update** (EMA): `center = c_mom * center + (1 − c_mom) * mean(teacher_out)`
-  Gestito da `DINOHead.update_center()`, chiamato da `post_step()`.
-- **EMA teacher**: momentum crescente cosine da `ema_tau_base` a `ema_tau` su `total_steps`.
-- **freeze_last_layer_epochs**: nelle prime N epoche i gradienti del layer prototipo
-  (`student_head.proto`) vengono azzerati dopo il backward — in `post_backward()`.
-- Iperparametri: `student_temp=0.1, teacher_temp=0.07, warmup_teacher_temp=0.04,
+  Handled by `DINOHead.update_center()`, called from `post_step()`.
+- **EMA teacher**: momentum grows on a cosine schedule from `ema_tau_base` to `ema_tau` over `total_steps`.
+- **freeze_last_layer_epochs**: during the first N epochs, gradients of the prototype layer
+  (`student_head.proto`) are zeroed out after backward — in `post_backward()`.
+- Hyperparameters: `student_temp=0.1, teacher_temp=0.07, warmup_teacher_temp=0.04,
   warmup_teacher_temp_epochs=30, ema_tau=0.996, freeze_last_layer_epochs=1,
   n_views=2, n_global_views=2`
 
 ### VICReg
-- Encoder + projector 3-layer `Projector(hidden_dim, hidden_dim*2, proj_dim)`
-- Loss tripla: invariance (MSE), variance (hinge su std), covariance (off-diagonal) — `VICRegLoss`
-- Iperparametri: `proj_dim=256, invariance=25.0, variance=25.0, covariance=1.0`
+- Encoder + 3-layer projector `Projector(hidden_dim, hidden_dim*2, proj_dim)`
+- Triple loss: invariance (MSE), variance (hinge on std), covariance (off-diagonal) — `VICRegLoss`
+- Hyperparameters: `proj_dim=256, invariance=25.0, variance=25.0, covariance=1.0`
 
 ### Barlow Twins
-- Encoder + projector 3-layer identico a VICReg
+- Encoder + 3-layer projector identical to VICReg's
 - Cross-correlation matrix `C = (z1_norm.T @ z2_norm) / N`
 - Loss: `sum((1−C_ii)²) + lambda * sum_{i≠j}(C_ij²)` — `BarlowTwinsLoss`
-- `lambda_param=None` → default `1/proj_dim` calcolato dentro `BarlowTwinsLoss`
-- Iperparametri: `proj_dim=256, lambda_param=None`
+- `lambda_param=None` → defaults to `1/proj_dim`, computed inside `BarlowTwinsLoss`
+- Hyperparameters: `proj_dim=256, lambda_param=None`
 
 ---
 
-## ENCODER (GNN BACKBONES)
+## ENCODERS (GNN BACKBONES)
 
-Tutti espongono `forward(x, edge_index, batch, edge_attr=None) → Tensor[N, out_dim]`.
-Tutti registrati tramite `@ENCODERS.register("nome")`.
+All expose `forward(x, edge_index, batch, edge_attr=None) → Tensor[N, out_dim]`.
+All are registered via `@ENCODERS.register("name")`.
 
-**`EncoderConfig` — parametri condivisi:**
-| Campo | Tipo | Default | Note |
+**`EncoderConfig` — shared parameters:**
+| Field | Type | Default | Notes |
 |---|---|---|---|
 | `name` | str | — | 'gin', 'gcn', 'transformer' |
-| `hidden_dim` | int | — | dimensione hidden/output |
-| `num_layers` | int | — | numero di layer |
-| `norm_type` | str | "batch" | 'batch', 'layer', 'none' — **API uniforme tra tutti gli encoder** |
-| `pool` | bool | True | global_add/mean_pool per graph-level |
+| `hidden_dim` | int | — | hidden/output dimension |
+| `num_layers` | int | — | number of layers |
+| `norm_type` | str | "batch" | 'batch', 'layer', 'none' — **uniform API across all encoders** |
+| `pool` | bool | True | global_add/mean_pool for graph-level tasks |
 | `drop` | float | 0.2 | dropout rate |
-| `mlp_ratio` | float | 2.0 | moltiplicatore hidden del MLP interno |
-| `edge_dim` | int\|None | None | abilita edge-feature-aware conv (GINEConv / TransformerConv) |
-| `node_emb_num_classes` | int\|None | None | sostituisce Linear con nn.Embedding per feature categoriche (ZINC: 28) |
-| `edge_emb_num_classes` | int\|None | None | nn.Embedding per edge features categoriche (ZINC: 4). Richiede `edge_dim`. |
+| `mlp_ratio` | float | 2.0 | hidden-dim multiplier for the internal MLP |
+| `edge_dim` | int\|None | None | enables edge-feature-aware convolution (GINEConv / TransformerConv) |
+| `node_emb_num_classes` | int\|None | None | replaces Linear with nn.Embedding for categorical features (ZINC: 28) |
+| `edge_emb_num_classes` | int\|None | None | nn.Embedding for categorical edge features (ZINC: 4). Requires `edge_dim`. |
 
-`EncoderConfig.build(in_channels)` usa `inspect.signature` per passare solo i kwargs
-accettati dall'encoder specifico — i campi non supportati vengono silenziosamente ignorati.
+`EncoderConfig.build(in_channels)` uses `inspect.signature` to forward only the kwargs
+accepted by the specific encoder — unsupported fields are silently ignored.
 
 ### GCN
-- 2 layer GCNConv con norm + PReLU
-- Weight standardization opzionale sul secondo layer
-- Backward compat: accetta ancora `batchnorm=True/False` e `layernorm=True/False`
-- `reset_parameters()` esposto (usato da BGRL per target encoder)
+- 2-layer GCNConv with norm + PReLU
+- Optional weight standardization on the second layer
+- Backward compatible: still accepts `batchnorm=True/False` and `layernorm=True/False`
+- `reset_parameters()` exposed (used by BGRL for the target encoder)
 
 ### GIN (Graph Isomorphism Network)
-- Stack di `GINLayer` con pre-norm + residual connections
+- Stack of `GINLayer` with pre-norm + residual connections
 - `GINLayer`: `norm(x)` → `GINConv(h)` → `ReLU` → `Dropout` → `x + h`
-- `edge_dim != None` → usa `GINEConv` (edge-feature aware)
-- Se `edge_dim` è impostato ma `edge_attr=None` a runtime, `GINEConv` riceve zeri (non crasha)
-- `node_emb_num_classes` → `nn.Embedding` invece di `Linear` per feature categoriche
-- `edge_emb_num_classes` → `nn.Embedding` per edge features categoriche prima di `GINEConv`
+- `edge_dim != None` → uses `GINEConv` (edge-feature aware)
+- If `edge_dim` is set but `edge_attr=None` at runtime, `GINEConv` receives zeros (doesn't crash)
+- `node_emb_num_classes` → `nn.Embedding` instead of `Linear` for categorical features
+- `edge_emb_num_classes` → `nn.Embedding` for categorical edge features before `GINEConv`
 
 ### Graph Transformer
-- Stack di `TransformerBlock` (TransformerConv da PyG), pre-norm + FFN + residual
-- Supporta `edge_attr` via `TransformerConv(edge_dim=...)`
-- Stessa API `norm_type` di GINEncoder (batch/layer/none)
-- `node_emb_num_classes` e `edge_emb_num_classes` supportati
+- Stack of `TransformerBlock` (PyG's TransformerConv), pre-norm + FFN + residual
+- Supports `edge_attr` via `TransformerConv(edge_dim=...)`
+- Same `norm_type` API as GINEncoder (batch/layer/none)
+- `node_emb_num_classes` and `edge_emb_num_classes` both supported
 
 ---
 
-## SISTEMA DI AUGMENTATION
+## AUGMENTATION SYSTEM
 
-Sistema componibile stile torchvision in `augmentation/`:
-- `functional.py`: funzioni pure `(data, *, protected_nodes=None, **kwargs) → Data`
-- `transforms.py`: classi callable che wrappano le funzioni
-- `compose.py`: `compose(data, aug_list, protected_nodes=None)` applica la lista in sequenza
+A torchvision-style composable system in `augmentation/`:
+- `functional.py`: pure functions `(data, *, protected_nodes=None, **kwargs) → Data`
+- `transforms.py`: callable classes wrapping those functions
+- `compose.py`: `compose(data, aug_list, protected_nodes=None)` applies the list in sequence
 
-Operazioni disponibili:
-| Nome | Parametri | Descrizione |
+Available operations:
+| Name | Parameters | Description |
 |---|---|---|
-| `edge_drop` | p | rimuove edge con probabilità p |
-| `edge_add` | p | aggiunge edge casuali (frazione p degli esistenti) |
-| `feat_mask` | p | maschera features dei nodi con probabilità p |
-| `feat_noise` | std | aggiunge rumore gaussiano alle features |
-| `feat_shuffle` | p | scambia features tra nodi casuali |
-| `subgraph` | num_hops | estrae k-hop subgraph da un seed casuale |
-| `node_drop` | p | rimuove nodi; i `protected_nodes` non vengono mai rimossi |
+| `edge_drop` | p | drops edges with probability p |
+| `edge_add` | p | adds random edges (fraction p of existing ones) |
+| `feat_mask` | p | masks node features with probability p |
+| `feat_noise` | std | adds Gaussian noise to features |
+| `feat_shuffle` | p | swaps features between random nodes |
+| `subgraph` | num_hops | extracts a k-hop subgraph from a random seed |
+| `node_drop` | p | drops nodes; `protected_nodes` are never removed |
 
-Due API:
-1. **Class-based** (stile torchvision): `EdgeDrop(p=0.2)(data)` — usata con `MultiView`
-2. **Registry-based** via `compose()`: `compose(data, [("edge_drop", {"p": 0.2})])` — supporta `protected_nodes`
+Two APIs:
+1. **Class-based** (torchvision style): `EdgeDrop(p=0.2)(data)` — used with `MultiView`
+2. **Registry-based** via `compose()`: `compose(data, [("edge_drop", {"p": 0.2})])` — supports `protected_nodes`
 
-`MultiView(transforms, n_views)` accetta entrambe le API e genera n viste indipendenti.
+`MultiView(transforms, n_views)` accepts either API and generates n independent views.
 
 ---
 
 ## LOSS FUNCTIONS
 
-Tutte le loss sono `nn.Module` standalone in `losses/`, testabili indipendentemente.
-Tutte registrate nel `LOSSES` registry tramite `@LOSSES.register("nome")`.
+All losses are standalone `nn.Module`s in `losses/`, independently testable.
+All are registered in the `LOSSES` registry via `@LOSSES.register("name")`.
 
-| Nome registry | Classe | Usata da |
+| Registry name | Class | Used by |
 |---|---|---|
 | `nt_xent` | `NTXentLoss` | GraphCL |
 | `vicreg` | `VICRegLoss` | VICReg |
@@ -214,7 +214,7 @@ Tutte registrate nel `LOSSES` registry tramite `@LOSSES.register("nome")`.
 | `cosine_regression` | `CosineRegressionLoss` | BGRL, AFGRL |
 | — | `DINOLoss` | GraphDINO |
 
-**Loss combinabili:**
+**Combinable losses:**
 ```python
 from graphssl.losses import CombinedLoss
 
@@ -224,7 +224,7 @@ fn = CombinedLoss.from_config([
 ])
 loss = fn(z1, z2)
 ```
-Oppure programmaticamente: `CombinedLoss([(NTXentLoss(tau=0.5), 0.7), (VICRegLoss(), 0.3)])`.
+Or programmatically: `CombinedLoss([(NTXentLoss(tau=0.5), 0.7), (VICRegLoss(), 0.3)])`.
 
 ---
 
@@ -233,87 +233,87 @@ Oppure programmaticamente: `CombinedLoss([(NTXentLoss(tau=0.5), 0.7), (VICRegLos
 ```python
 from graphssl.registry import ENCODERS, LOSSES, AUGMENTS, OBJECTIVES, DATASETS, LOADERS
 
-# Registrare un encoder custom:
+# Register a custom encoder:
 @ENCODERS.register("my_gat")
 class GATEncoder(nn.Module): ...
 
-# Istanziare dal registry:
+# Instantiate from the registry:
 enc = ENCODERS.build("my_gat", in_channels=32, hidden_dim=64)
 ```
 
-Registry disponibili:
-- `ENCODERS` — backbone GNN
+Available registries:
+- `ENCODERS` — GNN backbones
 - `HEADS` — projection/prediction heads
-- `AUGMENTS` — trasformazioni di augmentation
-- `LOSSES` — funzioni di loss
-- `LOADERS` — factory di DataLoader
-- `OBJECTIVES` — obiettivi SSL custom (placeholder per estensioni)
-- `DATASETS` — dataset builder custom (placeholder per estensioni)
+- `AUGMENTS` — augmentation transforms
+- `LOSSES` — loss functions
+- `LOADERS` — DataLoader factories
+- `OBJECTIVES` — custom SSL objectives (placeholder for extensions)
+- `DATASETS` — custom dataset builders (placeholder for extensions)
 
 ---
 
-## UTILITY CHIAVE
+## KEY UTILITIES
 
-### EMA dei parametri (`utils/ema.py`)
-`update_ema_params(student, teacher, tau)` — aggiorna parametri e buffer (es. BatchNorm running stats).
-I buffer vengono copiati direttamente (non mediati).
+### Parameter EMA (`utils/ema.py`)
+`update_ema_params(student, teacher, tau)` — updates parameters and buffers (e.g. BatchNorm running stats).
+Buffers are copied directly (not averaged).
 
 ### Schedulers (`utils/schedulers.py`)
-- `CosineDecayScheduler(max_val, min_val, total_steps, warmup_steps)` — decay cosine con warmup lineare
-- `CosineEMAScheduler(ema_base, ema_end, total_steps)` — momentum EMA crescente cosine (BGRL/DINO)
+- `CosineDecayScheduler(max_val, min_val, total_steps, warmup_steps)` — cosine decay with linear warmup
+- `CosineEMAScheduler(ema_base, ema_end, total_steps)` — increasing cosine EMA momentum (BGRL/DINO)
 
 ### Pooling (`nn/pooling.py`)
-`pool_graph_embeddings(node_embeddings, batch)` — `global_mean_pool` con fallback se `batch=None`.
+`pool_graph_embeddings(node_embeddings, batch)` — `global_mean_pool` with a fallback when `batch=None`.
 
 ### extract_embeddings (`evaluation/visualization.py`)
-Estrae embedding da un modello dato un datamodule. Gestisce:
-1. Graph-level: DataLoader standard
-2. Node full-batch: forward sull'intero grafo
-3. Node mini-batch: NeighborLoader con `global_to_local` mapping per ricostruire l'ordine
+Extracts embeddings from a model given a datamodule. Handles:
+1. Graph-level: standard DataLoader
+2. Node full-batch: a single forward pass over the whole graph
+3. Node mini-batch: NeighborLoader with a `global_to_local` mapping to reconstruct order
 
 ### LogRegEvaluator (`evaluation/linear_probe.py`)
-Evaluator lineare PyTorch puro. Per multilabel (es. ogbg-molpcba) usa BCE + average precision.
+Pure-PyTorch linear evaluator. For multilabel targets (e.g. ogbg-molpcba) uses BCE + average precision.
 
 ### DataModule (`data/datamodule.py`)
-Wrappa dataset PyG per due modalità:
-- Graph-level (`is_graph_level=True`): `DataLoader` su dataset di grafi
-- Node-level (`is_graph_level=False`): singolo `Data` object con mask + `neighbor_loader()` per large graphs
+Wraps a PyG dataset for two modes:
+- Graph-level (`is_graph_level=True`): `DataLoader` over a dataset of graphs
+- Node-level (`is_graph_level=False`): a single `Data` object with masks + `neighbor_loader()` for large graphs
 
 ---
 
-## TRAINER E CALLBACKS
+## TRAINER AND CALLBACKS
 
-`DINOTrainer` è generico: funziona con qualsiasi `BaseSSLModel`.
+`DINOTrainer` is generic: it works with any `BaseSSLModel`.
 
-**Loop per batch:**
+**Per-batch order:**
 ```
 compute_loss → backward → clip_grad_norm → post_backward → optimizer.step → post_step
 ```
-**Loop per epoca:**
+**Per-epoch order:**
 ```
 on_epoch_start → batches → on_epoch_end
 ```
 
-**Hook implementati per modello:**
-| Modello | `post_backward` | `post_step` | `on_epoch_start` | `on_epoch_end` |
+**Hooks implemented per model:**
+| Model | `post_backward` | `post_step` | `on_epoch_start` | `on_epoch_end` |
 |---|---|---|---|---|
 | BGRL | — | EMA teacher | — | — |
 | AFGRL | — | EMA teacher | — | — |
 | GraphDINO | freeze last layer | EMA + center update | teacher temp warmup | epoch counter |
 
-**Callbacks disponibili:**
-- `EmbeddingLoggerCallback` — salva embeddings ogni N epoche come `.pt`
-- `LinearEvalCallback` — linear probe periodica durante il training
-- `VisualizationCallback` — UMAP scatter plot (richiede `pip install umap-learn matplotlib`)
+**Available callbacks:**
+- `EmbeddingLoggerCallback` — saves embeddings every N epochs as `.pt`
+- `LinearEvalCallback` — periodic linear probe during training
+- `VisualizationCallback` — UMAP scatter plot (requires `pip install umap-learn matplotlib`)
 
 ---
 
-## BENCHMARK — Cora/CiteSeer/PubMed, ZINC E ogbn-arxiv
+## BENCHMARKS — Cora/CiteSeer/PubMed, ZINC AND ogbn-arxiv
 
 ### Cora / CiteSeer / PubMed (node-level, citation network, full-batch)
-- Script multi-seed: `examples/benchmark_planetoid.py --dataset {Cora,CiteSeer,PubMed} --seeds 10`
-- Script singolo/smoke test: `examples/cora_bgrl.py`, config: `configs/cora_bgrl.yaml`
-- BGRL, GIN-2L, `hidden_dim=256`, full-batch 300 step, split pubblico Planetoid, media±std su 10 seed:
+- Multi-seed script: `examples/benchmark_planetoid.py --dataset {Cora,CiteSeer,PubMed} --seeds 10`
+- Single-run/smoke-test script: `examples/cora_bgrl.py`, config: `configs/cora_bgrl.yaml`
+- BGRL, GIN-2L, `hidden_dim=256`, full-batch for 300 steps, public Planetoid split, mean±std over 10 seeds:
 
 | Dataset | Linear probe (test) | KNN k=5 (test) |
 |---|---|---|
@@ -321,166 +321,224 @@ on_epoch_start → batches → on_epoch_end
 | CiteSeer | 50.08 ± 1.58 | 43.07 ± 3.61 |
 | PubMed | 69.18 ± 2.32 | 66.59 ± 2.88 |
 
-- Config volutamente leggera/non tunata (nessuna hyperparameter search per dataset) — serve a validare che l'intera pipeline (augmentation → EMA → entrambe le evaluation head) funzioni end-to-end, non a competere con lo stato dell'arte. Confronto metodologico con i numeri originali di BGRL (Appendix C, Table 7) in `paper.tex`.
+- The config is deliberately lightweight/untuned (no per-dataset hyperparameter search) — its purpose is to validate that the whole pipeline (augmentation → EMA → both evaluation heads) works end-to-end, not to compete with the state of the art. See `paper.tex` for a methodological comparison against BGRL's original numbers (Appendix C, Table 7).
 
-### ZINC (graph-level, regressione molecolare)
+### ZINC (graph-level, molecular regression)
 ```yaml
 encoder:
   name: gin
-  node_emb_num_classes: 28  # 28 tipi di atomi
+  node_emb_num_classes: 28  # 28 atom types
   edge_dim: 64
-  edge_emb_num_classes: 4   # 4 tipi di legame
+  edge_emb_num_classes: 4   # 4 bond types
   pool: true
 ```
-- `in_channels` ignorato quando `node_emb_num_classes` è impostato
+- `in_channels` is ignored when `node_emb_num_classes` is set
 - Script: `examples/zinc_bgrl.py`, config: `configs/zinc_bgrl.yaml`
 
-### ogbn-arxiv (node-level, classificazione)
+### ogbn-arxiv (node-level, classification)
 ```yaml
 encoder:
   name: gin
   pool: false               # node-level: no pooling
   hidden_dim: 256
 ```
-- Feature continue 128-dim: nessun embedding categorico
-- Richiede `NeighborLoader` per training scalabile
+- Continuous 128-dim features: no categorical embeddings
+- Requires `NeighborLoader` for scalable training
 - Script: `examples/ogbn_arxiv_bgrl.py`, config: `configs/ogbn_arxiv_bgrl.yaml`
 
 ---
 
-## TEST
+## TESTS
 
 ```bash
 pytest tests/ -v
 ```
 
-| File | Modello | Note |
+| File | Model | Notes |
 |---|---|---|
-| `test_bgrl.py` | BGRL | teacher frozen, reset→pesi diversi, EMA scheduler, step counter |
+| `test_bgrl.py` | BGRL | teacher frozen, reset → different weights, EMA scheduler, step counter |
 | `test_dgi.py` | DGI | W learnable, shuffle_nodes/shuffle_edges |
 | `test_graphcl.py` | GraphCL | projector dim, NT-Xent ≥ 0 |
-| `test_vicreg.py` | VICReg | projector 3-layer, loss ≥ 0 |
-| `test_barlow_twins.py` | BarlowTwins | lambda default=1/proj_dim |
-| `test_afgrl.py` | AFGRL | **skip automatico se faiss non installato** |
+| `test_vicreg.py` | VICReg | 3-layer projector, loss ≥ 0 |
+| `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
+| `test_afgrl.py` | AFGRL | **auto-skipped if faiss isn't installed** |
 | `test_supervised.py` | Supervised | head dim, mini-batch crop |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, DINOTrainer hooks |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
-| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, label 2D stile OGB (`[N,1]`) equivalenti a 1D |
+| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D |
 
 ---
 
-## STRUTTURA
+## DEVELOPMENT TOOLING & CI
+
+### Linting & formatting (`ruff`)
+Config lives in `pyproject.toml` (`[tool.ruff]`): line-length 100, target py310, rule set
+E/F/W/I/UP/B/C4. Typing-modernization rules (`UP006`/`UP007`/`UP035`/`UP037`/`UP045` —
+`List`→`list`, `Optional[X]`→`X | None`, etc.) are deliberately excluded: the codebase
+intentionally keeps the pre-PEP 604/585 typing style for consistency (see "Implementation
+Notes" style below); modernizing it repo-wide is tracked as a separate, deliberate follow-up,
+never mixed into an unrelated change. `__init__.py` re-exports are exempt from `F401`
+(unused-import), since they exist specifically to re-export names for the public API surface.
+
+### Type checking (`mypy`)
+Configured in `pyproject.toml` (`[tool.mypy]`); runs in CI as an **informational,
+non-blocking** job (`continue-on-error: true`). Most current findings (~26) are false
+positives stemming from `nn.Module.__getattr__` being typed `Tensor | Module` — mypy cannot
+statically tell a submodule access from a tensor/parameter access unless the attribute is
+explicitly annotated. Being tightened module-by-module rather than fixed in one sweep; see
+`CONTRIBUTING.md`.
+
+### Test coverage
+`pytest-cov` measures coverage (`[tool.coverage.run]` / `[tool.coverage.report]` in
+`pyproject.toml`); CI uploads the report to Codecov from the Python-3.12 matrix leg. Current
+baseline is ~70%. Known gaps: `training/callbacks.py` (~27%) and `utils/schedulers.py`
+(~53%) are largely untested — treat behavior there as less battle-tested than the core
+model/loss code.
+
+### Pre-commit hooks
+`.pre-commit-config.yaml`: `ruff check --fix` + `ruff format`, plus standard hygiene hooks
+(trailing-whitespace, end-of-file-fixer, check-yaml/toml, check-merge-conflict,
+check-added-large-files). Enabled locally with `pre-commit install` after cloning.
+
+### CI (`.github/workflows/tests.yml`)
+Three jobs run on every push/PR to `main`:
+- `lint` — `ruff check .` + `ruff format --check .`
+- `typecheck` — `mypy src/graphssl`, non-blocking (see above)
+- `pytest` — full matrix (Python 3.10/3.11/3.12) with coverage, uploading to Codecov from
+  the 3.12 leg only
+
+### git-blame hygiene
+`.git-blame-ignore-revs` lists large, purely mechanical commits (e.g. the initial
+`ruff format` baseline) so `git blame` stays useful; GitHub's web UI picks it up
+automatically. Only add commits here that are behavior-preserving and mechanical — never one
+that also changes behavior.
+
+### Contributing
+The full dev workflow (setup, pre-PR checklist, code-style rationale, how to add a
+model/encoder/loss) lives in `CONTRIBUTING.md` — don't duplicate it here; update both if the
+workflow itself changes.
+
+---
+
+## STRUCTURE
 
 ```
 src/graphssl/
 ├── core/          ← ABC/Protocol: BaseModel, BaseSSLModel, BaseEncoder, BaseAugmentation, Callback, Registry
-├── config/        ← schema.py (dataclass validate), load.py (load_config, build_model)
+├── config/        ← schema.py (dataclass validation), load.py (load_config, build_model)
 ├── registry/      ← ENCODERS, HEADS, AUGMENTS, LOSSES, LOADERS, OBJECTIVES, DATASETS
-├── encoders/      ← GCN, GIN, Transformer (auto-registrati)
+├── encoders/      ← GCN, GIN, Transformer (auto-registered)
 ├── models/        ← DGI, GraphCL, BGRL, AFGRL, GraphDINO, VICReg, BarlowTwins, Supervised
 ├── losses/        ← nt_xent, dino, vicreg, barlow, regression, combined (CombinedLoss)
 ├── nn/            ← MLP, DINOHead, norm (weight_standardize), pooling
 ├── augmentation/  ← functional.py, transforms.py, compose.py
 ├── evaluation/    ← linear_probe, knn, visualization (extract_embeddings)
 ├── training/      ← trainer.py (DINOTrainer), callbacks.py
-├── data/          ← DataModule puro Python
+├── data/          ← pure-Python DataModule
 └── utils/         ← ema.py (update_ema_params), schedulers.py, positive_miner.py
 ```
 
 ---
 
-## PRINCIPI ARCHITETTURALI
+## ARCHITECTURAL PRINCIPLES
 
-1. **Config-driven uniform API**: tutti i modelli `__init__(config: Dict, in_channels: int)`.
-   Il config è validato da un dataclass in `schema.py`. L'encoder è sempre costruito da
-   `cfg.encoder.build(in_channels)` — nessun encoder costruito inline nei modelli.
+1. **Config-driven uniform API**: every model's `__init__(config: Dict, in_channels: int)`.
+   The config is validated by a dataclass in `schema.py`. The encoder is always built from
+   `cfg.encoder.build(in_channels)` — no encoder is ever built inline inside a model.
 
-2. **Loss come `nn.Module` standalone** in `losses/`, testabili indipendentemente e combinabili
+2. **Losses as standalone `nn.Module`s** in `losses/`, independently testable and combinable
    via `CombinedLoss`.
 
-3. **Registry pattern** per tutti i componenti estendibili: `@ENCODERS.register("nome")`.
+3. **Registry pattern** for every extensible component: `@ENCODERS.register("name")`.
 
-4. **Hook-driven trainer**: `post_backward()`, `post_step()`, `on_epoch_start/end()` invece di
-   subclassing del trainer.
+4. **Hook-driven trainer**: `post_backward()`, `post_step()`, `on_epoch_start/end()` instead
+   of subclassing the trainer.
 
-5. **Separazione a strati**: `core → encoders/models/nn/augmentation/losses → evaluation → training → data`.
-   Nessun modulo di livello superiore importa da uno inferiore.
+5. **Layered separation**: `core → encoders/models/nn/augmentation/losses → evaluation →
+   training → data`. No higher-level module imports from a lower one.
 
 ---
 
-## NOTE IMPLEMENTATIVE
+## IMPLEMENTATION NOTES
 
-### graph-level vs node-level
-`self.graph_level` è derivato da `cfg.encoder.pool` nel costruttore — mai passato come parametro
-separato. Nessun modello lo inferisce runtime dal batch.
+### graph-level vs. node-level
+`self.graph_level` is derived from `cfg.encoder.pool` in the constructor — never passed as a
+separate parameter. No model infers it at runtime from the batch.
 
 ### Mini-batch: protected nodes
-In mini-batch node training, `batch.batch_size` indica i seed nodes.
-La loss va calcolata solo su `z[:batch.batch_size]`.
-`compose()` accetta `protected_nodes=torch.arange(batch.batch_size)` e lo propaga a ogni augment;
-`node_drop` usa questo parametro per non rimuovere mai i seed nodes.
+In mini-batch node training, `batch.batch_size` gives the seed-node count.
+The loss must be computed only on `z[:batch.batch_size]`.
+`compose()` accepts `protected_nodes=torch.arange(batch.batch_size)` and propagates it to
+every augmentation; `node_drop` uses this parameter to never remove seed nodes.
 
-### BGRL vs AFGRL: inizializzazione del target encoder
-- **BGRL**: `deepcopy(encoder)` + `reset_parameters()` — pesi DIVERSI da online (cruciale, App. B paper)
-- **AFGRL**: `deepcopy(encoder)` senza reset — pesi IDENTICI a online all'inizio
+### BGRL vs. AFGRL: target-encoder initialization
+- **BGRL**: `deepcopy(encoder)` + `reset_parameters()` — weights DIFFER from online (critical, paper Appendix B)
+- **AFGRL**: `deepcopy(encoder)` without reset — weights are IDENTICAL to online at init
 
-### GraphDINO: ordine operazioni
+### GraphDINO: operation order
 ```
 forward → loss → backward → clip_grad → post_backward (freeze last layer)
 → optimizer.step → post_step (EMA teacher + center update)
 ```
 
-### GINLayer: edge_attr=None con edge_dim impostato
-Se `edge_dim` è impostato (usa `GINEConv`) ma `edge_attr=None` a runtime, il layer costruisce
-un tensore di zeri della forma corretta per non crashare. Questo permette di usare lo stesso
-encoder con e senza edge features durante il training.
+### GINLayer: edge_attr=None with edge_dim set
+If `edge_dim` is set (so `GINEConv` is used) but `edge_attr=None` at runtime, the layer builds
+a correctly-shaped zero tensor instead of crashing. This lets the same encoder be used with
+and without edge features during training.
 
 ### LogRegEvaluator: multilabel
-Per ogbg-molpcba le label sono multilabel float `[N, 128]` con NaN.
-Usa average precision score invece di accuracy.
+For ogbg-molpcba, labels are multilabel floats `[N, 128]` with NaNs.
+Uses average precision score instead of accuracy.
 
 ### extract_embeddings: global_to_local mapping
-In mini-batch, i batch del NeighborLoader arrivano in ordine diverso dai node_ids originali.
-Si usa una mappa `global_to_local[node_id] = posizione in z_cpu` per ricostruire l'ordine.
+In mini-batch mode, NeighborLoader batches arrive in a different order than the original
+node ids. A map `global_to_local[node_id] = position in z_cpu` is used to reconstruct order.
 
 ---
 
-## DISTRIBUZIONE
+## DISTRIBUTION
 
 ```toml
 # pyproject.toml optional-dependencies
 viz       = ["umap-learn", "matplotlib", "seaborn"]
 benchmark = ["ogb", "pyyaml"]
 full      = ["faiss-cpu", "umap-learn", "matplotlib", "seaborn", "ogb", "pyyaml"]
-dev       = ["pytest", "pytest-cov", "build", "twine", "pyyaml"]
+dev       = ["pytest", "pytest-cov", "build", "twine", "pyyaml", "ruff", "mypy", "pre-commit"]
 ```
 
-**Release:** ogni tag `v*.*.*` su GitHub attiva automaticamente il workflow
-`.github/workflows/publish.yml` che builda e pubblica su PyPI via Trusted Publishing.
+**Published on PyPI**: `graphssl` v0.1.0 is live (`pip install graphssl`), released 2026-09-07.
 
-## COME AGGIUNGERE UN NUOVO MODELLO (istruzioni per Claude)
+**Release process:** every `v*.*.*` tag on GitHub automatically triggers the
+`.github/workflows/publish.yml` workflow, which builds and publishes to PyPI via Trusted
+Publishing. Note: Trusted Publishing requires a "pending publisher" to be registered on
+pypi.org *before* a brand-new project's very first release — this isn't automatic. The
+v0.1.0 tag's first publish attempt failed for exactly this reason; re-running the job after
+registering the pending publisher on pypi.org succeeded without needing a new tag.
 
-### 1. Leggi prima, scrivi poi
-Leggi entrambe le versioni (riferimento e GraphSSL) e lista le differenze prima di
-modificare qualsiasi file.
+## HOW TO ADD A NEW MODEL (instructions for Claude)
 
-### 2. Usa la firma pubblica uniforme
-Tutti i modelli usano `__init__(config: Dict, in_channels: int)`, senza eccezioni.
+### 1. Read first, write later
+Read both versions (the reference paper and GraphSSL) and list the differences before
+modifying any file.
 
-Per ogni nuovo modello:
-1. Crea `ModelNameConfig` in `src/config/schema.py` con `__post_init__` validation
-   e `from_dict(cls, d: dict)` classmethod.
-2. Il costruttore fa solo: `cfg = ModelNameConfig.from_dict(config)` e usa `cfg.*`.
-3. Usa `cfg.encoder.build(in_channels)` — non costruire l'encoder inline.
-4. `graph_level` si deriva sempre da `cfg.encoder.pool`.
+### 2. Use the uniform public signature
+Every model uses `__init__(config: Dict, in_channels: int)`, no exceptions.
 
-### 3. Checklist dipendenze
-Per ogni modello modificato, verifica:
-- `losses/` — la loss è testabile standalone?
-- `utils/ema.py`, `utils/schedulers.py` — EMA e scheduler usati correttamente in `post_step()`?
-- `augmentation/` — `compose()` passa `protected_nodes`?
-- `config/schema.py` — aggiunto dataclass config?
-- `models/__init__.py`, `src/graphssl/__init__.py` — export aggiornati?
+For each new model:
+1. Create `ModelNameConfig` in `src/graphssl/config/schema.py` with `__post_init__`
+   validation and a `from_dict(cls, d: dict)` classmethod.
+2. The constructor should only do: `cfg = ModelNameConfig.from_dict(config)` and then use `cfg.*`.
+3. Use `cfg.encoder.build(in_channels)` — never build the encoder inline.
+4. `graph_level` always derives from `cfg.encoder.pool`.
 
-### 4. Aggiorna questo file
-Descrivi con precisione: config dataclass, formula della loss, dettagli EMA, iperparametri di default.
+### 3. Dependency checklist
+For every modified model, check:
+- `losses/` — is the loss testable standalone?
+- `utils/ema.py`, `utils/schedulers.py` — are EMA and the scheduler used correctly in `post_step()`?
+- `augmentation/` — does `compose()` pass `protected_nodes`?
+- `config/schema.py` — was a config dataclass added?
+- `models/__init__.py`, `src/graphssl/__init__.py` — are exports updated?
+
+### 4. Update this file (and CONTRIBUTING.md if the dev workflow itself changed)
+Describe precisely: the config dataclass, the loss formula, EMA details, default
+hyperparameters.
