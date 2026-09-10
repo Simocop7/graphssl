@@ -98,7 +98,8 @@ class GCNEncoder(nn.Module):
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
         for norm in (self.norm1, self.norm2):
-            if hasattr(norm, "reset_parameters"):
-                norm.reset_parameters()
+            reset_fn = getattr(norm, "reset_parameters", None)
+            if callable(reset_fn):
+                reset_fn()
         self.act1 = nn.PReLU().to(next(self.parameters()).device)
         self.act2 = nn.PReLU().to(next(self.parameters()).device)

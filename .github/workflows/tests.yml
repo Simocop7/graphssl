@@ -27,9 +27,6 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    # Informational only while type coverage is adopted module-by-module —
-    # see CONTRIBUTING.md. Flip to blocking once the codebase is clean.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +42,12 @@ jobs:
           pip install -e ".[dev]"
 
       - name: mypy
-        run: mypy src/graphssl
+        # src/graphssl is fully clean (0 errors) — this now blocks the build on
+        # regressions instead of being informational. See CONTRIBUTING.md.
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          mypy src/graphssl 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   pytest:
     runs-on: ubuntu-latest

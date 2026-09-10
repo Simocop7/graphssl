@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import torch.nn as nn
 from torch import Tensor
 from torch_geometric.nn import TransformerConv
@@ -82,11 +84,13 @@ class TransformerBlock(nn.Module):
     def reset_parameters(self) -> None:
         self.attn.reset_parameters()
         for m in self.ffn.modules():
-            if hasattr(m, "reset_parameters"):
-                m.reset_parameters()
+            reset_fn = getattr(m, "reset_parameters", None)
+            if callable(reset_fn):
+                reset_fn()
         for norm in (self.norm1, self.norm2):
-            if hasattr(norm, "reset_parameters"):
-                norm.reset_parameters()
+            reset_fn = getattr(norm, "reset_parameters", None)
+            if callable(reset_fn):
+                reset_fn()
 
 
 @ENCODERS.register("transformer")
@@ -149,11 +153,10 @@ class TransformerEncoder(nn.Module):
             self.input_proj = nn.Linear(in_channels, hidden_dim)
 
         # --- Edge input projection ---
-        self.edge_proj: nn.Module | None = (
-            nn.Embedding(edge_emb_num_classes, edge_dim)
-            if edge_emb_num_classes is not None
-            else None
-        )
+        self.edge_proj: nn.Module | None = None
+        if edge_emb_num_classes is not None:
+            assert edge_dim is not None  # validated above: edge_emb_num_classes requires edge_dim
+            self.edge_proj = nn.Embedding(edge_emb_num_classes, edge_dim)
 
         self.blocks = nn.ModuleList(
             [
@@ -196,11 +199,16 @@ class TransformerEncoder(nn.Module):
         return x
 
     def reset_parameters(self) -> None:
-        if hasattr(self.input_proj, "reset_parameters"):
-            self.input_proj.reset_parameters()
-        if self.edge_proj is not None and hasattr(self.edge_proj, "reset_parameters"):
-            self.edge_proj.reset_parameters()
+        input_reset = getattr(self.input_proj, "reset_parameters", None)
+        if callable(input_reset):
+            input_reset()
+        edge_reset = getattr(self.edge_proj, "reset_parameters", None)
+        if callable(edge_reset):
+            edge_reset()
         for block in self.blocks:
-            block.reset_parameters()
-        if hasattr(self.norm, "reset_parameters"):
-            self.norm.reset_parameters()
+            # self.blocks is a plain nn.ModuleList (yields Module on iteration per its
+            # stub), but every element is actually a TransformerBlock, which defines this.
+            cast(TransformerBlock, block).reset_parameters()
+        norm_reset = getattr(self.norm, "reset_parameters", None)
+        if callable(norm_reset):
+            norm_reset()

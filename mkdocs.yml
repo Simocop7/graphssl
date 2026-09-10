@@ -1,0 +1,93 @@
+site_name: GraphSSL
+site_description: A modular Python library for Self-Supervised Learning on graphs, built on PyTorch and PyTorch Geometric.
+site_url: https://simocop7.github.io/graphssl/
+repo_url: https://github.com/Simocop7/graphssl
+repo_name: Simocop7/graphssl
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - content.tabs.link
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            docstring_style: google
+            merge_init_into_class: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      check_paths: true
+      base_path: ["."]
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Models:
+      - Overview: models/index.md
+      - Supervised (baseline): models/supervised.md
+      - DGI: models/dgi.md
+      - GraphCL: models/graphcl.md
+      - BGRL: models/bgrl.md
+      - AFGRL: models/afgrl.md
+      - VICReg: models/vicreg.md
+      - Barlow Twins: models/barlow-twins.md
+      - GraphDINO: models/graphdino.md
+  - Encoders: encoders.md
+  - Augmentation: augmentation.md
+  - Loss Functions: losses.md
+  - Architecture: architecture.md
+  - Benchmarks: benchmarks.md
+  - API Reference:
+      - Models: api/models.md
+      - Encoders: api/encoders.md
+      - Losses: api/losses.md
+      - Config: api/config.md
+      - Evaluation: api/evaluation.md
+      - Training: api/training.md
+  - Contributing: contributing.md

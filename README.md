@@ -1,6 +1,7 @@
 # GraphSSL
 
 [![Tests](https://github.com/Simocop7/graphssl/actions/workflows/tests.yml/badge.svg)](https://github.com/Simocop7/graphssl/actions/workflows/tests.yml)
+[![Docs](https://github.com/Simocop7/graphssl/actions/workflows/docs.yml/badge.svg)](https://simocop7.github.io/graphssl/)
 [![codecov](https://codecov.io/gh/Simocop7/graphssl/branch/main/graph/badge.svg)](https://codecov.io/gh/Simocop7/graphssl)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](pyproject.toml)
@@ -60,6 +61,12 @@ pytest tests/ -v
 
 All 107 unit tests should pass. AFGRL tests are auto-skipped if `faiss-cpu` is not installed.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev workflow (lint, type checking, adding a model).
+
+**Full documentation:** [simocop7.github.io/graphssl](https://simocop7.github.io/graphssl/) — per-model pages, architecture, and an auto-generated API reference. Build it locally with:
+```bash
+pip install -e ".[docs]"
+mkdocs serve   # http://127.0.0.1:8000
+```
 
 ---
 

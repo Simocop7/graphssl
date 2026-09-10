@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple, cast
 
 import torch
 from torch import Tensor, nn
@@ -12,6 +12,7 @@ from graphssl.augmentation import compose
 from graphssl.config.schema import EncoderConfig, GraphDINOConfig, HeadConfig
 from graphssl.core.model import BaseSSLModel
 from graphssl.losses.dino import DINOLoss
+from graphssl.nn.dino_head import DINOHead
 from graphssl.nn.pooling import pool_graph_embeddings
 from graphssl.registry import ENCODERS, HEADS
 from graphssl.utils import update_ema_params
@@ -30,12 +31,17 @@ class GraphDINO(BaseSSLModel):
         cfg = GraphDINOConfig.from_dict(config)
 
         self.student_enc = self._build_encoder(cfg.encoder, in_channels)
-        self.student_head = self._build_head(cfg.head, cfg.encoder.hidden_dim)
+        # _build_head() returns nn.Module (it goes through the HEADS registry, which is
+        # deliberately generic — see registry pattern). GraphDINO itself only ever
+        # requests the "dino" head, so this cast documents a real, narrower invariant
+        # rather than papering over one; it's what unlocks DINOHead-specific access
+        # below (.center, .set_epoch(), .update_center(), .cancel_last_layer_gradients()).
+        self.student_head = cast(DINOHead, self._build_head(cfg.head, cfg.encoder.hidden_dim))
 
         # Build fresh instances rather than deepcopy: weight_norm creates non-leaf
         # tensors that break copy.deepcopy.
         self.teacher_enc = self._build_encoder(cfg.encoder, in_channels)
-        self.teacher_head = self._build_head(cfg.head, cfg.encoder.hidden_dim)
+        self.teacher_head = cast(DINOHead, self._build_head(cfg.head, cfg.encoder.hidden_dim))
         self.teacher_enc.load_state_dict(self.student_enc.state_dict())
         self.teacher_head.load_state_dict(self.student_head.state_dict())
         for p in self.teacher_enc.parameters():

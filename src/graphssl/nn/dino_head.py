@@ -61,6 +61,7 @@ class DINOHead(nn.Module):
         proto_linear = Linear(bottleneck_dim, n_prototypes, bias=False)
         self.proto = nn.utils.parametrizations.weight_norm(proto_linear, dim=0)
 
+        self.center: torch.Tensor
         self.register_buffer("center", torch.zeros(1, n_prototypes))
 
     def set_epoch(self, epoch: int) -> None:

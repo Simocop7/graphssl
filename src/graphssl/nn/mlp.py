@@ -40,8 +40,11 @@ class MLP(nn.Module):
 
     def reset_parameters(self) -> None:
         for m in self.modules():
-            if m is not self and hasattr(m, "reset_parameters"):
-                m.reset_parameters()
+            if m is self:
+                continue
+            reset_fn = getattr(m, "reset_parameters", None)
+            if callable(reset_fn):
+                reset_fn()
 
 
 class Projector(MLP):

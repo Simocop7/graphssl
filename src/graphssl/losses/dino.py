@@ -26,7 +26,7 @@ class DINOLoss(nn.Module):
         student_chunks = student_out.chunk(n_views)
         teacher_chunks = teacher_out.chunk(n_global_views)
 
-        total_loss = 0.0
+        total_loss: Tensor | float = 0.0
         n_terms = 0
         for iq, q in enumerate(teacher_chunks):
             for iv, s in enumerate(student_chunks):
@@ -35,4 +35,4 @@ class DINOLoss(nn.Module):
                 total_loss += (-q * s).sum(dim=-1).mean()
                 n_terms += 1
 
-        return total_loss / max(n_terms, 1)
+        return total_loss / max(n_terms, 1)  # type: ignore[return-value]

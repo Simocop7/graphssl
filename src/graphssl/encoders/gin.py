@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
@@ -58,8 +60,9 @@ class GINLayer(nn.Module):
 
     def reset_parameters(self) -> None:
         self.conv.reset_parameters()
-        if hasattr(self.norm, "reset_parameters"):
-            self.norm.reset_parameters()
+        reset_fn = getattr(self.norm, "reset_parameters", None)
+        if callable(reset_fn):
+            reset_fn()
 
 
 @ENCODERS.register("gin")
@@ -123,11 +126,10 @@ class GINEncoder(nn.Module):
         # Categorical (e.g. ZINC bond types 0-3) → nn.Embedding → edge_dim vectors
         # Continuous edge features               → passed directly (user must ensure dim matches)
         # No edge features                        → None
-        self.edge_proj: nn.Module | None = (
-            nn.Embedding(edge_emb_num_classes, edge_dim)
-            if edge_emb_num_classes is not None
-            else None
-        )
+        self.edge_proj: nn.Module | None = None
+        if edge_emb_num_classes is not None:
+            assert edge_dim is not None  # validated above: edge_emb_num_classes requires edge_dim
+            self.edge_proj = nn.Embedding(edge_emb_num_classes, edge_dim)
 
         self.layers = nn.ModuleList(
             [
@@ -171,11 +173,15 @@ class GINEncoder(nn.Module):
         return x
 
     def reset_parameters(self) -> None:
-        if hasattr(self.input_proj, "reset_parameters"):
-            self.input_proj.reset_parameters()
-        if self.edge_proj is not None and hasattr(self.edge_proj, "reset_parameters"):
-            self.edge_proj.reset_parameters()
+        input_reset = getattr(self.input_proj, "reset_parameters", None)
+        if callable(input_reset):
+            input_reset()
+        edge_reset = getattr(self.edge_proj, "reset_parameters", None)
+        if callable(edge_reset):
+            edge_reset()
         for layer in self.layers:
-            layer.reset_parameters()
+            # self.layers is a plain nn.ModuleList (yields Module on iteration per its
+            # stub), but every element is actually a GINLayer, which does define this.
+            cast(GINLayer, layer).reset_parameters()
         self.lin1.reset_parameters()
         self.lin2.reset_parameters()

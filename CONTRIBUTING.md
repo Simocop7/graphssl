@@ -19,7 +19,7 @@ pre-commit install   # runs ruff on every commit
 pytest tests/ -v          # 107 passed, 1 skipped (AFGRL skips without faiss-cpu)
 ruff check .               # lint
 ruff format --check .      # formatting
-mypy src/graphssl          # informational for now, see below — don't block on it
+mypy src/graphssl          # must stay at 0 errors — CI blocks on this, see below
 ```
 
 `pre-commit install` runs `ruff check --fix` and `ruff format` automatically on
@@ -43,15 +43,31 @@ mypy src/graphssl          # informational for now, see below — don't block on
 
 ## Type checking status
 
-mypy runs in CI as an **informational, non-blocking** job
-(`continue-on-error: true` in `.github/workflows/tests.yml`). Most current
-findings are false positives from `nn.Module.__getattr__` being typed
-`Tensor | Module` — mypy can't statically tell a submodule access from a
-tensor/parameter access unless the attribute is explicitly annotated. Rather
-than blanket-suppressing or annotating everything in one pass, we're tightening
-this module-by-module: if you touch a module and want to fix its mypy findings
-along the way (explicit `self.foo: nn.Module = ...` annotations), that's a
-welcome, easy-to-review addition to a PR. Don't let it block unrelated work.
+`src/graphssl` is fully clean under mypy (0 errors) and CI **blocks on regressions**
+(`mypy src/graphssl` in `.github/workflows/tests.yml`, no `continue-on-error` / swallowed
+exit code). Keep it that way — a new PR that introduces a mypy error should fix it, not
+suppress it.
+
+Most findings we hit while getting to zero were false positives from
+`nn.Module.__getattr__` being typed `Tensor | Module` — mypy can't statically tell a
+submodule/buffer access from a tensor/parameter access unless the attribute is explicitly
+annotated. The fix is almost always one of:
+
+- An explicit attribute annotation at first assignment (`self.norm: nn.Module = ...`), or a
+  bare declaration before `register_buffer` (`self.center: Tensor` then
+  `self.register_buffer("center", ...)`).
+- `getattr(obj, "reset_parameters", None)` + `callable(...)` instead of
+  `hasattr(...)` + direct call, when the attribute genuinely isn't on every possible type of
+  `obj` (three-arg `getattr` types as `Any`, which sidesteps the ambiguity; `hasattr` doesn't
+  narrow the type for mypy the way an `if` on a real type would).
+- `cast(ConcreteType, x)` when `x` comes from something structurally generic (a registry
+  `build()` call, `nn.ModuleList` iteration) but the surrounding code has stronger
+  information than the container's declared type carries — e.g. `GraphDINO` always builds a
+  `"dino"` head, so `cast(DINOHead, self._build_head(...))` is a real invariant, not a
+  workaround.
+
+See `src/graphssl/nn/mlp.py`, `encoders/gin.py`, `encoders/transformer.py`, and
+`models/graphdino.py` for worked examples of each.
 
 ## Adding a new model
 

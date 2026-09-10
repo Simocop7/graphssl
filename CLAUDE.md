@@ -381,12 +381,14 @@ never mixed into an unrelated change. `__init__.py` re-exports are exempt from `
 (unused-import), since they exist specifically to re-export names for the public API surface.
 
 ### Type checking (`mypy`)
-Configured in `pyproject.toml` (`[tool.mypy]`); runs in CI as an **informational,
-non-blocking** job (`continue-on-error: true`). Most current findings (~26) are false
-positives stemming from `nn.Module.__getattr__` being typed `Tensor | Module` — mypy cannot
-statically tell a submodule access from a tensor/parameter access unless the attribute is
-explicitly annotated. Being tightened module-by-module rather than fixed in one sweep; see
-`CONTRIBUTING.md`.
+Configured in `pyproject.toml` (`[tool.mypy]`). `src/graphssl` is fully clean (0 errors) and
+CI **blocks on regressions** — no `continue-on-error`, no swallowed exit code. Getting there
+mostly meant resolving `nn.Module.__getattr__` being typed `Tensor | Module` (mypy can't
+statically tell a submodule/buffer access from a tensor/parameter access unless the attribute
+is explicitly annotated) via explicit attribute annotations, `getattr(..., None)` +
+`callable()` instead of `hasattr()` + direct call, and `cast()` where a registry/container
+return type is more generic than what the surrounding code actually guarantees. See
+`CONTRIBUTING.md` for the worked examples and the pattern to follow for new code.
 
 ### Test coverage
 `pytest-cov` measures coverage (`[tool.coverage.run]` / `[tool.coverage.report]` in
@@ -403,7 +405,7 @@ check-added-large-files). Enabled locally with `pre-commit install` after clonin
 ### CI (`.github/workflows/tests.yml`)
 Three jobs run on every push/PR to `main`:
 - `lint` — `ruff check .` + `ruff format --check .`
-- `typecheck` — `mypy src/graphssl`, non-blocking (see above)
+- `typecheck` — `mypy src/graphssl`, blocking (see above)
 - `pytest` — full matrix (Python 3.10/3.11/3.12) with coverage, uploading to Codecov from
   the 3.12 leg only
 

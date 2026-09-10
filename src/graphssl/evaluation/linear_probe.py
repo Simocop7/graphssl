@@ -96,10 +96,14 @@ class LogRegEvaluator:
 
                         probs = torch.sigmoid(logits).cpu().numpy()
                         y_np = y_s.cpu().numpy()
-                        nan_mask = ~torch.isnan(y_s).cpu().numpy()
+                        # Renamed (not just `nan_mask`) because that name is already bound to a
+                        # Tensor earlier in this function (line ~74) — reusing it for an ndarray
+                        # here is exactly the kind of same-name/different-type reuse that trips
+                        # up both mypy and a reader skimming the function.
+                        nan_mask_np = ~torch.isnan(y_s).cpu().numpy()
                         ap_scores = []
                         for i in range(out_dim):
-                            col = nan_mask[:, i]
+                            col = nan_mask_np[:, i]
                             if col.sum() > 0:
                                 ap_scores.append(
                                     average_precision_score(y_np[col, i], probs[col, i])

@@ -7,6 +7,8 @@ from typing import List, Literal, Optional, Tuple
 import torch
 from torch import Tensor
 
+from graphssl.data import DataModule
+
 try:
     import matplotlib.pyplot as plt
     import umap
@@ -18,7 +20,7 @@ except ImportError:
 
 def extract_embeddings(
     model: "torch.nn.Module",
-    datamodule,
+    datamodule: DataModule,
     encoder_source: Literal["auto", "teacher", "student", "online", "target", "encoder"] = "auto",
     device: str = "cpu",
     mini_batch: bool = False,
@@ -157,7 +159,7 @@ def _select_encoder(model: "torch.nn.Module", source: str) -> "torch.nn.Module":
             if hasattr(model, attr):
                 return getattr(model, attr)
     if source == "encoder" and hasattr(model, "encoder"):
-        return model.encoder
+        return model.encoder  # type: ignore[return-value]  # narrowed by hasattr() above
     return model
 
 

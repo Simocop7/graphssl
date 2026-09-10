@@ -87,6 +87,9 @@ class LinearEvalCallback(Callback):
         from graphssl.evaluation.visualization import extract_embeddings
 
         embeddings, labels = extract_embeddings(model, self.datamodule, device=self.device)
+        assert labels is not None, (
+            "LinearEvalCallback requires labelled data (datamodule.data.y / batch.y is None)"
+        )
         evaluator = LogRegEvaluator(multilabel=self.multilabel)
         results = evaluator.evaluate(
             embeddings.to(self.device),
