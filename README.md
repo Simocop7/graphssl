@@ -59,7 +59,7 @@ pre-commit install   # ruff on every commit
 pytest tests/ -v
 ```
 
-All 107 unit tests should pass. AFGRL tests are auto-skipped if `faiss-cpu` is not installed.
+All unit tests should pass. AFGRL tests are auto-skipped if `faiss-cpu` is not installed.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev workflow (lint, type checking, adding a model).
 
 **Full documentation:** [simocop7.github.io/graphssl](https://simocop7.github.io/graphssl/) — per-model pages, architecture, and an auto-generated API reference. Build it locally with:

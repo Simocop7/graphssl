@@ -17,6 +17,15 @@ NT-Xent.
 |---|---|---|
 | `proj_dim` | `128` | projector output dimension |
 | `tau` | `0.5` | NT-Xent temperature |
+| `loss_chunk_size` | `4096` | max rows of the `[2N, 2N]` similarity matrix built at once; `None` = always full |
+
+!!! tip "Large full-batch graphs"
+    NT-Xent compares every node with every other, so the full similarity matrix is
+    `(2N)²` floats — ~5.8 GiB for PubMed alone, several times that once autograd keeps its
+    intermediates. When `2N > loss_chunk_size` the loss is computed in row chunks with
+    gradient checkpointing: **identical value and gradients**, peak memory
+    `O(loss_chunk_size · 2N)` instead (PubMed: ~1.9 GiB). Smaller inputs take the unchunked
+    path unchanged.
 
 ## Config example
 

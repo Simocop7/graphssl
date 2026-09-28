@@ -16,7 +16,7 @@ pre-commit install   # runs ruff on every commit
 ## Before opening a PR
 
 ```bash
-pytest tests/ -v          # 107 passed, 1 skipped (AFGRL skips without faiss-cpu)
+pytest tests/ -v          # all pass; test_afgrl.py is skipped without faiss-cpu
 ruff check .               # lint
 ruff format --check .      # formatting
 mypy src/graphssl          # must stay at 0 errors — CI blocks on this, see below

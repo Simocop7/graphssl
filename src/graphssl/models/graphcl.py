@@ -31,7 +31,7 @@ class GraphCL(BaseSSLModel):
         self.encoder = cfg.encoder.build(in_channels)
         hidden_dim = cfg.encoder.hidden_dim
         self.projector = Projector(hidden_dim, hidden_dim, cfg.proj_dim)
-        self.loss_fn = NTXentLoss(tau=cfg.tau)
+        self.loss_fn = NTXentLoss(tau=cfg.tau, chunk_size=cfg.loss_chunk_size)
         self.aug_list: List[Tuple[str, dict]] = [(a.name, a.kwargs) for a in cfg.augment]
         self.graph_level: bool = cfg.encoder.pool
 

@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] `pytest tests/ -v` passes locally (107 passed, 1 skipped without faiss-cpu)
+- [ ] `pytest tests/ -v` passes locally (`test_afgrl.py` is skipped without faiss-cpu)
 - [ ] `ruff check .` and `ruff format --check .` pass (or `pre-commit run --all-files`)
 - [ ] New models/encoders/losses have tests under `tests/`
 - [ ] `CLAUDE.md` updated if this changes a model's config, loss formula, or

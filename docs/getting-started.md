@@ -28,7 +28,7 @@ pip install -e ".[dev]"
 pre-commit install   # runs ruff on every commit
 pytest tests/ -v
 ```
-All 107 unit tests should pass. AFGRL tests are auto-skipped if `faiss-cpu` isn't installed.
+All unit tests should pass. AFGRL tests are auto-skipped if `faiss-cpu` isn't installed.
 See [Contributing](contributing.md) for the full dev workflow.
 
 ## A complete worked example

@@ -212,7 +212,9 @@ def _git_info() -> dict:
             return None
 
     commit = _run(["git", "rev-parse", "HEAD"])
-    dirty = _run(["git", "status", "--porcelain"])
+    # Tracked files only: untracked outputs (results/*.json, *.log) don't change the
+    # code that ran, and counting them would flag every run after the first as dirty.
+    dirty = _run(["git", "status", "--porcelain", "--untracked-files=no"])
     return {"commit": commit, "dirty": bool(dirty) if dirty is not None else None}
 
 

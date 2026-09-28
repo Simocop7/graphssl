@@ -73,7 +73,11 @@ No access to the trainer, logger, or datamodule from inside a model.
 - NT-Xent loss over 2 augmented views
 - Encoder + 2-layer projector `Projector(hidden_dim, hidden_dim, proj_dim)`
 - `protected_nodes` passed to `compose()` for seed nodes in mini-batch node training
-- Hyperparameters: `proj_dim=128, tau=0.5`
+- `NTXentLoss(tau, chunk_size)`: when `2N > chunk_size` the `[2N, 2N]` similarity matrix is
+  processed in row chunks under gradient checkpointing — exact same value/gradients, peak
+  memory `O(chunk_size · 2N)`. Needed for full-batch PubMed (unchunked OOMs a 16 GB GPU;
+  chunked peaks at ~1.9 GiB).
+- Hyperparameters: `proj_dim=128, tau=0.5, loss_chunk_size=4096`
 
 ### BGRL (Bootstrapped Graph Representation Learning)
 - Teacher-student with an EMA update on the target encoder
@@ -97,7 +101,11 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Graph-level loss: no miner; a simple teacher-student loss on pooled embeddings
 - EMA: identical to BGRL — `CosineEMAScheduler` in `post_step()`
 - Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, topk=5,
-  num_centroids=50, num_kmeans=4, clus_num_iters=20, pred_hidden=512`
+  num_centroids=50, num_kmeans=4, clus_num_iters=20, kmeans_threads=8, pred_hidden=512`
+- `kmeans_threads` caps FAISS's OpenMP threads inside `PositiveMiner` (restored after each
+  call; `None` = FAISS default, i.e. all cores). FAISS's all-cores default made AFGRL ~50×
+  slower on a 48-core VM (5.7 s vs 0.1 s per Cora step) — never remove the cap without
+  re-measuring on a many-core machine.
 
 ### GraphDINO
 - Adaptation of DINO (ViT) to graphs
@@ -358,10 +366,10 @@ pytest tests/ -v
 |---|---|---|
 | `test_bgrl.py` | BGRL | teacher frozen, reset → different weights, EMA scheduler, step counter |
 | `test_dgi.py` | DGI | W learnable, shuffle_nodes/shuffle_edges |
-| `test_graphcl.py` | GraphCL | projector dim, NT-Xent ≥ 0 |
+| `test_graphcl.py` | GraphCL | projector dim, NT-Xent ≥ 0, chunked NT-Xent == full (value + grads) |
 | `test_vicreg.py` | VICReg | 3-layer projector, loss ≥ 0 |
 | `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
-| `test_afgrl.py` | AFGRL | **auto-skipped if faiss isn't installed** |
+| `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored; **auto-skipped if faiss isn't installed** |
 | `test_supervised.py` | Supervised | head dim, mini-batch crop |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, DINOTrainer hooks |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |

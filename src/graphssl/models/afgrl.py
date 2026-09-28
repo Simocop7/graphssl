@@ -17,7 +17,7 @@ from graphssl.losses.regression import CosineRegressionLoss
 from graphssl.nn.mlp import Predictor
 from graphssl.nn.pooling import pool_graph_embeddings
 from graphssl.utils.ema import update_ema_params
-from graphssl.utils.positive_miner import PositiveMiner
+from graphssl.utils.positive_miner import PositiveMiner, sparse_coo_unchecked
 from graphssl.utils.schedulers import CosineEMAScheduler
 
 
@@ -70,6 +70,7 @@ class AFGRL(BaseSSLModel):
             num_centroids=cfg.num_centroids,
             num_kmeans=cfg.num_kmeans,
             clus_num_iters=cfg.clus_num_iters,
+            kmeans_threads=cfg.kmeans_threads,
         )
 
     def forward(self, data: Data) -> Tensor:
@@ -105,7 +106,7 @@ class AFGRL(BaseSSLModel):
             else torch.ones(data.edge_index.shape[1], device=data.x.device)
         )
         n = data.x.shape[0]
-        adj = torch.sparse_coo_tensor(data.edge_index, adj_vals, (n, n))
+        adj = sparse_coo_unchecked(data.edge_index, adj_vals, (n, n))
 
         src, dst = self.positive_miner.mine(
             adj,

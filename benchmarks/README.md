@@ -18,7 +18,7 @@ python benchmarks/render_tables.py --latex
 
 Each run writes `results/<Dataset>/<model>__<UTC-timestamp>.json` — per-seed
 metrics, aggregate mean/std, the exact hyperparameters, the git commit
-(and whether the working tree was dirty), and package versions. Old files
+(and whether tracked files had uncommitted changes), and package versions. Old files
 are never overwritten, so results accumulate as a history; `render_tables.py`
 always uses the most recent file per (dataset, model) pair.
 

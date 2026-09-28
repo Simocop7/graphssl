@@ -181,12 +181,15 @@ class GraphCLConfig:
     augment: List[AugmentConfig] = field(default_factory=list)
     proj_dim: int = 128
     tau: float = 0.5
+    loss_chunk_size: Optional[int] = 4096
 
     def __post_init__(self):
         if self.proj_dim <= 0:
             raise ValueError(f"proj_dim must be > 0, got {self.proj_dim}")
         if self.tau <= 0:
             raise ValueError(f"tau must be > 0, got {self.tau}")
+        if self.loss_chunk_size is not None and self.loss_chunk_size <= 0:
+            raise ValueError(f"loss_chunk_size must be > 0 or None, got {self.loss_chunk_size}")
 
     @classmethod
     def from_dict(cls, d: dict) -> GraphCLConfig:
@@ -195,6 +198,7 @@ class GraphCLConfig:
             augment=[AugmentConfig.from_dict(a) for a in d.get("augment", [])],
             proj_dim=d.get("proj_dim", 128),
             tau=d.get("tau", 0.5),
+            loss_chunk_size=d.get("loss_chunk_size", 4096),
         )
 
 
@@ -307,6 +311,7 @@ class AFGRLConfig:
     num_centroids: int = 50
     num_kmeans: int = 4
     clus_num_iters: int = 20
+    kmeans_threads: Optional[int] = 8
 
     def __post_init__(self):
         if self.pred_hidden <= 0:
@@ -329,6 +334,8 @@ class AFGRLConfig:
             raise ValueError(f"num_kmeans must be > 0, got {self.num_kmeans}")
         if self.clus_num_iters <= 0:
             raise ValueError(f"clus_num_iters must be > 0, got {self.clus_num_iters}")
+        if self.kmeans_threads is not None and self.kmeans_threads <= 0:
+            raise ValueError(f"kmeans_threads must be > 0 or None, got {self.kmeans_threads}")
 
     @classmethod
     def from_dict(cls, d: dict) -> AFGRLConfig:
@@ -342,6 +349,7 @@ class AFGRLConfig:
             num_centroids=d.get("num_centroids", 50),
             num_kmeans=d.get("num_kmeans", 4),
             clus_num_iters=d.get("clus_num_iters", 20),
+            kmeans_threads=d.get("kmeans_threads", 8),
         )
 
 

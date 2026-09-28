@@ -3,6 +3,7 @@
 import pytest
 import torch
 
+from graphssl.losses import NTXentLoss
 from graphssl.models import GraphCL
 from helpers import make_batch as _make_batch
 from helpers import make_graph as _make_graph
@@ -74,6 +75,39 @@ class TestGraphCL:
         bad["proj_dim"] = 0
         with pytest.raises(ValueError, match="proj_dim"):
             GraphCL(bad, in_channels=self.in_channels)
+
+    def test_invalid_loss_chunk_size_raises(self):
+        bad = _make_config(loss_chunk_size=0)
+        with pytest.raises(ValueError, match="loss_chunk_size"):
+            GraphCL(bad, in_channels=self.in_channels)
+
+    def test_loss_chunk_size_forwarded(self):
+        model = GraphCL(_make_config(loss_chunk_size=16), in_channels=self.in_channels)
+        assert model.loss_fn.chunk_size == 16
+
+
+class TestNTXentChunked:
+    """Chunked NT-Xent must be exact: same value and gradients as the full [2N, 2N] version."""
+
+    @pytest.mark.parametrize("chunk_size", [1, 7, 16, 39])
+    def test_chunked_matches_full(self, chunk_size):
+        torch.manual_seed(0)
+        z1 = torch.randn(20, 8, requires_grad=True)
+        z2 = torch.randn(20, 8, requires_grad=True)
+
+        full = NTXentLoss(tau=0.5, chunk_size=None)(z1, z2)
+        g1_full, g2_full = torch.autograd.grad(full, (z1, z2))
+
+        chunked = NTXentLoss(tau=0.5, chunk_size=chunk_size)(z1, z2)
+        g1_chunk, g2_chunk = torch.autograd.grad(chunked, (z1, z2))
+
+        torch.testing.assert_close(chunked, full)
+        torch.testing.assert_close(g1_chunk, g1_full)
+        torch.testing.assert_close(g2_chunk, g2_full)
+
+    def test_invalid_chunk_size_raises(self):
+        with pytest.raises(ValueError, match="chunk_size"):
+            NTXentLoss(chunk_size=0)
 
 
 class TestGraphCLNodeLevel:

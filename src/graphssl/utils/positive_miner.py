@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+import os
+from typing import List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -16,6 +17,18 @@ except ImportError:
     HAS_FAISS = False
 
 
+def sparse_coo_unchecked(indices: Tensor, values: Tensor, size: Tuple[int, int]) -> Tensor:
+    """``torch.sparse_coo_tensor`` with invariant checks explicitly (not implicitly) disabled.
+
+    Same behavior as the default, minus the "Sparse invariant checks are implicitly
+    disabled" UserWarning recent PyTorch versions emit. Passing ``check_invariants=False``
+    does not silence it; only an explicit opt-out via the context manager does. Callers
+    guarantee valid indices (they come from ``edge_index`` or ``topk``).
+    """
+    with torch.sparse.check_sparse_tensor_invariants(enable=False):
+        return torch.sparse_coo_tensor(indices, values, size)
+
+
 class PositiveMiner:
     """Mine positive pairs via local graph neighbours and global k-means clustering.
 
@@ -27,6 +40,11 @@ class PositiveMiner:
         num_centroids: Number of k-means clusters per run.
         num_kmeans: Number of independent k-means runs (different random seeds).
         clus_num_iters: k-means iterations per run.
+        kmeans_threads: OpenMP threads FAISS may use for k-means (capped at the CPU count).
+            FAISS defaults to every core, which on many-core machines is dramatically
+            slower for the small, per-step k-means AFGRL runs (thread start-up and
+            contention dominate). ``None`` leaves FAISS's own setting untouched. The
+            previous FAISS thread count is restored after every call.
     """
 
     def __init__(
@@ -34,6 +52,7 @@ class PositiveMiner:
         num_centroids: int = 50,
         num_kmeans: int = 4,
         clus_num_iters: int = 20,
+        kmeans_threads: Optional[int] = 8,
     ):
         if not HAS_FAISS:
             raise ImportError(
@@ -42,6 +61,7 @@ class PositiveMiner:
         self.num_centroids = num_centroids
         self.num_kmeans = num_kmeans
         self.clus_num_iters = clus_num_iters
+        self.kmeans_threads = kmeans_threads
 
     @torch.no_grad()
     def mine(
@@ -66,7 +86,9 @@ class PositiveMiner:
         N = student.shape[0]
 
         # cosine similarity; +10 on diagonal so self is always among top-k
-        sim = student @ teacher.T + torch.eye(N, device=device) * 10.0
+        # (added in place: no dense N x N identity matrix)
+        sim = student @ teacher.T
+        sim.diagonal().add_(10.0)
         _, knn_idx = sim.topk(k=topk, dim=1, largest=True, sorted=True)  # [N, topk]
 
         row = torch.arange(N, device=device).repeat_interleave(topk)
@@ -74,26 +96,11 @@ class PositiveMiner:
 
         # local positives: kNN ∩ graph adjacency
         knn_vals = torch.ones(N * topk, device=device)
-        knn_sparse = torch.sparse_coo_tensor(torch.stack([row, col]), knn_vals, (N, N))
+        knn_sparse = sparse_coo_unchecked(torch.stack([row, col]), knn_vals, (N, N))
         locality = (knn_sparse * adj).coalesce()
 
         # global positives: same k-means cluster in any of the num_kmeans runs
-        teacher_np = teacher.detach().cpu().float().numpy()
-        D = teacher_np.shape[1]
-        cluster_labels_runs = []
-        for seed in range(self.num_kmeans):
-            kmeans = faiss.Kmeans(
-                D,
-                min(self.num_centroids, N),
-                niter=self.clus_num_iters,
-                gpu=False,
-                seed=seed + 1234,
-            )
-            kmeans.train(teacher_np)
-            _, ids = kmeans.index.search(teacher_np, 1)
-            cluster_labels_runs.append(ids[:, 0])  # [N]
-
-        labels_np = np.stack(cluster_labels_runs, axis=0)  # [num_kmeans, N]
+        labels_np = self._cluster_labels(teacher.detach().cpu().float().numpy())
         row_np = np.repeat(np.arange(N), topk)
         col_np = knn_idx.cpu().numpy().reshape(-1)
 
@@ -106,7 +113,7 @@ class PositiveMiner:
         g_row = row[mask]
         g_col = col[mask]
         g_vals = torch.ones(g_row.numel(), device=device)
-        globality = torch.sparse_coo_tensor(torch.stack([g_row, g_col]), g_vals, (N, N))
+        globality = sparse_coo_unchecked(torch.stack([g_row, g_col]), g_vals, (N, N))
 
         positives = (locality + globality).coalesce()
         idx = positives.indices()  # [2, P]
@@ -117,3 +124,26 @@ class PositiveMiner:
             return src, dst
 
         return idx[0], idx[1]
+
+    def _cluster_labels(self, x: np.ndarray) -> np.ndarray:
+        """Run ``num_kmeans`` independent k-means on ``x`` [N, D]; return labels [num_kmeans, N]."""
+        N, D = x.shape
+        prev_threads = faiss.omp_get_max_threads()
+        if self.kmeans_threads is not None:
+            faiss.omp_set_num_threads(min(self.kmeans_threads, os.cpu_count() or 1))
+        try:
+            runs: List[np.ndarray] = []
+            for seed in range(self.num_kmeans):
+                kmeans = faiss.Kmeans(
+                    D,
+                    min(self.num_centroids, N),
+                    niter=self.clus_num_iters,
+                    gpu=False,
+                    seed=seed + 1234,
+                )
+                kmeans.train(x)
+                _, ids = kmeans.index.search(x, 1)
+                runs.append(ids[:, 0])  # [N]
+        finally:
+            faiss.omp_set_num_threads(prev_threads)
+        return np.stack(runs, axis=0)

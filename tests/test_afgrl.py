@@ -127,3 +127,38 @@ class TestAFGRL:
         bad["num_centroids"] = -1
         with pytest.raises(ValueError, match="num_centroids"):
             AFGRL(bad, in_channels=self.in_channels)
+
+    def test_invalid_kmeans_threads_raises(self):
+        bad = _make_config(kmeans_threads=0)
+        with pytest.raises(ValueError, match="kmeans_threads"):
+            AFGRL(bad, in_channels=self.in_channels)
+
+    @pytest.mark.parametrize("kmeans_threads", [1, None])
+    def test_kmeans_threads_applied_then_restored(self, monkeypatch, kmeans_threads):
+        """FAISS must run k-means with the configured thread cap and restore the caller's
+        setting afterwards (None = leave FAISS's own setting untouched)."""
+        import graphssl.utils.positive_miner as pm
+
+        seen = []
+        real_kmeans = pm.faiss.Kmeans
+
+        class SpyKmeans(real_kmeans):
+            def train(self, x, *args, **kwargs):
+                seen.append(pm.faiss.omp_get_max_threads())
+                return super().train(x, *args, **kwargs)
+
+        monkeypatch.setattr(pm.faiss, "Kmeans", SpyKmeans)
+
+        cfg = _make_config(kmeans_threads=kmeans_threads)
+        cfg["encoder"]["pool"] = False
+        model = AFGRL(cfg, in_channels=self.in_channels)
+
+        before = pm.faiss.omp_get_max_threads()
+        try:
+            pm.faiss.omp_set_num_threads(2)
+            model.compute_loss(_make_graph(n_nodes=30, n_feat=self.in_channels))
+            expected = 1 if kmeans_threads == 1 else 2
+            assert seen == [expected] * cfg["num_kmeans"]
+            assert pm.faiss.omp_get_max_threads() == 2
+        finally:
+            pm.faiss.omp_set_num_threads(before)
