@@ -42,9 +42,11 @@ from the graph's own structure and embedding geometry.
     restored after each call, so this doesn't leak into the rest of your program.
 
 !!! warning "Memory scaling"
-    The FAISS-based k-means runs on the full embedding matrix in memory — this works fine for
-    citation-network-scale graphs but becomes a real constraint above roughly 10⁵ nodes.
-    Sub-sampled k-means / CPU-offload isn't implemented yet.
+    The miner's top-k neighbor search builds a **dense N × N** cosine-similarity matrix every
+    step, so memory grows quadratically: ~1.5 GB for PubMed (≈19.7k nodes), ~40 GB at 10⁵
+    nodes. The k-means itself only needs the `N × d` embedding matrix. Fine for
+    citation-network-scale graphs; larger graphs need a chunked or approximate (FAISS index)
+    kNN search, which isn't implemented yet.
 
 ## Config example
 

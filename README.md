@@ -9,7 +9,7 @@
 
 A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
 
-> **Status:** Alpha — all models train end-to-end and pass tests; citation-network benchmarks validated (see below), large-scale (OGB) benchmarks in progress.
+> **Status:** Alpha — all models train end-to-end and pass tests; all 7 SSL methods benchmarked on the citation networks under a shared protocol (see below), large-scale (OGB) benchmarks in progress.
 
 ---
 
@@ -117,21 +117,30 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 | Script | Dataset | Task | Notes |
 |---|---|---|---|
 | `examples/cora_bgrl.py` | Cora | Node classification (7 classes) | Full-batch, CPU-friendly — fastest smoke test |
-| `examples/benchmark_planetoid.py` | Cora / CiteSeer / PubMed | Node classification, multi-seed | Reproduces the results below (`--seeds`, `--epochs`) |
+| `examples/benchmark_planetoid.py` | Cora / CiteSeer / PubMed | Node classification, multi-seed | BGRL-only multi-seed demo; the cross-method numbers below come from `benchmarks/run_benchmark.py` |
 | `examples/ogbn_arxiv_bgrl.py` | ogbn-arxiv | Node classification (40 classes) | `NeighborLoader` mini-batch training |
 | `examples/zinc_bgrl.py` | ZINC-12k | Molecular property regression | Categorical node/edge embeddings |
 
 ### Benchmark results (citation networks)
 
-BGRL, GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, public Planetoid split, mean ± std over 10 seeds (`python examples/benchmark_planetoid.py --dataset <name> --seeds 10`):
+All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%), mean ± std over 10 seeds; best per dataset in bold:
 
-| Dataset | Linear probe (test) | KNN k=5 (test) |
-|---|---|---|
-| Cora | 62.39 ± 3.71 | 58.61 ± 3.76 |
-| CiteSeer | 50.08 ± 1.58 | 43.07 ± 3.61 |
-| PubMed | 69.18 ± 2.32 | 66.59 ± 2.88 |
+| Method | Cora | CiteSeer | PubMed |
+|---|---|---|---|
+| DGI | 68.62 ± 2.77 | 51.10 ± 2.26 | 66.16 ± 2.83 |
+| GraphCL | 78.06 ± 1.48 | 59.22 ± 2.50 | **80.11 ± 1.24** |
+| BGRL | 64.18 ± 3.04 | 47.59 ± 2.22 | 68.67 ± 2.07 |
+| AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
+| VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
+| Barlow Twins | **78.13 ± 1.00** | **63.00 ± 1.31** | 77.82 ± 1.03 |
+| GraphDINO | 61.54 ± 1.79 | 42.00 ± 3.13 | 70.80 ± 3.40 |
 
-This is a deliberately lightweight, untuned configuration (no per-dataset hyperparameter search) meant to validate that the training/evaluation pipeline is correct end-to-end — not a state-of-the-art claim. See `paper.tex` for a methodological comparison against the original BGRL paper's own numbers on these datasets. ogbn-arxiv and OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) require larger compute and are planned on dedicated infrastructure.
+```bash
+python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all --seeds 10
+python benchmarks/render_tables.py      # rebuilds these tables from benchmarks/results/*.json
+```
+
+This is a deliberately untuned configuration — no per-method or per-dataset hyperparameter search — so it compares objectives at equal budget rather than reproducing each paper's best reported number. kNN results, per-seed metrics and full provenance (git commit, package versions) are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`. ogbn-arxiv and OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are next.
 
 ---
 

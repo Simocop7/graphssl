@@ -319,17 +319,35 @@ on_epoch_start → batches → on_epoch_end
 ## BENCHMARKS — Cora/CiteSeer/PubMed, ZINC AND ogbn-arxiv
 
 ### Cora / CiteSeer / PubMed (node-level, citation network, full-batch)
-- Multi-seed script: `examples/benchmark_planetoid.py --dataset {Cora,CiteSeer,PubMed} --seeds 10`
-- Single-run/smoke-test script: `examples/cora_bgrl.py`, config: `configs/cora_bgrl.yaml`
-- BGRL, GIN-2L, `hidden_dim=256`, full-batch for 300 steps, public Planetoid split, mean±std over 10 seeds:
+- Cross-method runner: `benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all --seeds 10`
+  → one JSON per (dataset, model) in `benchmarks/results/`; `benchmarks/render_tables.py [--latex]`
+  rebuilds the tables. **Never retype benchmark numbers by hand** — regenerate them from the JSONs.
+- BGRL-only demo: `examples/benchmark_planetoid.py`; smoke test: `examples/cora_bgrl.py` (`configs/cora_bgrl.yaml`)
+- Shared protocol (all 7 methods): GIN-2L, `hidden_dim=256`, no dropout, full-batch 300 steps,
+  AdamW lr 5e-4 / wd 1e-5, `edge_drop` 0.5 + `feat_mask` 0.2 (augmentation-based methods),
+  public Planetoid split, 10 seeds. Run 2026-09-28 on the NECSTLab VM (NVIDIA A2 16 GB).
+- Linear-probe test accuracy (%), mean ± std over 10 seeds (kNN table in `docs/benchmarks.md`):
 
-| Dataset | Linear probe (test) | KNN k=5 (test) |
-|---|---|---|
-| Cora | 62.39 ± 3.71 | 58.61 ± 3.76 |
-| CiteSeer | 50.08 ± 1.58 | 43.07 ± 3.61 |
-| PubMed | 69.18 ± 2.32 | 66.59 ± 2.88 |
+| Method | Cora | CiteSeer | PubMed |
+|---|---|---|---|
+| DGI | 68.62 ± 2.77 | 51.10 ± 2.26 | 66.16 ± 2.83 |
+| GraphCL | 78.06 ± 1.48 | 59.22 ± 2.50 | 80.11 ± 1.24 |
+| BGRL | 64.18 ± 3.04 | 47.59 ± 2.22 | 68.67 ± 2.07 |
+| AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
+| VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
+| Barlow Twins | 78.13 ± 1.00 | 63.00 ± 1.31 | 77.82 ± 1.03 |
+| GraphDINO | 61.54 ± 1.79 | 42.00 ± 3.13 | 70.80 ± 3.40 |
 
-- The config is deliberately lightweight/untuned (no per-dataset hyperparameter search) — its purpose is to validate that the whole pipeline (augmentation → EMA → both evaluation heads) works end-to-end, not to compete with the state of the art. See `paper.tex` for a methodological comparison against BGRL's original numbers (Appendix C, Table 7).
+- Deliberately untuned (no per-method/per-dataset search): it compares objectives at equal
+  budget, it doesn't compete with each paper's best number. Teacher-student methods (BGRL,
+  AFGRL, GraphDINO) trail the top group — **unexplained so far**; the leading hypothesis
+  (short budget + untuned EMA) is unverified, so don't state it as a conclusion.
+- The 20 JSONs at commit `e295451` say `"dirty": true` — false positive (untracked files were
+  counted, fixed in `dae32cb`); the code that ran is exactly `e295451`.
+- Cost: on PubMed GraphCL (~440 s/run, O(N²) NT-Xent) and AFGRL (~500 s/run, dense N×N kNN +
+  per-step k-means) are ~10× slower than the other methods (35–60 s).
+- `paper.tex` compares our BGRL against the original BGRL paper's numbers (Appendix C, Table 7)
+  and spells out the protocol differences.
 
 ### ZINC (graph-level, molecular regression)
 ```yaml

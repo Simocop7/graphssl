@@ -261,7 +261,7 @@ def save_result(
             },
         },
     }
-    path.write_text(json.dumps(result, indent=2))
+    path.write_text(json.dumps(result, indent=2) + "\n")
     return path
 
 

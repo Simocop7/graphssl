@@ -27,6 +27,11 @@ single-file demos for learning the API — this is for producing citable,
 comparable numbers across the model zoo. See `../CLAUDE.md` (Benchmarks
 section) for the methodology and current status.
 
+**Current results:** all 7 SSL models × Cora/CiteSeer/PubMed × 10 seeds are committed under
+`results/` and rendered in `../docs/benchmarks.md`. Budget for a full sweep: most models take
+~10–60 s per seed on an NVIDIA A2, but on PubMed GraphCL (O(N²) NT-Xent) and AFGRL (dense
+N×N kNN + per-step k-means) take ~7–9 min per seed, so ~75–85 min each for 10 seeds.
+
 **Known gaps:**
 - `--model supervised` is accepted but currently skipped — building it
   surfaced a real masking gap in `Supervised.compute_loss()` for full-batch

@@ -5,8 +5,9 @@ PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you
 through with a debugger.
 
 !!! info "Status: Alpha"
-    All models train end-to-end and pass tests; citation-network benchmarks are validated
-    (see [Benchmarks](benchmarks.md)), large-scale (OGB) benchmarks are in progress.
+    All models train end-to-end and pass tests; all 7 SSL methods are benchmarked on the
+    citation networks under a shared protocol (see [Benchmarks](benchmarks.md)), large-scale
+    (OGB) benchmarks are in progress.
 
 ## Supported methods
 
