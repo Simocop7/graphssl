@@ -24,7 +24,7 @@ from graphssl.data import DataModule
 from graphssl.encoders import GCNEncoder, GINEncoder, TransformerEncoder
 
 # ── Evaluation ────────────────────────────────────────────────────────────────
-from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, extract_embeddings
+from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
 
 # ── Losses ────────────────────────────────────────────────────────────────────
 from graphssl.losses import (

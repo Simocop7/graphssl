@@ -17,10 +17,41 @@ python benchmarks/render_tables.py --latex
 ```
 
 Each run writes `results/<Dataset>/<model>__<UTC-timestamp>.json` — per-seed
-metrics, aggregate mean/std, the exact hyperparameters, the git commit
-(and whether tracked files had uncommitted changes), and package versions. Old files
-are never overwritten, so results accumulate as a history; `render_tables.py`
-always uses the most recent file per (dataset, model) pair.
+metrics, aggregate mean/std, the exact hyperparameters and full model config
+(`model_config`, the dict passed to `build_model()`), the git commit (and whether tracked
+files had uncommitted changes), and package versions. Old files are never overwritten, so
+results accumulate as a history; `render_tables.py` always uses the most recent file per
+(dataset, model) pair.
+
+Besides accuracy, every result records the **effective rank** of the evaluated embeddings
+(`eff_rank`, from `graphssl.evaluation.effective_rank`: 1 = everything along one direction,
+`hidden_dim` = variance spread evenly), which exposes dimensional collapse. For the
+teacher-student models it also evaluates the **other encoder** of the same trained model
+(`alt_encoder`: target for BGRL/AFGRL, student for GraphDINO), saved with an `_alt` suffix.
+
+## Ablations
+
+Ablations must not land in `results/`, or `render_tables.py` would report them as the
+benchmark. Point `--out-dir` elsewhere and render them with `render_ablation.py`, which keeps
+one row per (model, encoder, steps, starting EMA momentum):
+
+```bash
+python benchmarks/run_benchmark.py --dataset Cora --model bgrl --epochs 1000 --ema-tau 0.9 \
+    --out-dir benchmarks/ablations/my_ablation
+python benchmarks/render_ablation.py benchmarks/ablations/my_ablation
+```
+
+`--ema-tau` sets the teacher's starting EMA momentum (BGRL/AFGRL anneal it to 1.0,
+GraphDINO to 0.996); the schedule always spans the whole `--epochs` budget.
+
+`ablation_teacher_student.sh` is the grid behind the teacher-student question (why BGRL,
+AFGRL and GraphDINO trail the top group): budget 300/1000/3000 steps × default vs faster
+EMA teacher, a Barlow Twins control, BGRL with GCN, and AFGRL on Cora. About 4 h on an A2:
+
+```bash
+bash benchmarks/ablation_teacher_student.sh 2>&1 | tee -a ablation.log
+python benchmarks/render_ablation.py benchmarks/ablations/teacher_student
+```
 
 This intentionally does not replace `examples/*.py`, which stay as minimal
 single-file demos for learning the API — this is for producing citable,

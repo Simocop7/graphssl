@@ -299,6 +299,12 @@ Extracts embeddings from a model given a datamodule. Handles:
 ### LogRegEvaluator (`evaluation/linear_probe.py`)
 Pure-PyTorch linear evaluator. For multilabel targets (e.g. ogbg-molpcba) uses BCE + average precision.
 
+### effective_rank (`evaluation/diagnostics.py`)
+`effective_rank(z)` = `exp(entropy)` of the normalized singular values of the centered
+embeddings (Roy & Vetterli 2007): 1 = all variance along one direction, `min(N, D)` = spread
+evenly, 0 = no variance. Exposes dimensional collapse that accuracy can hide; the benchmark
+runner records it for every seed (`eff_rank`).
+
 ### DataModule (`data/datamodule.py`)
 Wraps a PyG dataset for two modes:
 - Graph-level (`is_graph_level=True`): `DataLoader` over a dataset of graphs
@@ -371,6 +377,12 @@ on_epoch_start → batches → on_epoch_end
   per-step k-means) are ~10× slower than the other methods (35–60 s).
 - `paper.tex` compares our BGRL against the original BGRL paper's numbers (Appendix C, Table 7)
   and spells out the protocol differences.
+- Every result JSON also has `model_config` (the exact `build_model()` dict), per-seed
+  `eff_rank`, and for BGRL/AFGRL/GraphDINO the other encoder's metrics (`*_alt`).
+- **Ablations never go in `benchmarks/results/`** (render_tables.py would report them as the
+  benchmark): use `--out-dir benchmarks/ablations/<name>` and `benchmarks/render_ablation.py`.
+  `benchmarks/ablation_teacher_student.sh` is the grid for the teacher-student gap (budget
+  300/1000/3000 × `--ema-tau` default/0.9, Barlow Twins control, BGRL + GCN, AFGRL on Cora).
 
 ### ZINC (graph-level, molecular regression)
 ```yaml
@@ -414,7 +426,7 @@ pytest tests/ -v
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, center in logit space, DINOTrainer hooks |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
-| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D |
+| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, `effective_rank` |
 
 ---
 

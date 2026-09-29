@@ -35,6 +35,13 @@ head is saved alongside as ``test_acc_head``.
 Then render Markdown tables from the saved results::
 
     python benchmarks/render_tables.py
+
+Every result also records the effective rank of the evaluated embeddings (``eff_rank``,
+to spot dimensional collapse) and, for teacher-student models, the same metrics for the
+other encoder (``*_alt``: BGRL/AFGRL target, GraphDINO student). Ablations go outside
+``benchmarks/results/`` — e.g. ``--out-dir benchmarks/ablations/<name>`` together with
+``--ema-tau``/``--epochs``/``--encoder`` — and are rendered with
+``benchmarks/render_ablation.py``, which keeps every configuration.
 """
 
 from __future__ import annotations
@@ -57,7 +64,12 @@ from torch_geometric.datasets import Planetoid
 
 from graphssl.config.load import build_model
 from graphssl.data import DataModule
-from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, extract_embeddings
+from graphssl.evaluation import (
+    KNNEvaluator,
+    LogRegEvaluator,
+    effective_rank,
+    extract_embeddings,
+)
 from graphssl.models import Supervised
 from graphssl.training import DINOTrainer
 
@@ -81,6 +93,11 @@ SUPERVISED_REG_RECIPE = {
     "model_selection": "best_val_acc",  # checkpoint with the best validation accuracy
 }
 ALL_MODEL_CHOICES = [*SSL_MODELS, *SUPERVISED_MODELS]
+
+# Teacher-student models: model.forward() evaluates one encoder (online for BGRL/AFGRL,
+# teacher for GraphDINO); the runner also evaluates the other one, saved with an "_alt"
+# suffix. It costs one extra probe, no extra training.
+ALT_ENCODER = {"bgrl": "target", "afgrl": "target", "graphdino": "student"}
 
 # Only Planetoid citation networks are wired up today (CPU-friendly, already
 # validated — see CLAUDE.md). Add an entry here to extend to a new dataset;
@@ -107,14 +124,28 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--epochs", type=int, default=300)
     p.add_argument("--lr", type=float, default=5e-4)
     p.add_argument("--weight-decay", type=float, default=1e-5)
+    p.add_argument(
+        "--ema-tau",
+        type=float,
+        default=None,
+        help="starting EMA momentum of the teacher (bgrl/afgrl: annealed to 1.0; graphdino: "
+        "annealed to 0.996, fixed if higher). Default: the benchmark's per-model value",
+    )
     p.add_argument("--seeds", type=int, default=5)
     p.add_argument("--knn-k", type=int, default=5)
     p.add_argument("--data-dir", default="data")
-    p.add_argument("--out-dir", default="benchmarks/results")
+    p.add_argument(
+        "--out-dir",
+        default="benchmarks/results",
+        help="where JSONs go; keep ablations out of benchmarks/results, whose latest file "
+        "per (dataset, model) is what render_tables.py reports",
+    )
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
     if "all" in args.model:
         args.model = SSL_MODELS
+    if args.ema_tau is not None and not 0.0 < args.ema_tau < 1.0:
+        p.error(f"--ema-tau must be in (0, 1), got {args.ema_tau}")
     return args
 
 
@@ -125,19 +156,34 @@ def parse_args() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 
 
+def make_config(model_name: str, args: argparse.Namespace) -> dict:
+    """Full model config for one (model, args) combination — identical for every seed."""
+    encoder_cfg = {
+        "name": args.encoder,
+        "hidden_dim": args.hidden,
+        "num_layers": args.layers,
+        "norm_type": "batch",
+        "pool": False,  # node-level task: no graph pooling
+        "drop": SUPERVISED_REG_RECIPE["dropout"] if model_name == "supervised_reg" else 0.0,
+    }
+    return build_model_config(model_name, encoder_cfg, args)
+
+
 def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namespace) -> dict:
     augment = [{"name": "edge_drop", "p": 0.5}, {"name": "feat_mask", "p": 0.2}]
     name = "supervised" if model_name in SUPERVISED_MODELS else model_name
     cfg: dict = {"name": name, "encoder": encoder_cfg}
+    ema_tau = getattr(args, "ema_tau", None)
 
     if model_name in ("bgrl", "afgrl", "graphdino"):
-        cfg["ema_tau"] = 0.99
+        cfg["ema_tau"] = 0.99 if ema_tau is None else ema_tau
         cfg["ema_tau_end"] = 1.0
         cfg["total_steps"] = args.epochs
 
     if model_name == "graphdino":
-        cfg["ema_tau"] = 0.996
-        cfg["ema_tau_base"] = 0.996
+        # GraphDINO names it the other way round: ema_tau_base -> ema_tau.
+        cfg["ema_tau_base"] = 0.996 if ema_tau is None else ema_tau
+        cfg["ema_tau"] = max(cfg["ema_tau_base"], 0.996)
         cfg["freeze_last_layer_epochs"] = min(1, args.epochs)
         cfg["augment_teacher"] = augment
         cfg["augment_student"] = augment
@@ -165,8 +211,31 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
 # ---------------------------------------------------------------------------
 
 
+def evaluate_embeddings(
+    z: torch.Tensor,
+    y: torch.Tensor,
+    num_classes: int,
+    train_idx: torch.Tensor,
+    val_idx: torch.Tensor,
+    test_idx: torch.Tensor,
+    knn_k: int,
+    suffix: str = "",
+) -> dict:
+    """Linear probe + kNN accuracy and effective rank of frozen embeddings."""
+    lin = LogRegEvaluator().evaluate(z, y, train_idx, val_idx, test_idx, num_classes=num_classes)
+    knn = KNNEvaluator(k=knn_k).evaluate(z, y, train_idx, val_idx, test_idx)
+    return {
+        f"val_acc_linear{suffix}": lin["val_acc"],
+        f"test_acc_linear{suffix}": lin["test_acc"],
+        f"val_acc_knn{suffix}": knn["val_acc"],
+        f"test_acc_knn{suffix}": knn["test_acc"],
+        f"eff_rank{suffix}": effective_rank(z),
+    }
+
+
 def run_one(
     model_name: str,
+    config: dict,
     args: argparse.Namespace,
     data,
     num_classes: int,
@@ -177,16 +246,6 @@ def run_one(
     device: torch.device,
 ) -> dict:
     torch.manual_seed(seed)
-
-    encoder_cfg = {
-        "name": args.encoder,
-        "hidden_dim": args.hidden,
-        "num_layers": args.layers,
-        "norm_type": "batch",
-        "pool": False,  # node-level task: no graph pooling
-        "drop": SUPERVISED_REG_RECIPE["dropout"] if model_name == "supervised_reg" else 0.0,
-    }
-    config = build_model_config(model_name, encoder_cfg, args)
 
     dm = DataModule(
         data=data,
@@ -219,18 +278,13 @@ def run_one(
         trainer.train(model, loader, optimizer, num_epochs=args.epochs)
     wall_time_s = time.time() - t0
 
+    splits = (num_classes, train_idx, val_idx, test_idx, args.knn_k)
     z, y = extract_embeddings(model, dm, device=device)
-    lin = LogRegEvaluator().evaluate(z, y, train_idx, val_idx, test_idx, num_classes=num_classes)
-    knn = KNNEvaluator(k=args.knn_k).evaluate(z, y, train_idx, val_idx, test_idx)
-
-    result = {
-        "seed": seed,
-        "val_acc_linear": lin["val_acc"],
-        "test_acc_linear": lin["test_acc"],
-        "val_acc_knn": knn["val_acc"],
-        "test_acc_knn": knn["test_acc"],
-        "wall_time_s": wall_time_s,
-    }
+    result = {"seed": seed, **evaluate_embeddings(z, y, *splits), "wall_time_s": wall_time_s}
+    alt = ALT_ENCODER.get(model_name)
+    if alt is not None:
+        z_alt, _ = extract_embeddings(model, dm, encoder_source=alt, device=device)
+        result.update(evaluate_embeddings(z_alt, y, *splits, suffix="_alt"))
     if isinstance(model, Supervised):
         result.update(head_accuracy(model, data, val_idx, test_idx, device))
     if best_epoch is not None:
@@ -316,8 +370,24 @@ def _mean_std(values: list[float]) -> dict:
     return {"mean": values[0], "std": 0.0}
 
 
+AGGREGATED_METRICS = [
+    "test_acc_linear",
+    "test_acc_knn",
+    "eff_rank",
+    "test_acc_head",
+    "test_acc_linear_alt",
+    "test_acc_knn_alt",
+    "eff_rank_alt",
+]
+
+
 def save_result(
-    out_dir: Path, dataset: str, model_name: str, args: argparse.Namespace, per_seed: list[dict]
+    out_dir: Path,
+    dataset: str,
+    model_name: str,
+    config: dict,
+    args: argparse.Namespace,
+    per_seed: list[dict],
 ) -> Path:
     out_dir = out_dir / dataset
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -325,11 +395,10 @@ def save_result(
     path = out_dir / f"{model_name}__{timestamp}.json"
 
     aggregate = {
-        "test_acc_linear": _mean_std([r["test_acc_linear"] for r in per_seed]),
-        "test_acc_knn": _mean_std([r["test_acc_knn"] for r in per_seed]),
+        metric: _mean_std([r[metric] for r in per_seed])
+        for metric in AGGREGATED_METRICS
+        if all(metric in r for r in per_seed)
     }
-    if all("test_acc_head" in r for r in per_seed):
-        aggregate["test_acc_head"] = _mean_std([r["test_acc_head"] for r in per_seed])
 
     hyperparameters = {
         "encoder": args.encoder,
@@ -343,11 +412,16 @@ def save_result(
     if model_name == "supervised_reg":
         # Its recipe replaces the shared optimizer settings: record what actually ran.
         hyperparameters.update(SUPERVISED_REG_RECIPE)
+    if args.ema_tau is not None and model_name in ALT_ENCODER:
+        hyperparameters["ema_tau"] = args.ema_tau
 
     result = {
         "dataset": dataset,
         "model": model_name,
         "hyperparameters": hyperparameters,
+        # The exact dict passed to build_model(): everything needed to rebuild the model.
+        "model_config": config,
+        **({"alt_encoder": ALT_ENCODER[model_name]} if model_name in ALT_ENCODER else {}),
         "seeds": [r["seed"] for r in per_seed],
         "per_seed": per_seed,
         "aggregate": aggregate,
@@ -402,20 +476,39 @@ def main() -> None:
                     print(f"[{dataset_name}/afgrl] skipped — faiss-cpu not installed")
                     continue
 
+            if args.ema_tau is not None and model_name not in ALT_ENCODER:
+                print(f"[{dataset_name}/{model_name}] note: --ema-tau has no effect here")
+            config = make_config(model_name, args)
             print(f"\n--- {dataset_name} / {model_name} ({args.seeds} seeds) ---")
             per_seed = []
             for seed in range(args.seeds):
                 t0 = time.time()
                 r = run_one(
-                    model_name, args, data, num_classes, train_idx, val_idx, test_idx, seed, device
+                    model_name,
+                    config,
+                    args,
+                    data,
+                    num_classes,
+                    train_idx,
+                    val_idx,
+                    test_idx,
+                    seed,
+                    device,
                 )
                 per_seed.append(r)
+                alt = ""
+                if "test_acc_linear_alt" in r:
+                    alt = (
+                        f"{ALT_ENCODER[model_name]}: linear={r['test_acc_linear_alt']:.4f} "
+                        f"rank={r['eff_rank_alt']:.1f} | "
+                    )
                 print(
                     f"  seed {seed}: linear test={r['test_acc_linear']:.4f} | "
-                    f"knn test={r['test_acc_knn']:.4f} | {time.time() - t0:.1f}s"
+                    f"knn test={r['test_acc_knn']:.4f} | rank {r['eff_rank']:.1f} | "
+                    f"{alt}{time.time() - t0:.1f}s"
                 )
 
-            path = save_result(out_dir, dataset_name, model_name, args, per_seed)
+            path = save_result(out_dir, dataset_name, model_name, config, args, per_seed)
             agg = _mean_std([r["test_acc_linear"] for r in per_seed])
             agg_knn = _mean_std([r["test_acc_knn"] for r in per_seed])
             head = ""

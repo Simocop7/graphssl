@@ -5,3 +5,5 @@
 ::: graphssl.evaluation.LogRegEvaluator
 
 ::: graphssl.evaluation.KNNEvaluator
+
+::: graphssl.evaluation.effective_rank

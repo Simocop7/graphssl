@@ -1,8 +1,9 @@
-"""Tests for LogRegEvaluator and KNNEvaluator, incl. OGB-style 2D labels."""
+"""Tests for LogRegEvaluator and KNNEvaluator (incl. OGB-style 2D labels) and effective_rank."""
 
+import pytest
 import torch
 
-from graphssl.evaluation import KNNEvaluator, LogRegEvaluator
+from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank
 
 
 def _make_splits(n=60, num_classes=3, seed=0):
@@ -67,3 +68,26 @@ class TestKNNEvaluator:
         results_1d = KNNEvaluator(k=5).evaluate(embeddings, labels_1d, train_idx, val_idx, test_idx)
         results_2d = KNNEvaluator(k=5).evaluate(embeddings, labels_2d, train_idx, val_idx, test_idx)
         assert results_1d == results_2d
+
+
+class TestEffectiveRank:
+    def test_isotropic_embeddings_use_every_dimension(self):
+        z = torch.randn(4000, 16, generator=torch.Generator().manual_seed(0))
+        assert effective_rank(z) > 15.5
+
+    def test_rank_one_embeddings(self):
+        g = torch.Generator().manual_seed(0)
+        z = torch.randn(500, 1, generator=g) @ torch.randn(1, 32, generator=g)
+        assert effective_rank(z) == pytest.approx(1.0, abs=1e-3)
+
+    def test_counts_only_directions_with_variance(self):
+        g = torch.Generator().manual_seed(0)
+        z = torch.cat([torch.randn(4000, 3, generator=g), torch.zeros(4000, 13)], dim=1)
+        assert effective_rank(z) == pytest.approx(3.0, abs=0.05)
+
+    def test_invariant_to_shift_and_scale(self):
+        z = torch.randn(300, 8, generator=torch.Generator().manual_seed(0))
+        assert effective_rank(3.0 * z + 5.0) == pytest.approx(effective_rank(z), rel=1e-5)
+
+    def test_no_variance_is_zero(self):
+        assert effective_rank(torch.ones(50, 8)) == 0.0
