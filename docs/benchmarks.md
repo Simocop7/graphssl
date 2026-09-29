@@ -15,10 +15,12 @@ come from the objective rather than from per-method tuning:
 | Evaluation | frozen embeddings → linear probe (Adam-trained) and kNN (k=5, cosine) |
 | Seeds | 10; mean ± sample std |
 | Hardware | NVIDIA A2 (16 GB), PyTorch 2.11 + CUDA 12.8, PyG 2.8 |
+| Supervised references (†) | same encoder, trained on the public split's training labels only: *Supervised* keeps the protocol above; *std. recipe* uses dropout 0.5, Adam lr 0.01 + L2 5e-4 and the best-validation checkpoint (adapted from Kipf & Welling) |
 
 No per-method or per-dataset hyperparameter search is performed: the goal is to compare
 objectives at equal budget, not to reproduce each paper's best reported number. Test accuracy
-(%), best per column in bold.
+(%), best SSL method per column in bold. The supervised rows (†) use labels during training:
+they are reference points, not ranked.
 
 ### Linear probe
 
@@ -30,7 +32,9 @@ objectives at equal budget, not to reproduce each paper's best reported number. 
 | AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
 | VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
 | Barlow Twins | **78.13 ± 1.00** | **63.00 ± 1.31** | 77.82 ± 1.03 |
-| GraphDINO | 61.54 ± 1.79 | 42.00 ± 3.13 | 70.80 ± 3.40 |
+| GraphDINO | 62.12 ± 1.98 | 42.12 ± 2.58 | 70.97 ± 2.85 |
+| *Supervised* † | 73.10 ± 1.54 | 51.81 ± 2.71 | 74.16 ± 1.72 |
+| *Supervised, std. recipe* † | 76.10 ± 1.65 | 60.97 ± 3.42 | 71.36 ± 1.27 |
 
 ### kNN (k=5)
 
@@ -42,7 +46,9 @@ objectives at equal budget, not to reproduce each paper's best reported number. 
 | AFGRL | 65.13 ± 2.55 | 44.09 ± 2.81 | 70.63 ± 2.31 |
 | VICReg | 73.08 ± 1.39 | 58.30 ± 2.50 | **78.28 ± 1.79** |
 | Barlow Twins | **75.17 ± 1.06** | **62.23 ± 1.92** | 76.84 ± 1.33 |
-| GraphDINO | 54.16 ± 1.33 | 36.58 ± 1.70 | 64.88 ± 3.10 |
+| GraphDINO | 55.30 ± 1.56 | 36.92 ± 1.73 | 66.13 ± 3.79 |
+| *Supervised* † | 74.14 ± 0.91 | 54.67 ± 1.38 | 74.63 ± 1.60 |
+| *Supervised, std. recipe* † | 76.97 ± 1.51 | 62.04 ± 2.88 | 71.23 ± 1.03 |
 
 ### Reading the results
 
@@ -52,7 +58,16 @@ objectives at equal budget, not to reproduce each paper's best reported number. 
   the top group everywhere. Within the family, AFGRL — which uses no augmentation at all —
   beats BGRL on Cora (+5.9) and PubMed (+4.8) and ties on CiteSeer. A plausible explanation
   is the short shared budget and untuned EMA schedule rather than the objectives themselves;
-  this has not been verified yet (it needs per-method tuning).
+  this has not been verified yet (it needs per-method tuning). One implementation cause is
+  ruled out: GraphDINO's center was estimated from probabilities instead of logits until
+  `20cce09`, and rerunning it after the fix moved every number by less than one std.
+- **The supervised references are weak with this backbone.** Accuracy of the trained head
+  (Cora / CiteSeer / PubMed): 73.2 / 51.7 / 74.4 under the shared protocol, 76.8 / 62.4 /
+  71.4 with the standard recipe, which helps on Cora and CiteSeer and hurts on PubMed. Both
+  stay below the best SSL linear probe on every dataset. That describes a GIN trained on
+  60–140 labels, not SSL beating supervision in general: the 2-layer GCN of Kipf & Welling
+  reports 81.5 / 70.3 / 79.0 with a similar recipe. The backbone effect hasn't been isolated
+  here yet.
 - **Quadratic cost is visible.** On PubMed (≈19.7k nodes) one 300-step run takes ≈440 s for
   GraphCL (pairwise NT-Xent) and ≈500 s for AFGRL (dense kNN + per-step k-means), versus
   ≈35–60 s for the other methods. Wall times are indicative only: some runs shared the GPU.
@@ -79,7 +94,9 @@ run with `--model supervised supervised_reg` (they aren't part of `--model all`)
     positive of the runner at the time — it counted untracked files (logs, the results
     themselves) as modifications; fixed in `dae32cb`. The code that ran is exactly
     `e295451`. GraphCL on PubMed was run at `dae32cb`, whose chunked NT-Xent is numerically
-    identical to the unchunked one used for Cora and CiteSeer.
+    identical to the unchunked one used for Cora and CiteSeer. GraphDINO (after its center
+    fix) and *Supervised* were run at `20cce09`, *Supervised, std. recipe* at `558af8e`, all
+    with `"dirty": false`.
 
 ## Comparison with the original BGRL numbers
 

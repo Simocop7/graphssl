@@ -123,7 +123,7 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 
 ### Benchmark results (citation networks)
 
-All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%), mean ± std over 10 seeds; best per dataset in bold:
+All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%), mean ± std over 10 seeds; best SSL method per dataset in bold. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint), not ranked:
 
 | Method | Cora | CiteSeer | PubMed |
 |---|---|---|---|
@@ -133,10 +133,13 @@ All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), 
 | AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
 | VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
 | Barlow Twins | **78.13 ± 1.00** | **63.00 ± 1.31** | 77.82 ± 1.03 |
-| GraphDINO | 61.54 ± 1.79 | 42.00 ± 3.13 | 70.80 ± 3.40 |
+| GraphDINO | 62.12 ± 1.98 | 42.12 ± 2.58 | 70.97 ± 2.85 |
+| *Supervised* † | 73.10 ± 1.54 | 51.81 ± 2.71 | 74.16 ± 1.72 |
+| *Supervised, std. recipe* † | 76.10 ± 1.65 | 60.97 ± 3.42 | 71.36 ± 1.27 |
 
 ```bash
 python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all --seeds 10
+python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model supervised supervised_reg --seeds 10
 python benchmarks/render_tables.py      # rebuilds these tables from benchmarks/results/*.json
 ```
 

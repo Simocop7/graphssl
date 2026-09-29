@@ -37,9 +37,10 @@ public split's `train_mask` only.
 - `--model supervised` keeps the shared SSL protocol unchanged (no dropout, AdamW, last
   checkpoint). With 120–140 labels and no regularization it overfits, so it understates what
   the labels are worth.
-- `--model supervised_reg` uses the standard Kipf & Welling recipe: dropout 0.5, Adam lr 0.01
-  with L2 5e-4, checkpoint with the best validation accuracy. This is the credible reference;
-  its recipe is recorded in the JSON's `hyperparameters`.
+- `--model supervised_reg` uses a recipe adapted from Kipf & Welling: dropout 0.5, Adam lr
+  0.01 with L2 5e-4, checkpoint with the best validation accuracy. Its recipe is recorded in
+  the JSON's `hyperparameters`, the selected epoch per seed as `best_epoch`. With the GIN
+  backbone it helps on Cora and CiteSeer and hurts on PubMed (see `../docs/benchmarks.md`).
 
 Both get the same linear probe + kNN evaluation on their encoder embeddings; the accuracy of
 the trained head itself is saved as `test_acc_head`.

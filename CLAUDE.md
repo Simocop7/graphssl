@@ -64,9 +64,13 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Benchmark runner (neither is part of `all`; both save the head's own accuracy as
   `test_acc_head` next to linear probe/kNN):
   - `--model supervised`: shared SSL protocol unchanged (no dropout, AdamW, last checkpoint) —
-    overfits 120–140 labels, so it understates supervision (Cora 73.1, CiteSeer 51.8)
-  - `--model supervised_reg`: standard Kipf & Welling recipe (dropout 0.5, Adam lr 0.01 + L2
-    5e-4, best-validation checkpoint) — the credible reference row
+    overfits the 60–140 labels (head: Cora 73.2, CiteSeer 51.7, PubMed 74.4)
+  - `--model supervised_reg`: recipe adapted from Kipf & Welling (dropout 0.5, Adam lr 0.01 +
+    L2 5e-4, best-validation checkpoint; recorded in the JSON hyperparameters, selected epoch
+    per seed as `best_epoch`) — helps on Cora/CiteSeer (76.8 / 62.4), hurts on PubMed (71.4)
+  - Both stay below the best SSL linear probe with the GIN backbone. Kipf & Welling's GCN
+    reports 81.5 / 70.3 / 79.0, so the backbone is the likely factor — not isolated yet, don't
+    state it as a conclusion
 
 ### DGI (Deep Graph Infomax)
 - Discriminates real vs. corrupted embeddings via a discriminator with a learnable matrix W
@@ -127,8 +131,8 @@ No access to the trainer, logger, or datamodule from inside a model.
 - **Center update** (EMA): `center = c_mom * center + (1 − c_mom) * mean(teacher_logits)`, over the
   **raw** teacher logits (`DINOHead.prototype_logits`), as in reference DINO — the center is
   subtracted from logits, so it must live in logit space. Handled by `DINOHead.update_center()`,
-  called from `post_step()`. (Until 2026-09-29 it was fed the post-softmax probabilities by
-  mistake; the committed GraphDINO benchmark numbers predate the fix.)
+  called from `post_step()`. (Until `20cce09` it was fed the post-softmax probabilities by
+  mistake; rerunning the Planetoid benchmark after the fix moved every number by < 1 std.)
 - **EMA teacher**: momentum grows on a cosine schedule from `ema_tau_base` to `ema_tau` over `total_steps`.
 - **freeze_last_layer_epochs**: during the first N epochs, gradients of the prototype layer
   (`student_head.proto`) are zeroed out after backward — in `post_backward()`.
@@ -349,14 +353,20 @@ on_epoch_start → batches → on_epoch_end
 | AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
 | VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
 | Barlow Twins | 78.13 ± 1.00 | 63.00 ± 1.31 | 77.82 ± 1.03 |
-| GraphDINO | 61.54 ± 1.79 | 42.00 ± 3.13 | 70.80 ± 3.40 |
+| GraphDINO | 62.12 ± 1.98 | 42.12 ± 2.58 | 70.97 ± 2.85 |
+| *Supervised* † | 73.10 ± 1.54 | 51.81 ± 2.71 | 74.16 ± 1.72 |
+| *Supervised, std. recipe* † | 76.10 ± 1.65 | 60.97 ± 3.42 | 71.36 ± 1.27 |
 
+- † Supervised references (`--model supervised supervised_reg`, see the Supervised section):
+  trained on labels, not ranked against the SSL methods.
 - Deliberately untuned (no per-method/per-dataset search): it compares objectives at equal
   budget, it doesn't compete with each paper's best number. Teacher-student methods (BGRL,
   AFGRL, GraphDINO) trail the top group — **unexplained so far**; the leading hypothesis
-  (short budget + untuned EMA) is unverified, so don't state it as a conclusion.
+  (short budget + untuned EMA) is unverified, so don't state it as a conclusion. Ruled out:
+  GraphDINO's center bug (rerun after the fix at `20cce09`: every number moved < 1 std).
 - The 20 JSONs at commit `e295451` say `"dirty": true` — false positive (untracked files were
-  counted, fixed in `dae32cb`); the code that ran is exactly `e295451`.
+  counted, fixed in `dae32cb`); the code that ran is exactly `e295451`. GraphDINO and
+  Supervised were rerun at `20cce09`, Supervised std. recipe at `558af8e` (all clean).
 - Cost: on PubMed GraphCL (~440 s/run, O(N²) NT-Xent) and AFGRL (~500 s/run, dense N×N kNN +
   per-step k-means) are ~10× slower than the other methods (35–60 s).
 - `paper.tex` compares our BGRL against the original BGRL paper's numbers (Appendix C, Table 7)
