@@ -32,14 +32,12 @@ section) for the methodology and current status.
 ~10–60 s per seed on an NVIDIA A2, but on PubMed GraphCL (O(N²) NT-Xent) and AFGRL (dense
 N×N kNN + per-step k-means) take ~7–9 min per seed, so ~75–85 min each for 10 seeds.
 
+**Supervised reference:** `--model supervised` (not part of `all`) trains the same encoder
+full-batch on the public split's `train_mask` only, under the same budget. It gets the same
+linear probe + kNN evaluation on its encoder embeddings; the accuracy of its own trained head
+is saved as `test_acc_head`.
+
 **Known gaps:**
-- `--model supervised` is accepted but currently skipped — building it
-  surfaced a real masking gap in `Supervised.compute_loss()` for full-batch
-  training (it only restricts to seed nodes in mini-batch/`NeighborLoader`
-  mode; full-batch mode would leak val/test labels into the loss), and the
-  correct fix (`NeighborLoader(input_nodes=train_idx)`) needs `pyg-lib` or
-  `torch-sparse`, neither a core dependency. See the comment in
-  `run_benchmark.main()`.
 - `afgrl` is skipped automatically when `faiss-cpu` isn't installed (same
   behavior as `tests/test_afgrl.py`).
 - Only Planetoid (Cora/CiteSeer/PubMed) is wired up so far — ogbn-arxiv/ZINC

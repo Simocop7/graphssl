@@ -5,6 +5,7 @@ import torch
 from torch_geometric.data import Data
 
 from graphssl.models import GraphDINO
+from graphssl.nn.pooling import pool_graph_embeddings
 from graphssl.training import DINOTrainer
 from graphssl.utils import update_ema_params
 from helpers import make_batch
@@ -185,6 +186,37 @@ class TestTeacherTempWarmup:
         """warmup_teacher_temp_epochs=0 means teacher_temp is used from the start."""
         model = GraphDINO(_make_config(), in_channels=7)
         assert model.teacher_head._current_teacher_temp == pytest.approx(0.07)
+
+
+class TestCenter:
+    def test_center_tracks_raw_teacher_logits(self):
+        """The center lives in logit space (as in DINO), not in softmax-probability space."""
+        cfg = _make_config(augment_teacher=[], augment_student=[])
+        cfg["encoder"]["drop"] = 0.0
+        cfg["head"]["center_momentum"] = 0.0  # center = mean of the last batch
+        model = GraphDINO(cfg, in_channels=7)
+        model.train()
+        batch = _make_batch(n_features=7)
+
+        with torch.no_grad():
+            h = model.teacher_enc(batch.x, batch.edge_index, batch.batch)
+            h = pool_graph_embeddings(h, batch.batch)
+            expected = model.teacher_head.prototype_logits(h).mean(0, keepdim=True)
+
+        model.compute_loss(batch)
+        model.post_step()
+        assert torch.allclose(model.teacher_head.center, expected, atol=1e-6)
+
+    def test_teacher_output_is_centered_softmax_of_logits(self):
+        head = GraphDINO(_make_config(), in_channels=7).teacher_head
+        head.eval()
+        head.center.normal_()
+        x = torch.randn(5, 32)
+        with torch.no_grad():
+            expected = torch.softmax(
+                (head.prototype_logits(x) - head.center) / head._current_teacher_temp, dim=-1
+            )
+            assert torch.allclose(head(x, use_teacher_temp=True), expected, atol=1e-6)
 
 
 class TestEMAUpdate:

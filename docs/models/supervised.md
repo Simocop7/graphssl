@@ -11,18 +11,18 @@ model = Supervised(config, in_channels, num_classes)
 ## How it works
 
 - Encoder + linear head `nn.Linear(hidden_dim, num_classes)`.
-- Supports both full-batch and mini-batch training. In mini-batch mode (`NeighborLoader`,
-  `batch.batch_size` set), the loss is cropped to `[:batch_size]` for the seed nodes.
-- `graph_level` is derived from `cfg.encoder.pool`, like every other model.
+- `graph_level` is derived from `cfg.encoder.pool`, like every other model. Which labels the
+  loss sees depends on the mode:
 
-!!! warning "Full-batch training computes the loss over the whole `Data` object"
-    `compute_loss()` only restricts to seed nodes when `batch.batch_size` is present (i.e. in
-    mini-batch/`NeighborLoader` mode). In full-batch mode there is currently no automatic
-    masking to `train_idx` — passing the full graph's `Data` object directly, unfiltered, will
-    include validation/test labels in the loss. Use `NeighborLoader(input_nodes=train_idx)` for
-    full-batch-sized graphs (Cora/CiteSeer/PubMed) rather than `DataModule.train_dataloader()`
-    directly if you need strict train/val/test separation. This was discovered while building
-    the [benchmark runner](../benchmarks.md); tracked as a follow-up fix.
+| Mode | Loss computed on |
+|---|---|
+| Graph-level (`pool=True`) | every graph in the batch (node embeddings mean-pooled per graph) |
+| Node-level mini-batch (`NeighborLoader`, `batch.batch_size` set) | the first `batch_size` seed nodes — build the loader with `input_nodes=train_idx` |
+| Node-level full-batch | the nodes in `data.train_mask` only |
+
+!!! warning "Full-batch node training requires `data.train_mask`"
+    Without it `compute_loss()` raises a `ValueError` instead of silently training on the
+    validation/test labels too. Planetoid datasets ship with the public split's masks.
 
 ## Config example
 

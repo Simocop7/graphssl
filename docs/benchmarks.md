@@ -71,8 +71,8 @@ hyperparameters, the git commit (plus whether tracked files had uncommitted chan
 package versions. Old files are never overwritten, so results accumulate as a reproducible
 history; `render_tables.py` uses the latest file per (dataset, model). See
 [`benchmarks/README.md`](https://github.com/Simocop7/graphssl/blob/main/benchmarks/README.md)
-for the known gaps (the supervised baseline isn't wired in yet; only Planetoid datasets are
-wired up so far).
+for the known gaps (only Planetoid datasets are wired up so far). The supervised reference
+runs with `--model supervised` (it isn't part of `--model all`).
 
 !!! note "Provenance of the committed results"
     The 20 files recorded at commit `e295451` report `"dirty": true`. That is a false

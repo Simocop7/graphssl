@@ -22,9 +22,13 @@ Usage::
     # Multiple datasets in one invocation
     python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all
 
-Note: ``--model supervised`` is accepted but currently skipped at run time —
-see the comment in ``main()`` for why (a real masking gap surfaced while
-building this, not a placeholder).
+    # Supervised reference (not part of "all")
+    python benchmarks/run_benchmark.py --dataset Cora --model supervised
+
+Supervised trains full-batch on the public split's ``train_mask`` only, under the
+same encoder/budget as the SSL models. Its encoder embeddings get the same linear
+probe + kNN evaluation; the accuracy of its own trained head is saved alongside
+as ``test_acc_head``.
 
 Then render Markdown tables from the saved results::
 
@@ -51,6 +55,7 @@ from torch_geometric.datasets import Planetoid
 from graphssl.config.load import build_model
 from graphssl.data import DataModule
 from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, extract_embeddings
+from graphssl.models import Supervised
 from graphssl.training import DINOTrainer
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -134,7 +139,8 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
     if model_name in ("bgrl", "afgrl"):
         cfg["pred_hidden"] = args.hidden
     # dgi and supervised need nothing beyond `encoder` — their dataclasses
-    # already default corruption/shuffle_ratio and nothing extra, respectively.
+    # already default corruption/shuffle_ratio and nothing extra, respectively
+    # (Supervised's num_classes is passed to build_model() separately).
     return cfg
 
 
@@ -175,7 +181,9 @@ def run_one(
     )
 
     t0 = time.time()
-    model = build_model(config, in_channels=data.num_features)
+    # num_classes is only used by Supervised; build_model ignores it for SSL models.
+    # Supervised's full-batch loss is restricted to data.train_mask (the public split).
+    model = build_model(config, in_channels=data.num_features, num_classes=num_classes)
     loader = dm.train_dataloader()
 
     optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -187,13 +195,34 @@ def run_one(
     lin = LogRegEvaluator().evaluate(z, y, train_idx, val_idx, test_idx, num_classes=num_classes)
     knn = KNNEvaluator(k=args.knn_k).evaluate(z, y, train_idx, val_idx, test_idx)
 
-    return {
+    result = {
         "seed": seed,
         "val_acc_linear": lin["val_acc"],
         "test_acc_linear": lin["test_acc"],
         "val_acc_knn": knn["val_acc"],
         "test_acc_knn": knn["test_acc"],
         "wall_time_s": wall_time_s,
+    }
+    if isinstance(model, Supervised):
+        result.update(head_accuracy(model, data, val_idx, test_idx, device))
+    return result
+
+
+@torch.no_grad()
+def head_accuracy(
+    model: Supervised,
+    data,
+    val_idx: torch.Tensor,
+    test_idx: torch.Tensor,
+    device: torch.device,
+) -> dict:
+    """Accuracy of Supervised's own trained head (end-to-end, no probe retraining)."""
+    model.eval()
+    pred = model.head(model(data.to(device))).argmax(dim=-1).cpu()
+    y = data.y.cpu()
+    return {
+        "val_acc_head": (pred[val_idx] == y[val_idx]).float().mean().item(),
+        "test_acc_head": (pred[test_idx] == y[test_idx]).float().mean().item(),
     }
 
 
@@ -232,6 +261,13 @@ def save_result(
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = out_dir / f"{model_name}__{timestamp}.json"
 
+    aggregate = {
+        "test_acc_linear": _mean_std([r["test_acc_linear"] for r in per_seed]),
+        "test_acc_knn": _mean_std([r["test_acc_knn"] for r in per_seed]),
+    }
+    if all("test_acc_head" in r for r in per_seed):
+        aggregate["test_acc_head"] = _mean_std([r["test_acc_head"] for r in per_seed])
+
     result = {
         "dataset": dataset,
         "model": model_name,
@@ -246,10 +282,7 @@ def save_result(
         },
         "seeds": [r["seed"] for r in per_seed],
         "per_seed": per_seed,
-        "aggregate": {
-            "test_acc_linear": _mean_std([r["test_acc_linear"] for r in per_seed]),
-            "test_acc_knn": _mean_std([r["test_acc_knn"] for r in per_seed]),
-        },
+        "aggregate": aggregate,
         "provenance": {
             "timestamp_utc": timestamp,
             "git": _git_info(),
@@ -301,23 +334,6 @@ def main() -> None:
                     print(f"[{dataset_name}/afgrl] skipped — faiss-cpu not installed")
                     continue
 
-            if model_name == "supervised":
-                # Not yet supported here: Supervised.compute_loss() has no
-                # masking of its own in full-batch mode (it only crops to
-                # `batch.batch_size` when that attribute is present — see
-                # src/graphssl/models/supervised.py) — a plain
-                # train_dataloader() full-graph Data object would leak
-                # val/test labels into the loss. The correct fix is
-                # NeighborLoader(input_nodes=train_idx), which in turn needs
-                # pyg-lib or torch-sparse installed (neither is a core
-                # dependency) — verified by hitting exactly this ImportError
-                # in a real run. Tracked as a follow-up rather than adding
-                # that dependency or a fragile workaround here.
-                print(
-                    f"[{dataset_name}/supervised] skipped — see comment above run_benchmark.main()"
-                )
-                continue
-
             print(f"\n--- {dataset_name} / {model_name} ({args.seeds} seeds) ---")
             per_seed = []
             for seed in range(args.seeds):
@@ -334,9 +350,16 @@ def main() -> None:
             path = save_result(out_dir, dataset_name, model_name, args, per_seed)
             agg = _mean_std([r["test_acc_linear"] for r in per_seed])
             agg_knn = _mean_std([r["test_acc_knn"] for r in per_seed])
+            head = ""
+            if "test_acc_head" in per_seed[0]:
+                agg_head = _mean_std([r["test_acc_head"] for r in per_seed])
+                head = f"head {agg_head['mean'] * 100:.2f} ± {agg_head['std'] * 100:.2f} | "
+            # --out-dir may point outside the repo (absolute path): print it as-is then.
+            shown = path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path
             print(
                 f"  -> linear {agg['mean'] * 100:.2f} ± {agg['std'] * 100:.2f} | "
-                f"knn {agg_knn['mean'] * 100:.2f} ± {agg_knn['std'] * 100:.2f} | saved to {path.relative_to(REPO_ROOT)}"
+                f"knn {agg_knn['mean'] * 100:.2f} ± {agg_knn['std'] * 100:.2f} | "
+                f"{head}saved to {shown}"
             )
 
 

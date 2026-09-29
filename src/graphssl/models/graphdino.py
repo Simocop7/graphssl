@@ -77,6 +77,7 @@ class GraphDINO(BaseSSLModel):
         self._step: int = 0
 
         self._last_teacher_out: Tensor | None = None
+        self._last_teacher_logits: Tensor | None = None
 
     @property
     def last_teacher_out(self) -> Tensor | None:
@@ -99,20 +100,13 @@ class GraphDINO(BaseSSLModel):
                 z = pool_graph_embeddings(z, data.batch)
             return z.detach()
 
-    def _encode(
-        self,
-        enc: nn.Module,
-        head: nn.Module,
-        view: Data,
-        batch_size: Optional[int],
-        use_teacher_temp: bool = False,
-    ) -> Tensor:
+    def _embed(self, enc: nn.Module, view: Data, batch_size: Optional[int]) -> Tensor:
         h = enc(view.x, view.edge_index, view.batch)
         if self._graph_level:
             h = pool_graph_embeddings(h, view.batch)
         elif batch_size is not None:
             h = h[:batch_size]
-        return head(h, use_teacher_temp=use_teacher_temp)
+        return h
 
     def compute_loss(self, data: Data) -> Tensor:
         # In mini-batch node training, protect the first batch_size seed nodes
@@ -137,24 +131,24 @@ class GraphDINO(BaseSSLModel):
         ]
         all_views = global_views + local_views
 
-        student_logits = [
-            self._encode(self.student_enc, self.student_head, v, batch_size) for v in all_views
-        ]
+        # Head called once per view, so its BatchNorm sees per-view statistics.
+        student_out = torch.cat(
+            [self.student_head(self._embed(self.student_enc, v, batch_size)) for v in all_views],
+            dim=0,
+        )
 
         with torch.no_grad():
-            teacher_logits = [
-                self._encode(
-                    self.teacher_enc,
-                    self.teacher_head,
-                    v,
-                    batch_size,
-                    use_teacher_temp=True,
-                )
-                for v in global_views
-            ]
-
-        student_out = torch.cat(student_logits, dim=0)
-        teacher_out = torch.cat(teacher_logits, dim=0)
+            # Raw teacher logits: the center is subtracted from them here and updated
+            # with them in post_step(), so both happen in logit space.
+            teacher_logits = torch.cat(
+                [
+                    self.teacher_head.prototype_logits(self._embed(self.teacher_enc, v, batch_size))
+                    for v in global_views
+                ],
+                dim=0,
+            )
+            teacher_out = self.teacher_head.teacher_probs(teacher_logits)
+        self._last_teacher_logits = teacher_logits
         self._last_teacher_out = teacher_out
 
         return self._loss_fn(student_out, teacher_out, self._n_global_views, self._n_views)
@@ -178,8 +172,8 @@ class GraphDINO(BaseSSLModel):
         # This preserves the teacher center's history through the EMA sync.
         self.student_head.center.copy_(self.teacher_head.center)
         update_ema_params(self.student_head, self.teacher_head, self._ema_tau)
-        if self._last_teacher_out is not None:
-            self.teacher_head.update_center(self._last_teacher_out)
+        if self._last_teacher_logits is not None:
+            self.teacher_head.update_center(self._last_teacher_logits)
 
     def on_epoch_start(self, epoch: int) -> None:
         self.teacher_head.set_epoch(epoch)

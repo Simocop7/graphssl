@@ -78,19 +78,33 @@ class DINOHead(nn.Module):
                 self.teacher_temp - self.warmup_teacher_temp
             )
 
-    def forward(self, x: torch.Tensor, use_teacher_temp: bool = False) -> torch.Tensor:
+    def prototype_logits(self, x: torch.Tensor) -> torch.Tensor:
+        """Raw prototype scores, before centering, temperature and (log-)softmax."""
         h = self.projector(x)
         h = F.normalize(h, dim=-1)
-        logits = self.proto(h)
+        return self.proto(h)
+
+    def teacher_probs(self, logits: torch.Tensor) -> torch.Tensor:
+        """Teacher output: softmax((logits - center) / teacher_temp_eff)."""
+        return F.softmax((logits - self.center) / self._current_teacher_temp, dim=-1)
+
+    def forward(self, x: torch.Tensor, use_teacher_temp: bool = False) -> torch.Tensor:
+        logits = self.prototype_logits(x)
 
         if use_teacher_temp:
-            return F.softmax((logits - self.center) / self._current_teacher_temp, dim=-1)
+            return self.teacher_probs(logits)
         else:
             return F.log_softmax(logits / self.student_temp, dim=-1)
 
     @torch.no_grad()
-    def update_center(self, teacher_out: torch.Tensor) -> None:
-        self.center = self.center * self.center_momentum + teacher_out.mean(0, keepdim=True) * (
+    def update_center(self, teacher_logits: torch.Tensor) -> None:
+        """EMA of the batch-mean *raw* teacher logits (from ``prototype_logits``).
+
+        The center is subtracted from the logits, so it must live in logit space — as in
+        the reference DINO implementation. Feeding it the post-softmax probabilities
+        instead would give a center that always sums to 1, on the wrong scale.
+        """
+        self.center = self.center * self.center_momentum + teacher_logits.mean(0, keepdim=True) * (
             1 - self.center_momentum
         )
 

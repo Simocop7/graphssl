@@ -17,9 +17,11 @@ student.
       `DINOHead`.
 - **Teacher temperature warmup**: `teacher_temp_eff` grows linearly from `warmup_teacher_temp`
   to `teacher_temp` over `warmup_teacher_temp_epochs` epochs (`DINOHead.set_epoch(epoch)`).
-- **Center update (EMA)**: `center = c_mom * center + (1 − c_mom) * mean(teacher_out)`,
-  handled by `DINOHead.update_center()`, called from `post_step()` — this is what keeps the
-  teacher's output distribution from collapsing to a single prototype.
+- **Center update (EMA)**: `center = c_mom * center + (1 − c_mom) * mean(teacher_logits)`,
+  over the **raw** teacher logits (`DINOHead.prototype_logits`, before centering and softmax),
+  as in the reference DINO implementation. Handled by `DINOHead.update_center()`, called from
+  `post_step()` — this is what keeps the teacher's output distribution from collapsing to a
+  single prototype.
 - **EMA teacher**: momentum grows on a cosine schedule from `ema_tau_base` to `ema_tau` over
   `total_steps`.
 - **`freeze_last_layer_epochs`**: during the first N epochs, gradients of the prototype layer
@@ -31,9 +33,10 @@ student.
 | Field | Default | Notes |
 |---|---|---|
 | `student_temp` | `0.1` | |
-| `teacher_temp` | `0.07` | final teacher temperature |
-| `warmup_teacher_temp` | `0.04` | starting teacher temperature |
-| `warmup_teacher_temp_epochs` | `30` | |
+| `teacher_temp` | `0.04` | final teacher temperature |
+| `warmup_teacher_temp` | `0.04` | starting teacher temperature (must be ≤ `teacher_temp`) |
+| `warmup_teacher_temp_epochs` | `0` | the warmup only matters when `teacher_temp` > `warmup_teacher_temp` (e.g. `0.07`) |
+| `center_momentum` | `0.9` | |
 | `ema_tau` | `0.996` | |
 | `freeze_last_layer_epochs` | `1` | |
 | `n_views` / `n_global_views` | `2` / `2` | |

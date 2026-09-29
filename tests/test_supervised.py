@@ -1,6 +1,8 @@
 """Smoke tests for the Supervised pipeline."""
 
+import pytest
 import torch
+import torch.nn.functional as F
 from torch_geometric.data import Batch, Data
 
 from graphssl.models import Supervised
@@ -15,6 +17,8 @@ def _make_config(**overrides):
 
 
 def _make_graph(n_nodes=20, n_feat=7, num_classes=3):
+    train_mask = torch.zeros(n_nodes, dtype=torch.bool)
+    train_mask[: n_nodes // 2] = True
     return Data(
         x=torch.randn(n_nodes, n_feat),
         edge_index=torch.stack(
@@ -24,10 +28,12 @@ def _make_graph(n_nodes=20, n_feat=7, num_classes=3):
             ]
         ),
         y=torch.randint(0, num_classes, (n_nodes,)),
+        train_mask=train_mask,
     )
 
 
 def _make_batch(n_graphs=4, n_nodes=10, n_feat=7, num_classes=3):
+    """Graph-level batch: one label per graph."""
     graphs = []
     for _ in range(n_graphs):
         graphs.append(
@@ -39,7 +45,7 @@ def _make_batch(n_graphs=4, n_nodes=10, n_feat=7, num_classes=3):
                         torch.randint(0, n_nodes, (n_nodes * 2,)),
                     ]
                 ),
-                y=torch.randint(0, num_classes, (n_nodes,)),
+                y=torch.randint(0, num_classes, (1,)),
             )
         )
     return Batch.from_data_list(graphs)
@@ -105,3 +111,44 @@ class TestSupervised:
             graph = _make_graph(n_nodes=15, n_feat=self.in_channels, num_classes=nc)
             loss = model.compute_loss(graph)
             assert torch.isfinite(loss)
+
+    def test_full_batch_uses_only_train_mask(self):
+        """Full-batch loss must see train labels only: val/test labels can't change it."""
+        model = Supervised(self.config, in_channels=self.in_channels, num_classes=self.num_classes)
+        model.eval()  # deterministic: no dropout, BatchNorm running stats
+        graph = _make_graph(n_nodes=20, n_feat=self.in_channels, num_classes=self.num_classes)
+        mask = graph.train_mask
+
+        with torch.no_grad():
+            loss = model.compute_loss(graph)
+            expected = F.cross_entropy(model.head(model(graph))[mask], graph.y[mask])
+            graph.y[~mask] = (graph.y[~mask] + 1) % self.num_classes
+            loss_other_labels = model.compute_loss(graph)
+
+        assert torch.allclose(loss, expected)
+        assert torch.allclose(loss, loss_other_labels)
+
+    def test_full_batch_without_train_mask_raises(self):
+        model = Supervised(self.config, in_channels=self.in_channels, num_classes=self.num_classes)
+        graph = _make_graph(n_nodes=20, n_feat=self.in_channels, num_classes=self.num_classes)
+        del graph.train_mask
+        with pytest.raises(ValueError, match="train_mask"):
+            model.compute_loss(graph)
+
+    def test_graph_level_pools_and_uses_graph_labels(self):
+        """pool=True: one embedding and one loss term per graph, not per node."""
+        config = _make_config(
+            encoder={"name": "gin", "hidden_dim": 32, "num_layers": 2, "pool": True}
+        )
+        model = Supervised(config, in_channels=self.in_channels, num_classes=self.num_classes)
+        model.eval()
+        batch = _make_batch(n_graphs=4, n_feat=self.in_channels, num_classes=self.num_classes)
+
+        with torch.no_grad():
+            emb = model(batch)
+            loss = model.compute_loss(batch)
+            expected = F.cross_entropy(model.head(emb), batch.y)
+
+        assert model.graph_level
+        assert emb.shape == (4, 32)
+        assert torch.allclose(loss, expected)

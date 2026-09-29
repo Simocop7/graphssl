@@ -57,8 +57,12 @@ No access to the trainer, logger, or datamodule from inside a model.
 
 ### Supervised
 - Encoder + linear head `nn.Linear(hidden_dim, num_classes)`, CrossEntropyLoss
-- Supports full-batch and mini-batch (crop to `[:batch_size]` for seed nodes)
-- `graph_level` derived from `cfg.encoder.pool`
+- `graph_level` derived from `cfg.encoder.pool`: embeddings mean-pooled per graph, loss on every graph
+- Node-level mini-batch: crop to `[:batch_size]` seed nodes (build `NeighborLoader` with `input_nodes=train_idx`)
+- Node-level full-batch: loss on `data.train_mask` only; **raises** if `train_mask` is missing —
+  never trains silently on val/test labels (it used to, until the benchmark runner exposed it)
+- Benchmark runner: `--model supervised` (not part of `all`), same encoder/budget as the SSL
+  methods; saves the head's own accuracy as `test_acc_head` next to linear probe/kNN
 
 ### DGI (Deep Graph Infomax)
 - Discriminates real vs. corrupted embeddings via a discriminator with a learnable matrix W
@@ -116,14 +120,19 @@ No access to the trainer, logger, or datamodule from inside a model.
   - Teacher output: `softmax((logits − center) / teacher_temp_eff)` — computed inside `DINOHead`
 - **Teacher temperature warmup**: `teacher_temp_eff` grows linearly from `warmup_teacher_temp`
   to `teacher_temp` over `warmup_teacher_temp_epochs` epochs. `DINOHead.set_epoch(epoch)` updates the value.
-- **Center update** (EMA): `center = c_mom * center + (1 − c_mom) * mean(teacher_out)`
-  Handled by `DINOHead.update_center()`, called from `post_step()`.
+- **Center update** (EMA): `center = c_mom * center + (1 − c_mom) * mean(teacher_logits)`, over the
+  **raw** teacher logits (`DINOHead.prototype_logits`), as in reference DINO — the center is
+  subtracted from logits, so it must live in logit space. Handled by `DINOHead.update_center()`,
+  called from `post_step()`. (Until 2026-09-29 it was fed the post-softmax probabilities by
+  mistake; the committed GraphDINO benchmark numbers predate the fix.)
 - **EMA teacher**: momentum grows on a cosine schedule from `ema_tau_base` to `ema_tau` over `total_steps`.
 - **freeze_last_layer_epochs**: during the first N epochs, gradients of the prototype layer
   (`student_head.proto`) are zeroed out after backward — in `post_backward()`.
-- Hyperparameters: `student_temp=0.1, teacher_temp=0.07, warmup_teacher_temp=0.04,
-  warmup_teacher_temp_epochs=30, ema_tau=0.996, freeze_last_layer_epochs=1,
-  n_views=2, n_global_views=2`
+- Hyperparameters (code defaults, `HeadConfig`/`GraphDINOConfig`): `student_temp=0.1,
+  teacher_temp=0.04, warmup_teacher_temp=0.04, warmup_teacher_temp_epochs=0,
+  center_momentum=0.9, ema_tau=0.996, ema_tau_base=0.996, freeze_last_layer_epochs=1,
+  n_views=2, n_global_views=2`. With the default temperatures the warmup is a no-op, even
+  where `warmup_teacher_temp_epochs` is set (e.g. the benchmark runner's 30).
 
 ### VICReg
 - Encoder + 3-layer projector `Projector(hidden_dim, hidden_dim*2, proj_dim)`
@@ -388,8 +397,8 @@ pytest tests/ -v
 | `test_vicreg.py` | VICReg | 3-layer projector, loss ≥ 0 |
 | `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
 | `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored; **auto-skipped if faiss isn't installed** |
-| `test_supervised.py` | Supervised | head dim, mini-batch crop |
-| `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, DINOTrainer hooks |
+| `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling |
+| `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, center in logit space, DINOTrainer hooks |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
 | `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D |
 
