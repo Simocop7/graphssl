@@ -61,8 +61,12 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Node-level mini-batch: crop to `[:batch_size]` seed nodes (build `NeighborLoader` with `input_nodes=train_idx`)
 - Node-level full-batch: loss on `data.train_mask` only; **raises** if `train_mask` is missing —
   never trains silently on val/test labels (it used to, until the benchmark runner exposed it)
-- Benchmark runner: `--model supervised` (not part of `all`), same encoder/budget as the SSL
-  methods; saves the head's own accuracy as `test_acc_head` next to linear probe/kNN
+- Benchmark runner (neither is part of `all`; both save the head's own accuracy as
+  `test_acc_head` next to linear probe/kNN):
+  - `--model supervised`: shared SSL protocol unchanged (no dropout, AdamW, last checkpoint) —
+    overfits 120–140 labels, so it understates supervision (Cora 73.1, CiteSeer 51.8)
+  - `--model supervised_reg`: standard Kipf & Welling recipe (dropout 0.5, Adam lr 0.01 + L2
+    5e-4, best-validation checkpoint) — the credible reference row
 
 ### DGI (Deep Graph Infomax)
 - Discriminates real vs. corrupted embeddings via a discriminator with a learnable matrix W

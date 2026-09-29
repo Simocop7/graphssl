@@ -22,13 +22,15 @@ Usage::
     # Multiple datasets in one invocation
     python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all
 
-    # Supervised reference (not part of "all")
-    python benchmarks/run_benchmark.py --dataset Cora --model supervised
+    # Supervised references (not part of "all")
+    python benchmarks/run_benchmark.py --dataset Cora --model supervised supervised_reg
 
-Supervised trains full-batch on the public split's ``train_mask`` only, under the
-same encoder/budget as the SSL models. Its encoder embeddings get the same linear
-probe + kNN evaluation; the accuracy of its own trained head is saved alongside
-as ``test_acc_head``.
+Both supervised references train full-batch on the public split's ``train_mask``
+only. ``supervised`` keeps the shared SSL protocol unchanged; ``supervised_reg``
+uses the standard Kipf & Welling recipe (dropout 0.5, Adam lr 0.01 + L2 5e-4,
+best-validation checkpoint), recorded in the JSON's hyperparameters. Their encoder
+embeddings get the same linear probe + kNN evaluation; the accuracy of the trained
+head is saved alongside as ``test_acc_head``.
 
 Then render Markdown tables from the saved results::
 
@@ -38,6 +40,7 @@ Then render Markdown tables from the saved results::
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import platform
 import statistics
@@ -49,7 +52,7 @@ from pathlib import Path
 
 import torch
 import torch_geometric
-from torch.optim import AdamW
+from torch.optim import Adam, AdamW
 from torch_geometric.datasets import Planetoid
 
 from graphssl.config.load import build_model
@@ -60,12 +63,24 @@ from graphssl.training import DINOTrainer
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# All 7 SSL models ("all" expands to this). "supervised" is deliberately not
-# included in "all" — it's a baseline with a different training contract
-# (needs labels during "pretraining"), not an SSL method to compare against
-# the others by default. Pass it explicitly via --model to include it.
+# All 7 SSL models ("all" expands to this).
 SSL_MODELS = ["dgi", "graphcl", "vicreg", "barlow_twins", "bgrl", "afgrl", "graphdino"]
-ALL_MODEL_CHOICES = [*SSL_MODELS, "supervised"]
+
+# Supervised references, deliberately not part of "all": they train on labels, so they're
+# reference points rather than methods to rank. Pass them explicitly via --model.
+#   supervised      the shared SSL protocol unchanged (no dropout, AdamW, last checkpoint).
+#                   With 120-140 labels and no regularization it overfits, so it understates
+#                   what the labels are worth.
+#   supervised_reg  the standard semi-supervised recipe of Kipf & Welling (2017) below.
+SUPERVISED_MODELS = ["supervised", "supervised_reg"]
+SUPERVISED_REG_RECIPE = {
+    "optimizer": "adam",  # L2 through Adam's coupled weight_decay, as in the GCN paper
+    "lr": 0.01,
+    "weight_decay": 5e-4,
+    "dropout": 0.5,
+    "model_selection": "best_val_acc",  # checkpoint with the best validation accuracy
+}
+ALL_MODEL_CHOICES = [*SSL_MODELS, *SUPERVISED_MODELS]
 
 # Only Planetoid citation networks are wired up today (CPU-friendly, already
 # validated — see CLAUDE.md). Add an entry here to extend to a new dataset;
@@ -84,7 +99,7 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=["all"],
         choices=[*ALL_MODEL_CHOICES, "all"],
-        help="'all' expands to every SSL model (excludes 'supervised', pass it explicitly)",
+        help="'all' expands to every SSL model (excludes the supervised references)",
     )
     p.add_argument("--encoder", default="gin", choices=["gin", "gcn", "transformer"])
     p.add_argument("--hidden", type=int, default=256)
@@ -112,7 +127,8 @@ def parse_args() -> argparse.Namespace:
 
 def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namespace) -> dict:
     augment = [{"name": "edge_drop", "p": 0.5}, {"name": "feat_mask", "p": 0.2}]
-    cfg: dict = {"name": model_name, "encoder": encoder_cfg}
+    name = "supervised" if model_name in SUPERVISED_MODELS else model_name
+    cfg: dict = {"name": name, "encoder": encoder_cfg}
 
     if model_name in ("bgrl", "afgrl", "graphdino"):
         cfg["ema_tau"] = 0.99
@@ -168,7 +184,7 @@ def run_one(
         "num_layers": args.layers,
         "norm_type": "batch",
         "pool": False,  # node-level task: no graph pooling
-        "drop": 0.0,
+        "drop": SUPERVISED_REG_RECIPE["dropout"] if model_name == "supervised_reg" else 0.0,
     }
     config = build_model_config(model_name, encoder_cfg, args)
 
@@ -186,9 +202,21 @@ def run_one(
     model = build_model(config, in_channels=data.num_features, num_classes=num_classes)
     loader = dm.train_dataloader()
 
-    optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=args.weight_decay)
     trainer = DINOTrainer(grad_clip_norm=None, device=device)
-    trainer.train(model, loader, optimizer, num_epochs=args.epochs)
+    best_epoch = None
+    if model_name == "supervised_reg":
+        assert isinstance(model, Supervised)
+        optimizer: torch.optim.Optimizer = Adam(
+            model.student_parameters(),
+            lr=SUPERVISED_REG_RECIPE["lr"],
+            weight_decay=SUPERVISED_REG_RECIPE["weight_decay"],
+        )
+        best_epoch = train_best_val(
+            model, loader, optimizer, trainer, data, val_idx, args.epochs, device
+        )
+    else:
+        optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        trainer.train(model, loader, optimizer, num_epochs=args.epochs)
     wall_time_s = time.time() - t0
 
     z, y = extract_embeddings(model, dm, device=device)
@@ -205,10 +233,18 @@ def run_one(
     }
     if isinstance(model, Supervised):
         result.update(head_accuracy(model, data, val_idx, test_idx, device))
+    if best_epoch is not None:
+        result["best_epoch"] = best_epoch
     return result
 
 
 @torch.no_grad()
+def head_predictions(model: Supervised, data, device: torch.device) -> torch.Tensor:
+    """Class predictions of Supervised's own trained head for every node (on CPU)."""
+    model.eval()
+    return model.head(model(data.to(device))).argmax(dim=-1).cpu()
+
+
 def head_accuracy(
     model: Supervised,
     data,
@@ -217,13 +253,40 @@ def head_accuracy(
     device: torch.device,
 ) -> dict:
     """Accuracy of Supervised's own trained head (end-to-end, no probe retraining)."""
-    model.eval()
-    pred = model.head(model(data.to(device))).argmax(dim=-1).cpu()
-    y = data.y.cpu()
+    pred, y = head_predictions(model, data, device), data.y.cpu()
     return {
         "val_acc_head": (pred[val_idx] == y[val_idx]).float().mean().item(),
         "test_acc_head": (pred[test_idx] == y[test_idx]).float().mean().item(),
     }
+
+
+def train_best_val(
+    model: Supervised,
+    loader,
+    optimizer: torch.optim.Optimizer,
+    trainer: DINOTrainer,
+    data,
+    val_idx: torch.Tensor,
+    epochs: int,
+    device: torch.device,
+) -> int:
+    """Train for ``epochs``, then restore the checkpoint with the best validation accuracy.
+
+    Selection looks at validation labels only, never at the test split. Returns the
+    selected epoch (the earliest one on ties).
+    """
+    model.to(device)
+    y_val = data.y.cpu()[val_idx]
+    best_acc, best_epoch, best_state = -1.0, -1, None
+    for epoch in range(epochs):
+        trainer.train_epoch(model, loader, optimizer, device=device, epoch=epoch)
+        acc = (head_predictions(model, data, device)[val_idx] == y_val).float().mean().item()
+        if acc > best_acc:
+            best_acc, best_epoch = acc, epoch
+            best_state = copy.deepcopy(model.state_dict())
+    assert best_state is not None
+    model.load_state_dict(best_state)
+    return best_epoch
 
 
 # ---------------------------------------------------------------------------
@@ -268,18 +331,23 @@ def save_result(
     if all("test_acc_head" in r for r in per_seed):
         aggregate["test_acc_head"] = _mean_std([r["test_acc_head"] for r in per_seed])
 
+    hyperparameters = {
+        "encoder": args.encoder,
+        "hidden_dim": args.hidden,
+        "num_layers": args.layers,
+        "epochs": args.epochs,
+        "lr": args.lr,
+        "weight_decay": args.weight_decay,
+        "knn_k": args.knn_k,
+    }
+    if model_name == "supervised_reg":
+        # Its recipe replaces the shared optimizer settings: record what actually ran.
+        hyperparameters.update(SUPERVISED_REG_RECIPE)
+
     result = {
         "dataset": dataset,
         "model": model_name,
-        "hyperparameters": {
-            "encoder": args.encoder,
-            "hidden_dim": args.hidden,
-            "num_layers": args.layers,
-            "epochs": args.epochs,
-            "lr": args.lr,
-            "weight_decay": args.weight_decay,
-            "knn_k": args.knn_k,
-        },
+        "hyperparameters": hyperparameters,
         "seeds": [r["seed"] for r in per_seed],
         "per_seed": per_seed,
         "aggregate": aggregate,

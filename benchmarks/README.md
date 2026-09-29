@@ -32,10 +32,17 @@ section) for the methodology and current status.
 ~10–60 s per seed on an NVIDIA A2, but on PubMed GraphCL (O(N²) NT-Xent) and AFGRL (dense
 N×N kNN + per-step k-means) take ~7–9 min per seed, so ~75–85 min each for 10 seeds.
 
-**Supervised reference:** `--model supervised` (not part of `all`) trains the same encoder
-full-batch on the public split's `train_mask` only, under the same budget. It gets the same
-linear probe + kNN evaluation on its encoder embeddings; the accuracy of its own trained head
-is saved as `test_acc_head`.
+**Supervised references** (not part of `all`): both train the same encoder full-batch on the
+public split's `train_mask` only.
+- `--model supervised` keeps the shared SSL protocol unchanged (no dropout, AdamW, last
+  checkpoint). With 120–140 labels and no regularization it overfits, so it understates what
+  the labels are worth.
+- `--model supervised_reg` uses the standard Kipf & Welling recipe: dropout 0.5, Adam lr 0.01
+  with L2 5e-4, checkpoint with the best validation accuracy. This is the credible reference;
+  its recipe is recorded in the JSON's `hyperparameters`.
+
+Both get the same linear probe + kNN evaluation on their encoder embeddings; the accuracy of
+the trained head itself is saved as `test_acc_head`.
 
 **Known gaps:**
 - `afgrl` is skipped automatically when `faiss-cpu` isn't installed (same
