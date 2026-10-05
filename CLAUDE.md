@@ -152,12 +152,22 @@ No access to the trainer, logger, or datamodule from inside a model.
   weight-norm scale g at 1, so logits are cosines in [-1, 1] (DINO's `norm_last_layer`).
   Without it g is trainable (weight_norm initializes it to the row norms: ~0.57 with the
   benchmark's 64-d bottleneck) and grows during training.
-- **Known instability (under investigation):** with the default config GraphDINO gets *worse*
-  the longer it trains (teacher_student ablation, Cora 62 → 39 from 300 to 3000 steps). Local
-  single-seed diagnostics tie it to the teacher over-sharpening (output entropy → 0); gradient
-  clipping and more prototypes don't help, `norm_last_layer` helps partly, `teacher_temp=0.07`
-  (warmed up from 0.04) stopped the decline up to 1000 steps. `benchmarks/ablation_graphdino.sh`
-  tests both levers with 5 seeds before any default changes.
+- **Known instability (defaults not changed yet):** with the default config GraphDINO gets
+  *worse* the longer it trains. 5 seeds, GIN, linear probe at 300 → 1000 → 3000 steps, Cora |
+  CiteSeer (`benchmarks/ablations/graphdino_stability`, `--ema-tau` rows in `teacher_student`):
+  - default: 63.3 → 50.0 → 38.9 | 42.2 → 33.3 → 28.8
+  - `--ema-tau 0.9` (EMA 0.9 → 0.996 over the run): 66.5 → 62.9 → 62.9 | 43.7 → 44.0 → 42.7 —
+    the only setting measured that removes the decline
+  - `head.teacher_temp=0.07` (warmed up from 0.04), 3000 steps only: 54.2 | 36.9 — slows it
+  - `head.norm_last_layer=true`, 3000 steps only: 37.4 | 27.9 — no effect. With
+    `teacher_temp=0.07`: 64.9 → 65.1 → 46.0 | 44.5 → 42.8 → 32.4, worse at 3000 than the
+    temperature alone. A single-seed local diagnostic had it helping: don't decide on one seed.
+  - GCN backbone, default, 300 → 3000: 73.3 → 69.1 | 53.0 → 44.7 (both levers: within ~1 std)
+
+  Local single-seed diagnostics tie the decline to the teacher over-sharpening (output
+  entropy → 0); gradient clipping and more prototypes didn't help there.
+  `benchmarks/ablation_graphdino_ema.sh` checks `--ema-tau 0.9` with GCN, on PubMed and
+  combined with `teacher_temp=0.07` before any default changes.
 
 ### VICReg
 - Encoder + 3-layer projector `Projector(hidden_dim, hidden_dim*2, proj_dim)`
@@ -384,9 +394,21 @@ on_epoch_start → batches → on_epoch_end
   trained on labels, not ranked against the SSL methods.
 - Deliberately untuned (no per-method/per-dataset search): it compares objectives at equal
   budget, it doesn't compete with each paper's best number. Teacher-student methods (BGRL,
-  AFGRL, GraphDINO) trail the top group — **unexplained so far**; the leading hypothesis
-  (short budget + untuned EMA) is unverified, so don't state it as a conclusion. Ruled out:
-  GraphDINO's center bug (rerun after the fix at `20cce09`: every number moved < 1 std).
+  AFGRL, GraphDINO) trail the top group. What the ablations (5 seeds, linear probe) show:
+  - The short budget alone is not it: from 300 to 3000 steps Barlow Twins is flat, BGRL with
+    GIN gains (Cora 64.5 → 71.2 → 73.5) but stays below, GraphDINO declines (see GraphDINO).
+  - With GCN at 300 steps the gap mostly closes on Cora: BGRL 78.2, AFGRL 76.8, GraphDINO 73.3
+    vs Barlow Twins 79.6 (CiteSeer: BGRL 57.8, GraphDINO 53.0 vs 61.3). BGRL/AFGRL's effective
+    rank goes from 9–48 with GIN to 170–190.
+  - **But an untrained GCN is already strong.** Zero-step encoders (`--epochs 0`) scored
+    71.7 / 57.0 / 72.2 with GCN vs 40.4 / 36.1 / 44.4 with GIN on Cora / CiteSeer / PubMed in a
+    local CPU check (5 seeds, not committed; `ablation_graphdino_ema.sh` records the official
+    rows). Over that reference BGRL + GCN adds +6.5 on Cora and ~0 on CiteSeer, GraphDINO + GCN
+    +1.6 and −4. Always read GCN rows against it, and don't state "the backbone explains the
+    gap" as a conclusion: what GCN recovers is largely the backbone itself.
+
+  Ruled out: GraphDINO's center bug (rerun after the fix at `20cce09`: every number moved
+  < 1 std).
 - The 20 JSONs at commit `e295451` say `"dirty": true` — false positive (untracked files were
   counted, fixed in `dae32cb`); the code that ran is exactly `e295451`. GraphDINO and
   Supervised were rerun at `20cce09`, Supervised std. recipe at `558af8e` (all clean).
@@ -400,7 +422,10 @@ on_epoch_start → batches → on_epoch_end
   benchmark): use `--out-dir benchmarks/ablations/<name>` and `benchmarks/render_ablation.py`.
   `benchmarks/ablation_teacher_student.sh` is the grid for the teacher-student gap (budget
   300/1000/3000 × `--ema-tau` default/0.9, Barlow Twins control, BGRL + GCN, AFGRL on Cora).
-  `benchmarks/ablation_graphdino.sh` tests GraphDINO's stability levers (see GraphDINO).
+  `benchmarks/ablation_graphdino.sh` tests GraphDINO's stability levers (see GraphDINO);
+  `benchmarks/ablation_graphdino_ema.sh` is its follow-up (faster teacher with GCN / on PubMed /
+  with the softer teacher, plus the untrained-encoder reference at `--epochs 0`). Both write
+  to `benchmarks/ablations/graphdino_stability`.
 - `--set KEY=VALUE` (repeatable) overrides any model-config field, dotted for nested ones
   (`--set head.teacher_temp=0.07`); keys are validated against the config dataclasses, values
   parsed as JSON, and recorded under `hyperparameters.overrides` (a column in render_ablation).

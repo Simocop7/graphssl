@@ -56,7 +56,14 @@ python benchmarks/run_benchmark.py --dataset Cora --model graphdino \
 Keys are checked against the model's config dataclasses, so a typo stops the run instead of
 being silently ignored; the overrides are saved under `hyperparameters.overrides` and shown
 as a column by `render_ablation.py`. `ablation_graphdino.sh` uses them to test GraphDINO's
-stability levers (~3.5 h on an A2).
+stability levers (~3.5 h on an A2). `ablation_graphdino_ema.sh` is its follow-up (~2 h 45 min):
+the faster EMA teacher (`--ema-tau 0.9`) with GCN, on PubMed and combined with the softer
+teacher. Both write to `ablations/graphdino_stability`.
+
+`--epochs 0` skips training and evaluates the **untrained encoder**. Use it as the reference
+when comparing backbones: an untrained GCN already separates the Planetoid classes far better
+than an untrained GIN, so a higher number with GCN is not by itself evidence that a method
+learned more.
 
 `ablation_teacher_student.sh` is the grid behind the teacher-student question (why BGRL,
 AFGRL and GraphDINO trail the top group): budget 300/1000/3000 steps × default vs faster

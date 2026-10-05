@@ -38,17 +38,32 @@ student.
 | `warmup_teacher_temp_epochs` | `0` | the warmup only matters when `teacher_temp` > `warmup_teacher_temp` (e.g. `0.07`) |
 | `center_momentum` | `0.9` | |
 | `norm_last_layer` | `False` | fix the prototypes' weight-norm scale at 1 (logits become cosines in [-1, 1]), as DINO's `norm_last_layer`; off = trainable scale |
-| `ema_tau` | `0.996` | |
+| `ema_tau` | `0.996` | final teacher EMA momentum |
+| `ema_tau_base` | same as `ema_tau` | starting teacher EMA momentum; when lower than `ema_tau` and `total_steps` > 0 it is annealed to `ema_tau` on a cosine schedule |
+| `total_steps` | `0` | length of the EMA schedule in optimizer steps; `0` keeps the momentum fixed at `ema_tau_base` |
 | `freeze_last_layer_epochs` | `1` | |
 | `n_views` / `n_global_views` | `2` / `2` | |
 
-!!! warning "Longer training can hurt with the default config"
-    In the citation-network ablation GraphDINO's accuracy *drops* as training gets longer
-    (Cora: 62% at 300 steps, 39% at 3000). The teacher's output sharpens until every node
-    gets a hard prototype assignment that no longer tracks the classes. Gradient clipping and
-    more prototypes don't help; `norm_last_layer=True` helps partly and a softer teacher
-    (`teacher_temp=0.07`, warmed up from `0.04`) stopped the decline in a first diagnostic.
-    `benchmarks/ablation_graphdino.sh` is measuring both before the defaults change.
+!!! warning "Longer training hurts with the default config"
+    In the citation-network ablations (GIN, 5 seeds, linear probe) GraphDINO's accuracy
+    *drops* as training gets longer: Cora 63.3 → 50.0 → 38.9 and CiteSeer 42.2 → 33.3 → 28.8
+    at 300 → 1000 → 3000 full-batch steps. Diagnostics tie it to the teacher's output
+    sharpening until every node gets a hard prototype assignment that no longer tracks the
+    classes.
+
+    - **A faster teacher removes the decline**: `ema_tau_base=0.9` annealed to `ema_tau=0.996`
+      over the run (`total_steps` = number of training steps) gives Cora 66.5 → 62.9 → 62.9
+      and CiteSeer 43.7 → 44.0 → 42.7. It is the only setting measured so far that does.
+    - A softer teacher (`teacher_temp=0.07`, warmed up from `0.04`) slows the decline but
+      doesn't stop it (Cora 54.2 at 3000 steps).
+    - `norm_last_layer=True` has no measurable effect on its own (Cora 37.4 at 3000 steps).
+    - Gradient clipping and more prototypes didn't help in single-seed diagnostics.
+
+    The defaults are unchanged for now: `benchmarks/ablation_graphdino_ema.sh` first checks
+    the faster teacher with the GCN backbone, on PubMed, and combined with the softer
+    teacher. Until then, for short full-batch training set `ema_tau_base` and `total_steps`
+    explicitly. Full tables: `python benchmarks/render_ablation.py
+    benchmarks/ablations/graphdino_stability` (and `benchmarks/ablations/teacher_student`).
 
 ## Operation order
 
