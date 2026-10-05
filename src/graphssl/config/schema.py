@@ -99,6 +99,7 @@ class HeadConfig:
     center_momentum: float = 0.9
     warmup_teacher_temp: float = 0.04
     warmup_teacher_temp_epochs: int = 0
+    norm_last_layer: bool = False
 
     def __post_init__(self):
         for fname, val in [
@@ -312,6 +313,7 @@ class AFGRLConfig:
     num_kmeans: int = 4
     clus_num_iters: int = 20
     kmeans_threads: Optional[int] = 8
+    knn_chunk_size: Optional[int] = 4096
 
     def __post_init__(self):
         if self.pred_hidden <= 0:
@@ -336,6 +338,8 @@ class AFGRLConfig:
             raise ValueError(f"clus_num_iters must be > 0, got {self.clus_num_iters}")
         if self.kmeans_threads is not None and self.kmeans_threads <= 0:
             raise ValueError(f"kmeans_threads must be > 0 or None, got {self.kmeans_threads}")
+        if self.knn_chunk_size is not None and self.knn_chunk_size <= 0:
+            raise ValueError(f"knn_chunk_size must be > 0 or None, got {self.knn_chunk_size}")
 
     @classmethod
     def from_dict(cls, d: dict) -> AFGRLConfig:
@@ -350,6 +354,7 @@ class AFGRLConfig:
             num_kmeans=d.get("num_kmeans", 4),
             clus_num_iters=d.get("clus_num_iters", 20),
             kmeans_threads=d.get("kmeans_threads", 8),
+            knn_chunk_size=d.get("knn_chunk_size", 4096),
         )
 
 

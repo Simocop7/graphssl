@@ -48,12 +48,14 @@ from __future__ import annotations
 
 import argparse
 import copy
+import dataclasses
 import json
 import platform
 import statistics
 import subprocess
 import sys
 import time
+import typing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -62,6 +64,7 @@ import torch_geometric
 from torch.optim import Adam, AdamW
 from torch_geometric.datasets import Planetoid
 
+from graphssl.config import schema
 from graphssl.config.load import build_model
 from graphssl.data import DataModule
 from graphssl.evaluation import (
@@ -131,6 +134,16 @@ def parse_args() -> argparse.Namespace:
         help="starting EMA momentum of the teacher (bgrl/afgrl: annealed to 1.0; graphdino: "
         "annealed to 0.996, fixed if higher). Default: the benchmark's per-model value",
     )
+    p.add_argument(
+        "--set",
+        dest="overrides",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="override a model-config field; dotted keys reach nested configs, values are "
+        "parsed as JSON (e.g. --set head.teacher_temp=0.07 --set head.norm_last_layer=true). "
+        "Repeatable; unknown fields are an error",
+    )
     p.add_argument("--seeds", type=int, default=5)
     p.add_argument("--knn-k", type=int, default=5)
     p.add_argument("--data-dir", default="data")
@@ -146,7 +159,64 @@ def parse_args() -> argparse.Namespace:
         args.model = SSL_MODELS
     if args.ema_tau is not None and not 0.0 < args.ema_tau < 1.0:
         p.error(f"--ema-tau must be in (0, 1), got {args.ema_tau}")
+    overrides: dict = {}
+    for item in args.overrides:
+        key, sep, raw = item.partition("=")
+        if not sep or not key:
+            p.error(f"--set expects KEY=VALUE, got {item!r}")
+        try:
+            overrides[key] = json.loads(raw)
+        except json.JSONDecodeError:
+            overrides[key] = raw  # a bare string, e.g. --set encoder.norm_type=layer
+    args.overrides = overrides
+    for model_name in args.model:
+        for key in overrides:
+            problem = invalid_override(model_name, key)
+            if problem:
+                p.error(f"--set {key} for {model_name}: {problem}")
     return args
+
+
+# Config dataclass behind each runner model name, to validate --set keys against.
+CONFIG_CLASSES = {
+    "dgi": schema.DGIConfig,
+    "graphcl": schema.GraphCLConfig,
+    "vicreg": schema.VICRegConfig,
+    "barlow_twins": schema.BarlowTwinsConfig,
+    "bgrl": schema.BGRLConfig,
+    "afgrl": schema.AFGRLConfig,
+    "graphdino": schema.GraphDINOConfig,
+    "supervised": schema.SupervisedConfig,
+    "supervised_reg": schema.SupervisedConfig,
+}
+
+
+def invalid_override(model_name: str, dotted_key: str) -> str | None:
+    """Why ``dotted_key`` isn't a field of the model's config, or None if it is."""
+    cls = CONFIG_CLASSES[model_name]
+    parts = dotted_key.split(".")
+    for depth, part in enumerate(parts):
+        fields = {f.name for f in dataclasses.fields(cls)}
+        if part not in fields:
+            return f"{cls.__name__} has no field {part!r}"
+        if depth < len(parts) - 1:
+            nested = typing.get_type_hints(cls)[part]
+            if not dataclasses.is_dataclass(nested):
+                return f"{cls.__name__}.{part} is not a nested config"
+            cls = nested
+    return None
+
+
+def apply_overrides(cfg: dict, overrides: dict) -> dict:
+    """Copy of ``cfg`` with each dotted ``key: value`` override set."""
+    cfg = copy.deepcopy(cfg)
+    for dotted_key, value in overrides.items():
+        *parents, leaf = dotted_key.split(".")
+        node = cfg
+        for key in parents:
+            node = node.setdefault(key, {})
+        node[leaf] = value
+    return cfg
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +236,8 @@ def make_config(model_name: str, args: argparse.Namespace) -> dict:
         "pool": False,  # node-level task: no graph pooling
         "drop": SUPERVISED_REG_RECIPE["dropout"] if model_name == "supervised_reg" else 0.0,
     }
-    return build_model_config(model_name, encoder_cfg, args)
+    cfg = build_model_config(model_name, encoder_cfg, args)
+    return apply_overrides(cfg, getattr(args, "overrides", {}))
 
 
 def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namespace) -> dict:
@@ -414,6 +485,8 @@ def save_result(
         hyperparameters.update(SUPERVISED_REG_RECIPE)
     if args.ema_tau is not None and model_name in ALT_ENCODER:
         hyperparameters["ema_tau"] = args.ema_tau
+    if args.overrides:
+        hyperparameters["overrides"] = args.overrides
 
     result = {
         "dataset": dataset,

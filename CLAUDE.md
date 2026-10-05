@@ -113,7 +113,13 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Graph-level loss: no miner; a simple teacher-student loss on pooled embeddings
 - EMA: identical to BGRL — `CosineEMAScheduler` in `post_step()`
 - Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, topk=5,
-  num_centroids=50, num_kmeans=4, clus_num_iters=20, kmeans_threads=8, pred_hidden=512`
+  num_centroids=50, num_kmeans=4, clus_num_iters=20, kmeans_threads=8, knn_chunk_size=4096,
+  pred_hidden=512`
+- `knn_chunk_size`: the top-k search (`topk_similar` in `utils/positive_miner.py`) computes the
+  N×N similarity in row chunks — identical neighbors, peak memory `O(chunk · N)` instead of
+  `O(N²)` (~115 GB on ogbn-arxiv unchunked). Time is still `O(N² d)` per step and mining is
+  full-graph only, so AFGRL stays slow on very large graphs. Tested without faiss in
+  `tests/test_positive_miner.py`.
 - `kmeans_threads` caps FAISS's OpenMP threads inside `PositiveMiner` (restored after each
   call; `None` = FAISS default, i.e. all cores). FAISS's all-cores default made AFGRL ~50×
   slower on a 48-core VM (5.7 s vs 0.1 s per Cora step) — never remove the cap without
@@ -139,8 +145,19 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Hyperparameters (code defaults, `HeadConfig`/`GraphDINOConfig`): `student_temp=0.1,
   teacher_temp=0.04, warmup_teacher_temp=0.04, warmup_teacher_temp_epochs=0,
   center_momentum=0.9, ema_tau=0.996, ema_tau_base=0.996, freeze_last_layer_epochs=1,
-  n_views=2, n_global_views=2`. With the default temperatures the warmup is a no-op, even
-  where `warmup_teacher_temp_epochs` is set (e.g. the benchmark runner's 30).
+  n_views=2, n_global_views=2, norm_last_layer=False`. With the default temperatures the
+  warmup is a no-op, even where `warmup_teacher_temp_epochs` is set (e.g. the benchmark
+  runner's 30).
+- `norm_last_layer` (`HeadConfig`, off by default = unchanged behavior): fixes the prototypes'
+  weight-norm scale g at 1, so logits are cosines in [-1, 1] (DINO's `norm_last_layer`).
+  Without it g is trainable (weight_norm initializes it to the row norms: ~0.57 with the
+  benchmark's 64-d bottleneck) and grows during training.
+- **Known instability (under investigation):** with the default config GraphDINO gets *worse*
+  the longer it trains (teacher_student ablation, Cora 62 → 39 from 300 to 3000 steps). Local
+  single-seed diagnostics tie it to the teacher over-sharpening (output entropy → 0); gradient
+  clipping and more prototypes don't help, `norm_last_layer` helps partly, `teacher_temp=0.07`
+  (warmed up from 0.04) stopped the decline up to 1000 steps. `benchmarks/ablation_graphdino.sh`
+  tests both levers with 5 seeds before any default changes.
 
 ### VICReg
 - Encoder + 3-layer projector `Projector(hidden_dim, hidden_dim*2, proj_dim)`
@@ -383,6 +400,10 @@ on_epoch_start → batches → on_epoch_end
   benchmark): use `--out-dir benchmarks/ablations/<name>` and `benchmarks/render_ablation.py`.
   `benchmarks/ablation_teacher_student.sh` is the grid for the teacher-student gap (budget
   300/1000/3000 × `--ema-tau` default/0.9, Barlow Twins control, BGRL + GCN, AFGRL on Cora).
+  `benchmarks/ablation_graphdino.sh` tests GraphDINO's stability levers (see GraphDINO).
+- `--set KEY=VALUE` (repeatable) overrides any model-config field, dotted for nested ones
+  (`--set head.teacher_temp=0.07`); keys are validated against the config dataclasses, values
+  parsed as JSON, and recorded under `hyperparameters.overrides` (a column in render_ablation).
 
 ### ZINC (graph-level, molecular regression)
 ```yaml
@@ -423,8 +444,10 @@ pytest tests/ -v
 | `test_vicreg.py` | VICReg | 3-layer projector, loss ≥ 0 |
 | `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
 | `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored; **auto-skipped if faiss isn't installed** |
+| `test_positive_miner.py` | AFGRL | chunked top-k search == full matrix, self always first, `knn_chunk_size` validation (no faiss needed) |
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling |
-| `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, center in logit space, DINOTrainer hooks |
+| `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, center in logit space, `norm_last_layer`, DINOTrainer hooks |
+| `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; AFGRL rows need faiss |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
 | `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, `effective_rank` |
 
@@ -526,7 +549,11 @@ src/graphssl/
 
 ### graph-level vs. node-level
 `self.graph_level` is derived from `cfg.encoder.pool` in the constructor — never passed as a
-separate parameter. No model infers it at runtime from the batch.
+separate parameter. No model infers it at runtime from the batch. In graph-level mode every
+model's `forward()` returns **one embedding per graph** (pooled): `extract_embeddings` pairs it
+with graph labels. DGI returned node embeddings until this was enforced by
+`tests/test_model_encoder_matrix.py`, which also caught GraphDINO building its encoder inline
+(it crashed with GCN/Transformer) — always use `cfg.encoder.build(in_channels)`.
 
 ### Mini-batch: protected nodes
 In mini-batch node training, `batch.batch_size` gives the seed-node count.

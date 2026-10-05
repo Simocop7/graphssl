@@ -219,6 +219,48 @@ class TestCenter:
             assert torch.allclose(head(x, use_teacher_temp=True), expected, atol=1e-6)
 
 
+class TestNormLastLayer:
+    @staticmethod
+    def _scales(model):
+        return [
+            head.proto.parametrizations.weight.original0
+            for head in (model.student_head, model.teacher_head)
+        ]
+
+    def test_frozen_unit_scale_bounds_logits(self):
+        cfg = _make_config()
+        cfg["head"]["norm_last_layer"] = True
+        model = GraphDINO(cfg, in_channels=7)
+        for g in self._scales(model):
+            assert torch.all(g == 1.0) and not g.requires_grad
+        model.student_head.eval()
+        with torch.no_grad():
+            logits = model.student_head.prototype_logits(100.0 * torch.randn(10, 32))
+        assert logits.abs().max() <= 1.0 + 1e-5  # cosine similarities
+
+    def test_scale_stays_one_through_a_training_step(self):
+        cfg = _make_config()
+        cfg["head"]["norm_last_layer"] = True
+        model = GraphDINO(cfg, in_channels=7)
+        params = [p for p in model.student_parameters() if p.requires_grad]
+        optimizer = torch.optim.AdamW(params, lr=1e-2)
+        model.train()
+        model.compute_loss(_make_batch(n_features=7)).backward()
+        optimizer.step()
+        model.post_step()
+        for g in self._scales(model):
+            assert torch.all(g == 1.0)
+
+    def test_disabled_keeps_weight_norm_default_trainable_scale(self):
+        cfg = _make_config()
+        cfg["head"]["norm_last_layer"] = False
+        params = GraphDINO(cfg, in_channels=7).student_head.proto.parametrizations.weight
+        g, v = params.original0, params.original1
+        assert g.requires_grad
+        # weight_norm's own init (g = row norms of v), untouched by the option
+        assert torch.allclose(g.squeeze(-1), v.norm(dim=1))
+
+
 class TestEMAUpdate:
     def test_teacher_moves_toward_student(self):
         student = torch.nn.Linear(4, 4)

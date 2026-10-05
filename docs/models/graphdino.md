@@ -37,9 +37,18 @@ student.
 | `warmup_teacher_temp` | `0.04` | starting teacher temperature (must be ≤ `teacher_temp`) |
 | `warmup_teacher_temp_epochs` | `0` | the warmup only matters when `teacher_temp` > `warmup_teacher_temp` (e.g. `0.07`) |
 | `center_momentum` | `0.9` | |
+| `norm_last_layer` | `False` | fix the prototypes' weight-norm scale at 1 (logits become cosines in [-1, 1]), as DINO's `norm_last_layer`; off = trainable scale |
 | `ema_tau` | `0.996` | |
 | `freeze_last_layer_epochs` | `1` | |
 | `n_views` / `n_global_views` | `2` / `2` | |
+
+!!! warning "Longer training can hurt with the default config"
+    In the citation-network ablation GraphDINO's accuracy *drops* as training gets longer
+    (Cora: 62% at 300 steps, 39% at 3000). The teacher's output sharpens until every node
+    gets a hard prototype assignment that no longer tracks the classes. Gradient clipping and
+    more prototypes don't help; `norm_last_layer=True` helps partly and a softer teacher
+    (`teacher_temp=0.07`, warmed up from `0.04`) stopped the decline in a first diagnostic.
+    `benchmarks/ablation_graphdino.sh` is measuring both before the defaults change.
 
 ## Operation order
 

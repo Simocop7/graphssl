@@ -23,6 +23,10 @@ class DINOHead(nn.Module):
             to teacher_temp over warmup_teacher_temp_epochs epochs.
         warmup_teacher_temp_epochs: Number of epochs for the linear warmup.
             Set to 0 to disable warmup (use teacher_temp from epoch 0).
+        norm_last_layer: Fix the weight-norm scale ``g`` of every prototype at 1, so the
+            logits are cosine similarities in [-1, 1] (DINO's ``norm_last_layer``). When
+            False, ``g`` is trained, and the network can sharpen its outputs by growing the
+            prototype norms.
     """
 
     def __init__(
@@ -36,6 +40,7 @@ class DINOHead(nn.Module):
         center_momentum: float = 0.9,
         warmup_teacher_temp: float = 0.04,
         warmup_teacher_temp_epochs: int = 0,
+        norm_last_layer: bool = False,
     ):
         super().__init__()
         self.student_temp = student_temp
@@ -56,10 +61,16 @@ class DINOHead(nn.Module):
             Linear(proj_hidden, bottleneck_dim),
         )
 
-        # weight_norm keeps prototype rows unit-norm; using parametrizations API
-        # since the old weight_norm is deprecated and breaks deepcopy.
+        # weight_norm splits each prototype row into a direction and a trainable scale g
+        # (parametrizations API: the old weight_norm is deprecated and breaks deepcopy).
+        # With norm_last_layer, g is fixed at 1 as in DINO.
         proto_linear = Linear(bottleneck_dim, n_prototypes, bias=False)
         self.proto = nn.utils.parametrizations.weight_norm(proto_linear, dim=0)
+        if norm_last_layer:
+            scale = self.proto.parametrizations.weight.original0
+            with torch.no_grad():
+                scale.fill_(1.0)
+            scale.requires_grad_(False)
 
         self.center: torch.Tensor
         self.register_buffer("center", torch.zeros(1, n_prototypes))

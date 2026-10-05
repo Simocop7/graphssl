@@ -44,6 +44,20 @@ python benchmarks/render_ablation.py benchmarks/ablations/my_ablation
 `--ema-tau` sets the teacher's starting EMA momentum (BGRL/AFGRL anneal it to 1.0,
 GraphDINO to 0.996); the schedule always spans the whole `--epochs` budget.
 
+`--set KEY=VALUE` (repeatable) overrides any field of the model config, with dotted keys for
+nested configs and values parsed as JSON:
+
+```bash
+python benchmarks/run_benchmark.py --dataset Cora --model graphdino \
+    --set head.norm_last_layer=true --set head.teacher_temp=0.07 \
+    --out-dir benchmarks/ablations/my_ablation
+```
+
+Keys are checked against the model's config dataclasses, so a typo stops the run instead of
+being silently ignored; the overrides are saved under `hyperparameters.overrides` and shown
+as a column by `render_ablation.py`. `ablation_graphdino.sh` uses them to test GraphDINO's
+stability levers (~3.5 h on an A2).
+
 `ablation_teacher_student.sh` is the grid behind the teacher-student question (why BGRL,
 AFGRL and GraphDINO trail the top group): budget 300/1000/3000 steps × default vs faster
 EMA teacher, a Barlow Twins control, BGRL with GCN, and AFGRL on Cora. About 4 h on an A2:

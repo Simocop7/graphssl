@@ -9,12 +9,12 @@ from torch import Tensor, nn
 from torch_geometric.data import Data
 
 from graphssl.augmentation import compose
-from graphssl.config.schema import EncoderConfig, GraphDINOConfig, HeadConfig
+from graphssl.config.schema import GraphDINOConfig, HeadConfig
 from graphssl.core.model import BaseSSLModel
 from graphssl.losses.dino import DINOLoss
 from graphssl.nn.dino_head import DINOHead
 from graphssl.nn.pooling import pool_graph_embeddings
-from graphssl.registry import ENCODERS, HEADS
+from graphssl.registry import HEADS
 from graphssl.utils import update_ema_params
 from graphssl.utils.schedulers import CosineEMAScheduler
 
@@ -30,7 +30,7 @@ class GraphDINO(BaseSSLModel):
         super().__init__()
         cfg = GraphDINOConfig.from_dict(config)
 
-        self.student_enc = self._build_encoder(cfg.encoder, in_channels)
+        self.student_enc = cfg.encoder.build(in_channels)
         # _build_head() returns nn.Module (it goes through the HEADS registry, which is
         # deliberately generic — see registry pattern). GraphDINO itself only ever
         # requests the "dino" head, so this cast documents a real, narrower invariant
@@ -40,7 +40,7 @@ class GraphDINO(BaseSSLModel):
 
         # Build fresh instances rather than deepcopy: weight_norm creates non-leaf
         # tensors that break copy.deepcopy.
-        self.teacher_enc = self._build_encoder(cfg.encoder, in_channels)
+        self.teacher_enc = cfg.encoder.build(in_channels)
         self.teacher_head = cast(DINOHead, self._build_head(cfg.head, cfg.encoder.hidden_dim))
         self.teacher_enc.load_state_dict(self.student_enc.state_dict())
         self.teacher_head.load_state_dict(self.student_head.state_dict())
@@ -82,11 +82,6 @@ class GraphDINO(BaseSSLModel):
     @property
     def last_teacher_out(self) -> Tensor | None:
         return self._last_teacher_out
-
-    @staticmethod
-    def _build_encoder(enc_cfg: EncoderConfig, in_channels: int) -> nn.Module:
-        kwargs = {k: v for k, v in vars(enc_cfg).items() if k != "name"}
-        return ENCODERS.build(enc_cfg.name, in_channels=in_channels, **kwargs)
 
     @staticmethod
     def _build_head(head_cfg: HeadConfig, hidden_dim: int) -> nn.Module:

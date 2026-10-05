@@ -71,6 +71,7 @@ class AFGRL(BaseSSLModel):
             num_kmeans=cfg.num_kmeans,
             clus_num_iters=cfg.clus_num_iters,
             kmeans_threads=cfg.kmeans_threads,
+            knn_chunk_size=cfg.knn_chunk_size,
         )
 
     def forward(self, data: Data) -> Tensor:

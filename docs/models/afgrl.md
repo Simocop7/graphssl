@@ -34,6 +34,7 @@ from the graph's own structure and embedding geometry.
 | `num_kmeans` | `4` | independent k-means runs (a node is "global-positive" if it shares a cluster in *any* run) |
 | `clus_num_iters` | `20` | k-means iterations |
 | `kmeans_threads` | `8` | OpenMP threads FAISS may use for k-means (capped at the CPU count); `None` = FAISS default (all cores) |
+| `knn_chunk_size` | `4096` | rows of the N × N similarity matrix computed at once for the top-k search; `None` = whole matrix |
 
 !!! tip "Why `kmeans_threads` exists"
     The miner re-runs `num_kmeans` small k-means every training step. With FAISS's default of
@@ -41,12 +42,13 @@ from the graph's own structure and embedding geometry.
     step took ~5.7 s with 48 threads vs ~0.1 s with 4–16. The previous FAISS thread count is
     restored after each call, so this doesn't leak into the rest of your program.
 
-!!! warning "Memory scaling"
-    The miner's top-k neighbor search builds a **dense N × N** cosine-similarity matrix every
-    step, so memory grows quadratically: ~1.5 GB for PubMed (≈19.7k nodes), ~40 GB at 10⁵
-    nodes. The k-means itself only needs the `N × d` embedding matrix. Fine for
-    citation-network-scale graphs; larger graphs need a chunked or approximate (FAISS index)
-    kNN search, which isn't implemented yet.
+!!! warning "Scaling"
+    The miner's top-k neighbor search compares every pair of nodes, every step. Its
+    **memory** is chunked: `knn_chunk_size` rows of the N × N similarity matrix at a time
+    (`utils.positive_miner.topk_similar`), so peak memory is O(`knn_chunk_size` · N) instead of
+    O(N²) — the full matrix would be ~1.5 GB on PubMed and ~115 GB on ogbn-arxiv — with exactly
+    the same neighbors. Its **time** stays O(N² d) per step, plus `num_kmeans` k-means runs,
+    and mining runs on the whole graph (no mini-batch mode), so very large graphs remain slow.
 
 ## Config example
 
@@ -56,7 +58,7 @@ config = {
     "pred_hidden": 256,
     "ema_tau": 0.99, "ema_tau_end": 1.0, "total_steps": 300,
     "topk": 5, "num_centroids": 50, "num_kmeans": 4, "clus_num_iters": 20,
-    "kmeans_threads": 8,
+    "kmeans_threads": 8, "knn_chunk_size": 4096,
 }
 model = AFGRL(config, in_channels=dataset.num_features)
 ```

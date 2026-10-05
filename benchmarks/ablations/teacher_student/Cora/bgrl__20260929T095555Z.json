@@ -1,0 +1,157 @@
+{
+  "dataset": "Cora",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 3000,
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 3000,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7260000109672546,
+      "test_acc_linear": 0.7210000157356262,
+      "val_acc_knn": 0.656000018119812,
+      "test_acc_knn": 0.6480000019073486,
+      "eff_rank": 34.479034423828125,
+      "wall_time_s": 93.59450387954712,
+      "val_acc_linear_alt": 0.7239999771118164,
+      "test_acc_linear_alt": 0.7269999980926514,
+      "val_acc_knn_alt": 0.6299999952316284,
+      "test_acc_knn_alt": 0.6370000243186951,
+      "eff_rank_alt": 25.19975471496582
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7200000286102295,
+      "test_acc_linear": 0.7540000081062317,
+      "val_acc_knn": 0.6700000166893005,
+      "test_acc_knn": 0.6690000295639038,
+      "eff_rank": 37.8111457824707,
+      "wall_time_s": 93.1993658542633,
+      "val_acc_linear_alt": 0.7080000042915344,
+      "test_acc_linear_alt": 0.7310000061988831,
+      "val_acc_knn_alt": 0.6660000085830688,
+      "test_acc_knn_alt": 0.6790000200271606,
+      "eff_rank_alt": 21.456388473510742
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7099999785423279,
+      "test_acc_linear": 0.7250000238418579,
+      "val_acc_knn": 0.6159999966621399,
+      "test_acc_knn": 0.6620000004768372,
+      "eff_rank": 38.04983139038086,
+      "wall_time_s": 92.9762716293335,
+      "val_acc_linear_alt": 0.722000002861023,
+      "test_acc_linear_alt": 0.7400000095367432,
+      "val_acc_knn_alt": 0.6259999871253967,
+      "test_acc_knn_alt": 0.6729999780654907,
+      "eff_rank_alt": 26.36578941345215
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7400000095367432,
+      "test_acc_linear": 0.7390000224113464,
+      "val_acc_knn": 0.6700000166893005,
+      "test_acc_knn": 0.6959999799728394,
+      "eff_rank": 38.438114166259766,
+      "wall_time_s": 94.13963079452515,
+      "val_acc_linear_alt": 0.7419999837875366,
+      "test_acc_linear_alt": 0.7450000047683716,
+      "val_acc_knn_alt": 0.6800000071525574,
+      "test_acc_knn_alt": 0.7089999914169312,
+      "eff_rank_alt": 28.475988388061523
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7120000123977661,
+      "test_acc_linear": 0.7350000143051147,
+      "val_acc_knn": 0.6320000290870667,
+      "test_acc_knn": 0.6430000066757202,
+      "eff_rank": 36.27426528930664,
+      "wall_time_s": 94.03786134719849,
+      "val_acc_linear_alt": 0.6959999799728394,
+      "test_acc_linear_alt": 0.734000027179718,
+      "val_acc_knn_alt": 0.6399999856948853,
+      "test_acc_knn_alt": 0.6589999794960022,
+      "eff_rank_alt": 26.56711196899414
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7348000168800354,
+      "std": 0.012969190449418171
+    },
+    "test_acc_knn": {
+      "mean": 0.6636000037193298,
+      "std": 0.020911711344702138
+    },
+    "eff_rank": {
+      "mean": 37.01047821044922,
+      "std": 1.6362827633025194
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.7354000091552735,
+      "std": 0.007162403239858158
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.671399998664856,
+      "std": 0.02651036789706302
+    },
+    "eff_rank_alt": {
+      "mean": 25.613006591796875,
+      "std": 2.603935248239081
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20260929T095555Z",
+    "git": {
+      "commit": "2039e6ab94d47a3452571bc24fbe79122c2656f3",
+      "dirty": false
+    },
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

@@ -1,7 +1,8 @@
 """Render ablation tables from run_benchmark.py JSONs saved outside benchmarks/results/.
 
 Unlike render_tables.py, which reports the latest run per (dataset, model), this keeps
-every configuration: one row per (model, encoder, training steps, starting EMA momentum),
+every configuration: one row per (model, encoder, training steps, starting EMA momentum,
+``--set`` overrides),
 one table per dataset, with the effective rank of the embeddings and, for teacher-student
 models, the numbers of the other encoder (target for BGRL/AFGRL, student for GraphDINO).
 When a configuration was run more than once, the latest run is shown.
@@ -19,9 +20,15 @@ from collections import defaultdict
 from pathlib import Path
 
 HEADER = (
-    "| Model | Encoder | Steps | EMA τ start | Linear | kNN | Rank "
+    "| Model | Encoder | Steps | EMA τ start | Overrides | Linear | kNN | Rank "
     "| Alt. encoder | Alt. linear | Alt. rank | Seeds |"
 )
+
+
+def overrides_label(result: dict) -> str:
+    """The run's --set overrides as ``key=value`` pairs, or an empty string."""
+    overrides = result["hyperparameters"].get("overrides", {})
+    return ", ".join(f"{k}={json.dumps(v)}" for k, v in sorted(overrides.items()))
 
 
 def ema_start(result: dict) -> float | None:
@@ -48,7 +55,7 @@ def load(results_dir: Path) -> dict:
     for path in sorted(results_dir.glob("*/*.json")):
         d = json.loads(path.read_text())
         hp = d["hyperparameters"]
-        key = (d["model"], hp["encoder"], hp["epochs"], ema_start(d))
+        key = (d["model"], hp["encoder"], hp["epochs"], ema_start(d), overrides_label(d))
         prev = latest[d["dataset"]].get(key)
         if prev is None or d["provenance"]["timestamp_utc"] > prev["provenance"]["timestamp_utc"]:
             latest[d["dataset"]][key] = d
@@ -58,12 +65,15 @@ def load(results_dir: Path) -> dict:
 def render(dataset: str, configs: dict) -> str:
     n_columns = HEADER.count("|") - 1
     lines = [f"### {dataset}", "", HEADER, "|" + "---|" * n_columns]
-    for key in sorted(configs, key=lambda k: (k[0], k[1], k[2], -1 if k[3] is None else k[3])):
-        model, encoder, steps, tau = key
+    for key in sorted(
+        configs, key=lambda k: (k[0], k[1], k[2], -1 if k[3] is None else k[3], k[4])
+    ):
+        model, encoder, steps, tau, overrides = key
         d = configs[key]
         agg = d["aggregate"]
         lines.append(
             f"| {model} | {encoder} | {steps} | {'—' if tau is None else tau} "
+            f"| {overrides or '—'} "
             f"| {fmt_pct(agg.get('test_acc_linear'))} | {fmt_pct(agg.get('test_acc_knn'))} "
             f"| {fmt_rank(agg.get('eff_rank'))} | {d.get('alt_encoder', '—')} "
             f"| {fmt_pct(agg.get('test_acc_linear_alt'))} | {fmt_rank(agg.get('eff_rank_alt'))} "

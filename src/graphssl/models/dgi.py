@@ -13,6 +13,7 @@ from torch_geometric.nn import global_mean_pool
 
 from graphssl.config.schema import DGIConfig
 from graphssl.core.model import BaseSSLModel
+from graphssl.nn.pooling import pool_graph_embeddings
 
 
 class DGI(BaseSSLModel):
@@ -60,7 +61,11 @@ class DGI(BaseSSLModel):
         return Data(x=data.x, edge_index=torch.stack([data.edge_index[0], dst]), batch=data.batch)
 
     def forward(self, data: Data) -> Tensor:
-        return self.encoder(data.x, data.edge_index, data.batch)
+        z = self.encoder(data.x, data.edge_index, data.batch)
+        if self.graph_level:
+            # One embedding per graph, like every other model's forward().
+            z = pool_graph_embeddings(z, data.batch)
+        return z
 
     def compute_loss(self, data: Data) -> Tensor:
         h_pos = self.encoder(data.x, data.edge_index, data.batch)

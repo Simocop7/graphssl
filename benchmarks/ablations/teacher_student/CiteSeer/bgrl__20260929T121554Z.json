@@ -1,0 +1,157 @@
+{
+  "dataset": "CiteSeer",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 3000,
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 3000,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.5419999957084656,
+      "test_acc_linear": 0.5590000152587891,
+      "val_acc_knn": 0.5580000281333923,
+      "test_acc_knn": 0.5600000023841858,
+      "eff_rank": 182.5509490966797,
+      "wall_time_s": 117.34283018112183,
+      "val_acc_linear_alt": 0.5640000104904175,
+      "test_acc_linear_alt": 0.5669999718666077,
+      "val_acc_knn_alt": 0.5759999752044678,
+      "test_acc_knn_alt": 0.5630000233650208,
+      "eff_rank_alt": 178.39462280273438
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.5580000281333923,
+      "test_acc_linear": 0.5600000023841858,
+      "val_acc_knn": 0.5879999995231628,
+      "test_acc_knn": 0.578000009059906,
+      "eff_rank": 182.4723663330078,
+      "wall_time_s": 116.39187288284302,
+      "val_acc_linear_alt": 0.5759999752044678,
+      "test_acc_linear_alt": 0.574999988079071,
+      "val_acc_knn_alt": 0.6140000224113464,
+      "test_acc_knn_alt": 0.5770000219345093,
+      "eff_rank_alt": 177.69337463378906
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.5080000162124634,
+      "test_acc_linear": 0.5189999938011169,
+      "val_acc_knn": 0.5199999809265137,
+      "test_acc_knn": 0.5230000019073486,
+      "eff_rank": 179.17236328125,
+      "wall_time_s": 120.5471670627594,
+      "val_acc_linear_alt": 0.5199999809265137,
+      "test_acc_linear_alt": 0.5239999890327454,
+      "val_acc_knn_alt": 0.5239999890327454,
+      "test_acc_knn_alt": 0.5289999842643738,
+      "eff_rank_alt": 175.9808807373047
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.5479999780654907,
+      "test_acc_linear": 0.5479999780654907,
+      "val_acc_knn": 0.5360000133514404,
+      "test_acc_knn": 0.5649999976158142,
+      "eff_rank": 181.32960510253906,
+      "wall_time_s": 117.29457402229309,
+      "val_acc_linear_alt": 0.5199999809265137,
+      "test_acc_linear_alt": 0.5479999780654907,
+      "val_acc_knn_alt": 0.5460000038146973,
+      "test_acc_knn_alt": 0.5740000009536743,
+      "eff_rank_alt": 177.50587463378906
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.527999997138977,
+      "test_acc_linear": 0.5270000100135803,
+      "val_acc_knn": 0.5339999794960022,
+      "test_acc_knn": 0.5130000114440918,
+      "eff_rank": 179.19329833984375,
+      "wall_time_s": 113.3883285522461,
+      "val_acc_linear_alt": 0.5339999794960022,
+      "test_acc_linear_alt": 0.527999997138977,
+      "val_acc_knn_alt": 0.5220000147819519,
+      "test_acc_knn_alt": 0.5210000276565552,
+      "eff_rank_alt": 175.8065948486328
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.5425999999046326,
+      "std": 0.01871630523587441
+    },
+    "test_acc_knn": {
+      "mean": 0.5478000044822693,
+      "std": 0.02820815321969568
+    },
+    "eff_rank": {
+      "mean": 180.94371643066407,
+      "std": 1.6785807179232435
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.5483999848365784,
+      "std": 0.02272223024223276
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.5528000116348266,
+      "std": 0.02606146853485393
+    },
+    "eff_rank_alt": {
+      "mean": 177.07626953125,
+      "std": 1.1308608457410798
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20260929T121554Z",
+    "git": {
+      "commit": "2039e6ab94d47a3452571bc24fbe79122c2656f3",
+      "dirty": false
+    },
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}
