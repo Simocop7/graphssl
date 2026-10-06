@@ -2,8 +2,10 @@
 
 import pytest
 import torch
+from torch_geometric.data import Data
 
-from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank
+from graphssl.data import DataModule
+from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
 
 
 def _make_splits(n=60, num_classes=3, seed=0):
@@ -68,6 +70,47 @@ class TestKNNEvaluator:
         results_1d = KNNEvaluator(k=5).evaluate(embeddings, labels_1d, train_idx, val_idx, test_idx)
         results_2d = KNNEvaluator(k=5).evaluate(embeddings, labels_2d, train_idx, val_idx, test_idx)
         assert results_1d == results_2d
+
+    def test_chunked_matches_single_pass(self):
+        """Scoring the split in row chunks must not change any prediction."""
+        splits = _make_splits(n=200, seed=1)
+        whole = KNNEvaluator(k=5, chunk_size=10_000).evaluate(*splits)
+        for chunk_size in (1, 7, 64):
+            assert KNNEvaluator(k=5, chunk_size=chunk_size).evaluate(*splits) == whole
+
+    def test_invalid_chunk_size_raises(self):
+        with pytest.raises(ValueError, match="chunk_size"):
+            KNNEvaluator(chunk_size=0)
+
+
+class _SpyData(Data):
+    """Records whether .to() was called on this very object."""
+
+    def to(self, *args, **kwargs):
+        self.__dict__["moved"] = True
+        return super().to(*args, **kwargs)
+
+
+class _Identity(torch.nn.Module):
+    def forward(self, data):
+        return data.x
+
+
+class TestExtractEmbeddings:
+    def test_full_batch_extraction_leaves_the_datamodule_graph_in_place(self):
+        """Data.to() mutates in place: extraction must move a copy, or a NeighborLoader built
+        on the datamodule's graph would suddenly sample from GPU tensors."""
+        data = _SpyData(
+            x=torch.randn(6, 4),
+            edge_index=torch.tensor([[0, 1, 2], [1, 2, 3]]),
+            y=torch.arange(6),
+        )
+        dm = DataModule(data=data, is_graph_level=False)
+
+        z, y = extract_embeddings(_Identity(), dm, device="cpu")
+
+        assert "moved" not in data.__dict__
+        assert torch.equal(z, data.x) and torch.equal(y, data.y)
 
 
 class TestEffectiveRank:

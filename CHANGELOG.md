@@ -27,6 +27,10 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
   Transformer backbones (it crashed with both).
 - AFGRL no longer lets FAISS use every core for k-means: `kmeans_threads` (default 8) caps
   it. The uncapped default was about 50× slower on a 48-core machine.
+- `extract_embeddings` (node-level, full-graph pass) no longer moves the `DataModule`'s graph
+  to the inference device as a side effect. A `NeighborLoader` built on that graph before the
+  call crashed afterwards on GPU ("Cannot re-initialize CUDA in forked subprocess"), e.g. when
+  a linear probe ran during mini-batch training.
 
 ### Added
 
@@ -36,6 +40,9 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 - `AFGRLConfig.knn_chunk_size`: chunked top-k neighbor search, same neighbors with memory
   `O(chunk · N)` instead of `O(N²)`.
 - `graphssl.evaluation.effective_rank`: effective rank of a set of embeddings.
+- `KNNEvaluator(chunk_size=4096)`: the evaluated split is scored in row chunks, with identical
+  predictions. The full similarity matrix (about 17 GB for the ogbn-arxiv test split) is no
+  longer built.
 
 ## 0.1.0 (2026-09-07)
 

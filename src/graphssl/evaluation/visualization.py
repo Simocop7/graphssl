@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import List, Literal, Optional, Tuple
 
 import torch
@@ -104,7 +105,9 @@ def _extract_graph_level(datamodule, extract_fn, device) -> Tuple[Tensor, Option
 
 
 def _extract_node_full_batch(datamodule, extract_fn, device) -> Tuple[Tensor, Optional[Tensor]]:
-    data = datamodule.data.to(device)
+    # Shallow copy: Data.to() moves an object's tensors in place, and the datamodule's graph
+    # must stay where it is (a NeighborLoader built on it keeps sampling from it).
+    data = copy.copy(datamodule.data).to(device)
     embeddings = extract_fn(data).cpu()
     labels = data.y.cpu() if hasattr(data, "y") and data.y is not None else None
     return embeddings, labels

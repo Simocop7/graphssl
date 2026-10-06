@@ -329,10 +329,21 @@ Buffers are copied directly (not averaged).
 `pool_graph_embeddings(node_embeddings, batch)` — `global_mean_pool` with a fallback when `batch=None`.
 
 ### extract_embeddings (`evaluation/visualization.py`)
-Extracts embeddings from a model given a datamodule. Handles:
+Extracts embeddings from a model given a datamodule (pass the `DataModule`, not a loader).
+Handles:
 1. Graph-level: standard DataLoader
-2. Node full-batch: a single forward pass over the whole graph
+2. Node full-batch: a single forward pass over the whole graph. It moves a **shallow copy** of
+   the graph to the device: PyG's `Data.to()` mutates in place, and moving the datamodule's
+   own graph to the GPU made a `NeighborLoader` built on it crash in its worker processes
+   ("Cannot re-initialize CUDA in forked subprocess") — found by the ogbn-arxiv stress test.
 3. Node mini-batch: NeighborLoader with a `global_to_local` mapping to reconstruct order
+
+Returns CPU tensors: move them explicitly before training a probe on GPU.
+
+### KNNEvaluator (`evaluation/knn.py`)
+Cosine kNN, majority vote. `chunk_size=4096` scores the evaluated split in row chunks with
+identical predictions; the full `[|split|, |train|]` similarity (~17 GB for the ogbn-arxiv
+test split) is never built.
 
 ### LogRegEvaluator (`evaluation/linear_probe.py`)
 Pure-PyTorch linear evaluator. For multilabel targets (e.g. ogbg-molpcba) uses BCE + average precision.
@@ -464,6 +475,16 @@ encoder:
 - Continuous 128-dim features: no categorical embeddings
 - Requires `NeighborLoader` for scalable training
 - Script: `examples/ogbn_arxiv_bgrl.py`, config: `configs/ogbn_arxiv_bgrl.yaml`
+- `ogb` <= 1.3.6 loads its processed file with a bare `torch.load()`: with PyTorch >= 2.6
+  allow-list PyG's `DataEdgeAttr`, `DataTensorAttr`, `GlobalStorage` via
+  `torch.serialization.add_safe_globals` first (done in the example and the stress test)
+- **Stress test**: `benchmarks/stress_ogbn_arxiv.py` runs all 7 SSL methods through the
+  mini-batch path (NeighborLoader, callbacks with a probe during training, full-graph
+  evaluation, mini-batch extraction checked against the full-graph pass). One seed, no tuning:
+  it reports failures, time, memory and accuracy curves, it is not a benchmark. Results go to
+  `benchmarks/stress/ogbn_arxiv/` (one JSON per model + `summary.md`); a failing model doesn't
+  stop the run. Both example scripts (this one and `examples/zinc_bgrl.py`) crashed before
+  `6493aa3` — examples are not covered by the test suite, so smoke-run them after API changes.
 
 ---
 
@@ -486,7 +507,7 @@ pytest tests/ -v
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
 | `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; AFGRL rows need faiss |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
-| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, `effective_rank` |
+| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, chunked kNN == single pass, `extract_embeddings` leaves the datamodule's graph in place, `effective_rank` |
 
 ---
 

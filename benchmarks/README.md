@@ -79,6 +79,28 @@ bash benchmarks/ablation_teacher_student.sh 2>&1 | tee -a ablation.log
 python benchmarks/render_ablation.py benchmarks/ablations/teacher_student
 ```
 
+## Stress test (ogbn-arxiv)
+
+`stress_ogbn_arxiv.py` runs every SSL method through the **mini-batch** path on ogbn-arxiv
+(169k nodes, 2.3M edges), which the full-batch citation benchmark never touches:
+`NeighborLoader` training, the trainer's callback hooks with a probe running during training,
+full-graph extraction and linear-probe / kNN evaluation at that scale, and mini-batch
+extraction checked against the full-graph pass. It is a robustness test, not a benchmark
+(one seed, no tuning). A model that fails does not stop the run: its error is saved and the
+next model starts.
+
+```bash
+# smoke test, a few minutes
+python benchmarks/stress_ogbn_arxiv.py --epochs 2 --max-steps 5 --eval-every 1 \
+    --out-dir benchmarks/stress/smoke
+# the real run, inside tmux
+python -u benchmarks/stress_ogbn_arxiv.py --epochs 50 2>&1 | tee -a stress_arxiv.log
+```
+
+One JSON per model goes to `benchmarks/stress/ogbn_arxiv/` (status, per-epoch loss / time /
+peak GPU memory / sampled-subgraph size, accuracy curve, effective rank, the untrained
+encoder as reference), next to a `summary.md` table.
+
 This intentionally does not replace `examples/*.py`, which stay as minimal
 single-file demos for learning the API — this is for producing citable,
 comparable numbers across the model zoo. See `../CLAUDE.md` (Benchmarks
