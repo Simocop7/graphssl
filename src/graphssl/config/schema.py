@@ -95,10 +95,13 @@ class HeadConfig:
     bottleneck_dim: int
     n_prototypes: int
     student_temp: float = 0.1
-    teacher_temp: float = 0.04
+    # Softer than reference DINO's 0.04 and warmed up to: with 0.04 the teacher's output
+    # over-sharpens on graphs and accuracy drops as training continues
+    # (benchmarks/ablations/graphdino_stability).
+    teacher_temp: float = 0.07
     center_momentum: float = 0.9
     warmup_teacher_temp: float = 0.04
-    warmup_teacher_temp_epochs: int = 0
+    warmup_teacher_temp_epochs: int = 30
     norm_last_layer: bool = False
 
     def __post_init__(self):
@@ -378,7 +381,10 @@ class GraphDINOConfig:
     augment_teacher: List[AugmentConfig] = field(default_factory=list)
     augment_student: List[AugmentConfig] = field(default_factory=list)
     ema_tau: float = 0.996
-    ema_tau_base: float = 0.996
+    # Starting EMA momentum, annealed to ema_tau over total_steps (fixed when total_steps=0).
+    # A fast teacher: with 0.996 from the start accuracy drops as training continues
+    # (benchmarks/ablations/graphdino_stability).
+    ema_tau_base: float = 0.9
     total_steps: int = 0
     freeze_last_layer_epochs: int = 1
     n_views: int = 2
@@ -412,13 +418,15 @@ class GraphDINOConfig:
         head = HeadConfig(**d["head"])
         augment_teacher = [AugmentConfig.from_dict(a) for a in d.get("augment_teacher", [])]
         augment_student = [AugmentConfig.from_dict(a) for a in d.get("augment_student", [])]
+        ema_tau = d.get("ema_tau", 0.996)
         return cls(
             encoder=encoder,
             head=head,
             augment_teacher=augment_teacher,
             augment_student=augment_student,
-            ema_tau=d.get("ema_tau", 0.996),
-            ema_tau_base=d.get("ema_tau_base", d.get("ema_tau", 0.996)),
+            ema_tau=ema_tau,
+            # never above ema_tau, so a config that only lowers ema_tau stays valid
+            ema_tau_base=d.get("ema_tau_base", min(0.9, ema_tau)),
             total_steps=d.get("total_steps", 0),
             freeze_last_layer_epochs=d.get("freeze_last_layer_epochs", 1),
             n_views=d.get("n_views", 2),

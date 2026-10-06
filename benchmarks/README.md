@@ -44,6 +44,11 @@ python benchmarks/render_ablation.py benchmarks/ablations/my_ablation
 `--ema-tau` sets the teacher's starting EMA momentum (BGRL/AFGRL anneal it to 1.0,
 GraphDINO to 0.996); the schedule always spans the whole `--epochs` budget.
 
+For GraphDINO the runner pins reference DINO's values (EMA momentum 0.996 from the first
+step, teacher temperature 0.04) rather than the library defaults, so the benchmark row stays
+untuned like the others. `--ema-tau 0.9 --set head.teacher_temp=0.07` runs the library
+defaults.
+
 `--set KEY=VALUE` (repeatable) overrides any field of the model config, with dotted keys for
 nested configs and values parsed as JSON:
 

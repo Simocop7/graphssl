@@ -253,6 +253,10 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
 
     if model_name == "graphdino":
         # GraphDINO names it the other way round: ema_tau_base -> ema_tau.
+        # The benchmark keeps reference DINO's values (EMA 0.996 from the start, teacher
+        # temperature 0.04), not the library defaults (0.9 and 0.07): like every other row
+        # it is untuned, and the committed JSONs stay reproducible. --ema-tau 0.9
+        # --set head.teacher_temp=0.07 gives the library defaults.
         cfg["ema_tau_base"] = 0.996 if ema_tau is None else ema_tau
         cfg["ema_tau"] = max(cfg["ema_tau_base"], 0.996)
         cfg["freeze_last_layer_epochs"] = min(1, args.epochs)
@@ -263,6 +267,7 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
             "proj_hidden": args.hidden,
             "bottleneck_dim": max(args.hidden // 4, 8),
             "n_prototypes": 128,
+            "teacher_temp": 0.04,
             "warmup_teacher_temp_epochs": min(30, args.epochs // 4),
         }
         return cfg

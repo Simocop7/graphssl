@@ -143,31 +143,42 @@ No access to the trainer, logger, or datamodule from inside a model.
 - **freeze_last_layer_epochs**: during the first N epochs, gradients of the prototype layer
   (`student_head.proto`) are zeroed out after backward — in `post_backward()`.
 - Hyperparameters (code defaults, `HeadConfig`/`GraphDINOConfig`): `student_temp=0.1,
-  teacher_temp=0.04, warmup_teacher_temp=0.04, warmup_teacher_temp_epochs=0,
-  center_momentum=0.9, ema_tau=0.996, ema_tau_base=0.996, freeze_last_layer_epochs=1,
-  n_views=2, n_global_views=2, norm_last_layer=False`. With the default temperatures the
-  warmup is a no-op, even where `warmup_teacher_temp_epochs` is set (e.g. the benchmark
-  runner's 30).
+  teacher_temp=0.07, warmup_teacher_temp=0.04, warmup_teacher_temp_epochs=30,
+  center_momentum=0.9, ema_tau=0.996, ema_tau_base=0.9, total_steps=0,
+  freeze_last_layer_epochs=1, n_views=2, n_global_views=2, norm_last_layer=False`.
+  - `ema_tau_base=0.9` and `teacher_temp=0.07` differ from reference DINO (0.996 / 0.04) on
+    purpose: see "Stability" below. `from_dict` falls back to `min(0.9, ema_tau)` for the
+    base, so a config that only lowers `ema_tau` stays valid.
+  - With `total_steps=0` the momentum stays fixed at `ema_tau_base` (0.9). The ablations
+    always set `total_steps` to the run length; the fixed-0.9 path is only spot-checked
+    (local CPU, Cora, 300 steps: 71.6 ± 3.3 vs 74.0 ± 2.9 with the schedule).
+  - **The benchmark runner does not use these defaults**: `run_benchmark.py` pins reference
+    DINO's values (`ema_tau_base=0.996`, `head.teacher_temp=0.04`), so the benchmark row stays
+    untuned and every committed JSON stays reproducible. `--ema-tau 0.9 --set
+    head.teacher_temp=0.07` runs the library defaults.
 - `norm_last_layer` (`HeadConfig`, off by default = unchanged behavior): fixes the prototypes'
   weight-norm scale g at 1, so logits are cosines in [-1, 1] (DINO's `norm_last_layer`).
   Without it g is trainable (weight_norm initializes it to the row norms: ~0.57 with the
   benchmark's 64-d bottleneck) and grows during training.
-- **Known instability (defaults not changed yet):** with the default config GraphDINO gets
+- **Stability** (why the defaults changed): with reference DINO's values GraphDINO gets
   *worse* the longer it trains. 5 seeds, GIN, linear probe at 300 → 1000 → 3000 steps, Cora |
-  CiteSeer (`benchmarks/ablations/graphdino_stability`, `--ema-tau` rows in `teacher_student`):
-  - default: 63.3 → 50.0 → 38.9 | 42.2 → 33.3 → 28.8
-  - `--ema-tau 0.9` (EMA 0.9 → 0.996 over the run): 66.5 → 62.9 → 62.9 | 43.7 → 44.0 → 42.7 —
-    the only setting measured that removes the decline
-  - `head.teacher_temp=0.07` (warmed up from 0.04), 3000 steps only: 54.2 | 36.9 — slows it
-  - `head.norm_last_layer=true`, 3000 steps only: 37.4 | 27.9 — no effect. With
-    `teacher_temp=0.07`: 64.9 → 65.1 → 46.0 | 44.5 → 42.8 → 32.4, worse at 3000 than the
-    temperature alone. A single-seed local diagnostic had it helping: don't decide on one seed.
-  - GCN backbone, default, 300 → 3000: 73.3 → 69.1 | 53.0 → 44.7 (both levers: within ~1 std)
+  CiteSeer (`benchmarks/ablations/graphdino_stability`, `--ema-tau 0.9` alone in
+  `teacher_student`); tables in `docs/benchmarks.md` (Sensitivity):
+  - reference values: 63.3 → 50.0 → 38.9 | 42.2 → 33.3 → 28.8 (below the untrained GIN)
+  - `--ema-tau 0.9` (0.9 → 0.996 over the run): 66.5 → 62.9 → 62.9 | 43.7 → 44.0 → 42.7
+  - `--ema-tau 0.9` + `head.teacher_temp=0.07` (**the library defaults**): 73.5 → 68.1 → 67.0 |
+    47.8 → 45.6 → 45.0 — best in every cell measured, also PubMed at 300 steps (75.6 vs 70.7)
+    and with GCN (Cora 78.3 → 75.4 vs 73.3 → 69.1)
+  - `head.teacher_temp=0.07` alone, 3000 steps: 54.2 | 36.9. `head.norm_last_layer=true`
+    alone: 37.4 | 27.9, no effect (a single-seed local diagnostic had it helping: don't
+    decide on one seed)
+  - Still open: a milder decline with training length (Cora 73.5 → 67.0), larger seed std
+    (up to 4.7 on CiteSeer), and with GCN on CiteSeer GraphDINO stays below the untrained
+    encoder (54.5 vs 57.0)
 
   Local single-seed diagnostics tie the decline to the teacher over-sharpening (output
-  entropy → 0); gradient clipping and more prototypes didn't help there.
-  `benchmarks/ablation_graphdino_ema.sh` checks `--ema-tau 0.9` with GCN, on PubMed and
-  combined with `teacher_temp=0.07` before any default changes.
+  entropy → 0); gradient clipping and more prototypes didn't help there. The settings were
+  chosen on test accuracy of Cora/CiteSeer: say so wherever the tuned numbers are reported.
 
 ### VICReg
 - Encoder + 3-layer projector `Projector(hidden_dim, hidden_dim*2, proj_dim)`
@@ -400,12 +411,13 @@ on_epoch_start → batches → on_epoch_end
   - With GCN at 300 steps the gap mostly closes on Cora: BGRL 78.2, AFGRL 76.8, GraphDINO 73.3
     vs Barlow Twins 79.6 (CiteSeer: BGRL 57.8, GraphDINO 53.0 vs 61.3). BGRL/AFGRL's effective
     rank goes from 9–48 with GIN to 170–190.
-  - **But an untrained GCN is already strong.** Zero-step encoders (`--epochs 0`) scored
-    71.7 / 57.0 / 72.2 with GCN vs 40.4 / 36.1 / 44.4 with GIN on Cora / CiteSeer / PubMed in a
-    local CPU check (5 seeds, not committed; `ablation_graphdino_ema.sh` records the official
-    rows). Over that reference BGRL + GCN adds +6.5 on Cora and ~0 on CiteSeer, GraphDINO + GCN
-    +1.6 and −4. Always read GCN rows against it, and don't state "the backbone explains the
-    gap" as a conclusion: what GCN recovers is largely the backbone itself.
+  - **But an untrained GCN is already strong.** Zero-step encoders (`--epochs 0`, rows in
+    `graphdino_stability`) score 71.7 / 57.0 / 72.2 with GCN vs 40.4 / 36.1 / 44.4 with GIN on
+    Cora / CiteSeer / PubMed. Over that reference BGRL + GCN adds +6.5 on Cora and +0.9 on
+    CiteSeer, Barlow Twins + GCN +7.9 / +4.3; GraphDINO + GCN is below it on CiteSeer. Always
+    read GCN rows against it, and don't state "the backbone explains the gap" as a
+    conclusion: what GCN recovers is largely the backbone itself. With GIN every method is
+    far above the untrained encoder, so the benchmark table is not affected.
 
   Ruled out: GraphDINO's center bug (rerun after the fix at `20cce09`: every number moved
   < 1 std).
@@ -471,7 +483,7 @@ pytest tests/ -v
 | `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored; **auto-skipped if faiss isn't installed** |
 | `test_positive_miner.py` | AFGRL | chunked top-k search == full matrix, self always first, `knn_chunk_size` validation (no faiss needed) |
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling |
-| `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, center in logit space, `norm_last_layer`, DINOTrainer hooks |
+| `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
 | `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; AFGRL rows need faiss |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
 | `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, `effective_rank` |

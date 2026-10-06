@@ -4,6 +4,7 @@ import pytest
 import torch
 from torch_geometric.data import Data
 
+from graphssl.config.schema import GraphDINOConfig
 from graphssl.models import GraphDINO
 from graphssl.nn.pooling import pool_graph_embeddings
 from graphssl.training import DINOTrainer
@@ -182,10 +183,53 @@ class TestTeacherTempWarmup:
         model.on_epoch_start(5)
         assert model.teacher_head._current_teacher_temp == pytest.approx(0.06)
 
-    def test_no_warmup_by_default(self):
+    def test_no_warmup_when_epochs_zero(self):
         """warmup_teacher_temp_epochs=0 means teacher_temp is used from the start."""
         model = GraphDINO(_make_config(), in_channels=7)
         assert model.teacher_head._current_teacher_temp == pytest.approx(0.07)
+
+
+class TestDefaults:
+    """The defaults are the recipe that stayed stable in the citation-network ablations:
+    a fast EMA teacher (0.9, annealed to 0.996) and a teacher temperature warmed up to 0.07."""
+
+    @staticmethod
+    def _minimal(**overrides):
+        cfg = {
+            "encoder": {"name": "gin", "hidden_dim": 32, "num_layers": 2},
+            "head": {"name": "dino", "proj_hidden": 64, "bottleneck_dim": 32, "n_prototypes": 16},
+        }
+        cfg.update(overrides)
+        return cfg
+
+    def test_teacher_temp_warms_up_from_0_04_to_0_07(self):
+        model = GraphDINO(self._minimal(), in_channels=7)
+        assert model.teacher_head._current_teacher_temp == pytest.approx(0.04)
+        model.on_epoch_start(30)
+        assert model.teacher_head._current_teacher_temp == pytest.approx(0.07)
+
+    def test_ema_anneals_from_0_9_to_ema_tau(self):
+        model = GraphDINO(self._minimal(total_steps=10), in_channels=7)
+        model.post_step()
+        assert model._ema_tau == pytest.approx(0.9)
+        for _ in range(10):
+            model.post_step()
+        assert model._ema_tau == pytest.approx(0.996)
+
+    def test_ema_fixed_at_base_without_total_steps(self):
+        model = GraphDINO(self._minimal(), in_channels=7)
+        for _ in range(3):
+            model.post_step()
+        assert model._ema_tau == pytest.approx(0.9)
+
+    def test_base_follows_a_lower_ema_tau(self):
+        """A config that only sets ema_tau below 0.9 must stay valid (base <= ema_tau)."""
+        cfg = GraphDINOConfig.from_dict(self._minimal(ema_tau=0.8))
+        assert cfg.ema_tau_base == pytest.approx(0.8)
+
+    def test_explicit_base_is_kept(self):
+        cfg = GraphDINOConfig.from_dict(self._minimal(ema_tau_base=0.996))
+        assert cfg.ema_tau_base == pytest.approx(0.996)
 
 
 class TestCenter:

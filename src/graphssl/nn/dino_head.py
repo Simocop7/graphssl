@@ -36,10 +36,10 @@ class DINOHead(nn.Module):
         bottleneck_dim: int,
         n_prototypes: int,
         student_temp: float = 0.1,
-        teacher_temp: float = 0.04,
+        teacher_temp: float = 0.07,
         center_momentum: float = 0.9,
         warmup_teacher_temp: float = 0.04,
-        warmup_teacher_temp_epochs: int = 0,
+        warmup_teacher_temp_epochs: int = 30,
         norm_last_layer: bool = False,
     ):
         super().__init__()

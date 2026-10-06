@@ -33,37 +33,34 @@ student.
 | Field | Default | Notes |
 |---|---|---|
 | `student_temp` | `0.1` | |
-| `teacher_temp` | `0.04` | final teacher temperature |
+| `teacher_temp` | `0.07` | final teacher temperature (reference DINO: `0.04`) |
 | `warmup_teacher_temp` | `0.04` | starting teacher temperature (must be ≤ `teacher_temp`) |
-| `warmup_teacher_temp_epochs` | `0` | the warmup only matters when `teacher_temp` > `warmup_teacher_temp` (e.g. `0.07`) |
+| `warmup_teacher_temp_epochs` | `30` | epochs of linear warmup from `warmup_teacher_temp` to `teacher_temp`; `0` uses `teacher_temp` from the start |
 | `center_momentum` | `0.9` | |
 | `norm_last_layer` | `False` | fix the prototypes' weight-norm scale at 1 (logits become cosines in [-1, 1]), as DINO's `norm_last_layer`; off = trainable scale |
 | `ema_tau` | `0.996` | final teacher EMA momentum |
-| `ema_tau_base` | same as `ema_tau` | starting teacher EMA momentum; when lower than `ema_tau` and `total_steps` > 0 it is annealed to `ema_tau` on a cosine schedule |
-| `total_steps` | `0` | length of the EMA schedule in optimizer steps; `0` keeps the momentum fixed at `ema_tau_base` |
+| `ema_tau_base` | `0.9` | starting teacher EMA momentum, annealed to `ema_tau` on a cosine schedule over `total_steps` (reference DINO starts at `0.996`); never above `ema_tau` |
+| `total_steps` | `0` | length of the EMA schedule in optimizer steps — **set it to your number of training steps**; `0` keeps the momentum fixed at `ema_tau_base` |
 | `freeze_last_layer_epochs` | `1` | |
 | `n_views` / `n_global_views` | `2` / `2` | |
 
-!!! warning "Longer training hurts with the default config"
-    In the citation-network ablations (GIN, 5 seeds, linear probe) GraphDINO's accuracy
-    *drops* as training gets longer: Cora 63.3 → 50.0 → 38.9 and CiteSeer 42.2 → 33.3 → 28.8
-    at 300 → 1000 → 3000 full-batch steps. Diagnostics tie it to the teacher's output
-    sharpening until every node gets a hard prototype assignment that no longer tracks the
-    classes.
+!!! note "Why the defaults differ from reference DINO"
+    With reference DINO's values (EMA momentum `0.996` from the first step, teacher
+    temperature `0.04`) GraphDINO's accuracy *drops* as full-batch training continues: in the
+    citation-network ablations (GIN, 5 seeds, linear probe) Cora goes 63.3 → 50.0 → 38.9 at
+    300 → 1000 → 3000 steps, ending below the untrained encoder. Diagnostics tie it to the
+    teacher's output sharpening until every node gets a hard prototype assignment that no
+    longer tracks the classes.
 
-    - **A faster teacher removes the decline**: `ema_tau_base=0.9` annealed to `ema_tau=0.996`
-      over the run (`total_steps` = number of training steps) gives Cora 66.5 → 62.9 → 62.9
-      and CiteSeer 43.7 → 44.0 → 42.7. It is the only setting measured so far that does.
-    - A softer teacher (`teacher_temp=0.07`, warmed up from `0.04`) slows the decline but
-      doesn't stop it (Cora 54.2 at 3000 steps).
-    - `norm_last_layer=True` has no measurable effect on its own (Cora 37.4 at 3000 steps).
-    - Gradient clipping and more prototypes didn't help in single-seed diagnostics.
+    The defaults are the setting that held up best there: a faster teacher
+    (`ema_tau_base=0.9`, annealed to `ema_tau=0.996`) with a softer one (`teacher_temp=0.07`,
+    warmed up from `0.04`). Cora: 73.5 → 68.1 → 67.0. `norm_last_layer=True`, gradient
+    clipping and more prototypes did not help. Tables and caveats:
+    [Benchmarks → Sensitivity](../benchmarks.md#sensitivity-budget-teacher-and-backbone).
 
-    The defaults are unchanged for now: `benchmarks/ablation_graphdino_ema.sh` first checks
-    the faster teacher with the GCN backbone, on PubMed, and combined with the softer
-    teacher. Until then, for short full-batch training set `ema_tau_base` and `total_steps`
-    explicitly. Full tables: `python benchmarks/render_ablation.py
-    benchmarks/ablations/graphdino_stability` (and `benchmarks/ablations/teacher_student`).
+    - The ablations always set `total_steps` to the length of the run. Without it the
+      momentum stays at `0.9`, which is only spot-checked at 300 steps.
+    - To get reference DINO back: `ema_tau_base=0.996`, `head.teacher_temp=0.04`.
 
 ## Operation order
 
@@ -79,11 +76,11 @@ config = {
     "encoder": {"name": "gin", "hidden_dim": 128, "num_layers": 2},
     "head": {
         "name": "dino", "proj_hidden": 128, "bottleneck_dim": 32,
-        "n_prototypes": 128, "warmup_teacher_temp_epochs": 30,
+        "n_prototypes": 128,
     },
     "augment_teacher": [{"name": "edge_drop", "p": 0.2}, {"name": "feat_mask", "p": 0.1}],
     "augment_student": [{"name": "edge_drop", "p": 0.3}, {"name": "feat_mask", "p": 0.2}],
-    "ema_tau": 0.996,
+    "total_steps": num_epochs * steps_per_epoch,  # length of the EMA schedule
     "freeze_last_layer_epochs": 1,
 }
 model = GraphDINO(config, in_channels=dataset.num_features)
