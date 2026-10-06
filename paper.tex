@@ -275,7 +275,7 @@ Several limitations remain in the current alpha implementation. First, protected
 
 \subsection{Cross-Method Comparison on Citation Networks}
 \label{sec:results-citation}
-We evaluate all seven SSL objectives on the three standard citation networks --- Cora, CiteSeer, and PubMed --- under a single shared protocol, so that differences reflect the objectives rather than per-method tuning. Every method uses the same GIN-2L encoder ($d{=}256$, batch normalization, no dropout), trained full-batch for 300 steps with AdamW ($\text{lr}{=}5{\times}10^{-4}$, weight decay $10^{-5}$) on the public Planetoid split. The augmentation-based methods (GraphCL, BGRL, VICReg, Barlow Twins, GraphDINO) share the same symmetric augmentation (edge dropout $p{=}0.5$, feature masking $p{=}0.2$); DGI uses node-shuffling corruption and AFGRL uses no augmentation. BGRL and AFGRL anneal the EMA momentum from 0.99 to 1 with a cosine schedule. The trained encoder is frozen and evaluated with two heads: a linear probe trained with Adam and a cosine $k$NN classifier ($k{=}5$). No per-method or per-dataset hyperparameter search is performed. All runs were executed on a single NVIDIA A2 GPU (16\,GB) at NECSTLab with \texttt{benchmarks/run\_benchmark.py}, which stores every result together with its per-seed metrics, exact hyperparameters, git commit, and package versions. \Cref{tab:accuracy} reports test accuracy over 10 seeds (mean and sample standard deviation).
+We evaluate all seven SSL objectives on the three standard citation networks --- Cora, CiteSeer, and PubMed --- under a single shared protocol, so that differences reflect the objectives rather than per-method tuning. Every method uses the same GIN-2L encoder ($d{=}256$, batch normalization, no dropout), trained full-batch for 300 steps with AdamW ($\text{lr}{=}5{\times}10^{-4}$, weight decay $10^{-5}$) on the public Planetoid split. The augmentation-based methods (GraphCL, BGRL, VICReg, Barlow Twins, GraphDINO) share the same symmetric augmentation (edge dropout $p{=}0.5$, feature masking $p{=}0.2$); DGI uses node-shuffling corruption and AFGRL uses no augmentation. BGRL and AFGRL anneal the EMA momentum from 0.99 to 1 with a cosine schedule; GraphDINO uses the reference DINO values \cite{dino} (EMA momentum 0.996, teacher temperature $\tau_t{=}0.04$). The trained encoder is frozen and evaluated with two heads: a linear probe trained with Adam and a cosine $k$NN classifier ($k{=}5$). No per-method or per-dataset hyperparameter search is performed. All runs were executed on a single NVIDIA A2 GPU (16\,GB) at NECSTLab with \texttt{benchmarks/run\_benchmark.py}, which stores every result together with its per-seed metrics, exact hyperparameters, git commit, and package versions. \Cref{tab:accuracy} reports test accuracy over 10 seeds (mean and sample standard deviation).
 
 \begin{table*}[htbp]
 \centering
@@ -299,7 +299,7 @@ GraphDINO    & 62.12 $\pm$ 1.98 & 55.30 $\pm$ 1.56 & 42.12 $\pm$ 2.58 & 36.92 $\
 \end{tabular}
 \end{table*}
 
-Every objective yields representations well above the random-guess baseline (14.3\%, 16.7\%, and 33.3\% for Cora, CiteSeer, and PubMed, given their class counts), which confirms that the complete pipeline --- augmentation, EMA teacher-student optimization, positive mining, and both evaluation heads --- executes correctly end-to-end for all seven methods. Beyond that, four observations emerge. First, the redundancy-reduction objectives (Barlow Twins, VICReg) and contrastive GraphCL form the top group on all three datasets, with a seed standard deviation of at most 2.5 points. Second, the teacher-student family (BGRL, AFGRL, GraphDINO) consistently trails under this shared budget. Within that family, AFGRL --- which uses no augmentation at all --- outperforms BGRL on Cora (+5.9) and PubMed (+4.8) and ties on CiteSeer. We hypothesize that the gap stems from the short, shared training budget and the untuned EMA schedule rather than from the objectives themselves; per-method tuning is needed to confirm this. Third, the supervised references stay below the best SSL linear probe on every dataset: the accuracy of their own trained head is 73.2 / 51.7 / 74.4 on Cora / CiteSeer / PubMed under the shared protocol and 76.8 / 62.4 / 71.4 with the standard recipe, which helps on Cora and CiteSeer and hurts on PubMed. This characterizes a GIN encoder trained on 60--140 labels rather than an advantage of self-supervision over supervision in general: the 2-layer GCN of \cite{gcn} reports 81.5 / 70.3 / 79.0 with a similar recipe, and we have not yet isolated the effect of the backbone. Fourth, the quadratic costs of \Cref{tab:complexity} are directly observable: on PubMed ($N \approx 19.7$k) a 300-step run takes about 440\,s for GraphCL and 500\,s for AFGRL, versus 35--60\,s for the other methods. These wall times are indicative only, since some runs shared the GPU.
+Every objective yields representations well above the random-guess baseline (14.3\%, 16.7\%, and 33.3\% for Cora, CiteSeer, and PubMed, given their class counts), which confirms that the complete pipeline --- augmentation, EMA teacher-student optimization, positive mining, and both evaluation heads --- executes correctly end-to-end for all seven methods. Beyond that, four observations emerge. First, the redundancy-reduction objectives (Barlow Twins, VICReg) and contrastive GraphCL form the top group on all three datasets, with a seed standard deviation of at most 2.5 points. Second, the teacher-student family (BGRL, AFGRL, GraphDINO) consistently trails under this shared budget. Within that family, AFGRL --- which uses no augmentation at all --- outperforms BGRL on Cora (+5.9) and PubMed (+4.8) and ties on CiteSeer. \Cref{sec:sensitivity} examines this gap: a longer budget alone does not close it, whereas the teacher schedule and the encoder backbone both matter. Third, the supervised references stay below the best SSL linear probe on every dataset: the accuracy of their own trained head is 73.2 / 51.7 / 74.4 on Cora / CiteSeer / PubMed under the shared protocol and 76.8 / 62.4 / 71.4 with the standard recipe, which helps on Cora and CiteSeer and hurts on PubMed. This characterizes a GIN encoder trained on 60--140 labels rather than an advantage of self-supervision over supervision in general: the 2-layer GCN of \cite{gcn} reports 81.5 / 70.3 / 79.0 with a similar recipe, and we have not yet isolated the effect of the backbone. Fourth, the quadratic costs of \Cref{tab:complexity} are directly observable: on PubMed ($N \approx 19.7$k) a 300-step run takes about 440\,s for GraphCL and 500\,s for AFGRL, versus 35--60\,s for the other methods. These wall times are indicative only, since some runs shared the GPU.
 
 \Cref{tab:bgrl-comparison} places our BGRL numbers alongside the original BGRL paper's own small-dataset evaluation (Appendix C, Table 7 of \cite{bgrl}). The comparison is not strictly apples-to-apples, and we report the methodological differences explicitly rather than let the numbers speak alone: \cite{bgrl} averages over 20 random dataset splits rather than the fixed public Planetoid split used here (the original authors themselves note the fixed split is known to be unreliable for evaluating GNNs \cite{shchur2018pitfalls}); their encoder follows the GRACE setup \cite{zhu2020graph}, most likely a 2-layer GCN rather than our GIN; and their linear head is an $\ell_2$-regularized scikit-learn logistic-regression classifier with a hyperparameter search over the regularization strength, rather than our untuned Adam-trained linear layer.
 
@@ -317,6 +317,54 @@ This work & BGRL (linear) & 64.18 $\pm$ 3.04 & 47.59 $\pm$ 2.22 & 68.67 $\pm$ 2.
 \end{table}
 
 The gap is consistent with the configuration differences above rather than a defect in the implementation: our run intentionally omits per-dataset hyperparameter search, uses symmetric rather than asymmetric augmentation strength across the two views, trains for only 300 steps, and evaluates through an untuned linear layer rather than a regularization-swept logistic regression classifier. Closing this gap under a matched protocol is left as future work; the present results are offered as an equal-budget comparison between objectives and a reproducibility check, not a state-of-the-art claim. The medium- and large-scale OGB datasets \cite{ogb} (ogbn-arxiv, ogbg-molhiv, ogbg-molpcba) are the next step of the evaluation on the same NECSTLab infrastructure, with the caveat that AFGRL's dense neighbor search (\Cref{sec:limitations}) must be replaced before it can run on the larger graphs.
+
+\subsection{Sensitivity to Budget, Teacher Schedule, and Backbone}
+\label{sec:sensitivity}
+The shared protocol leaves open why the teacher-student family trails. We ran three ablation grids on Cora and CiteSeer (5 seeds, linear probe, same optimizer and augmentations as above), kept separate from \Cref{tab:accuracy}, whose rows are unchanged. The settings below were compared on test accuracy, so the best row of each table is an optimistic estimate for that setting.
+
+\textbf{Training budget.} A longer budget alone does not close the gap. From 300 to 1000 to 3000 steps with GIN, Barlow Twins is flat on Cora (78.04 / 78.44 / 77.62), BGRL improves but stays below it (64.50 / 71.24 / 73.48), and GraphDINO with the reference DINO values degrades (\Cref{tab:graphdino-stability}).
+
+\begin{table*}[htbp]
+\centering
+\small
+\caption{GraphDINO linear-probe test accuracy (\%) with GIN-2L after 300 / 1000 / 3000 full-batch steps (5 seeds; mean $\pm$ sample std). The first row is the configuration of \Cref{tab:accuracy}; the last row is the library default. ``--'' marks settings that were only run at 3000 steps.}
+\label{tab:graphdino-stability}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+& \multicolumn{3}{c}{\textbf{Cora}} & \multicolumn{3}{c}{\textbf{CiteSeer}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+\textbf{Setting} & 300 & 1000 & 3000 & 300 & 1000 & 3000 \\ \midrule
+Reference DINO values & 63.34 $\pm$ 1.25 & 49.96 $\pm$ 1.13 & 38.88 $\pm$ 2.33 & 42.24 $\pm$ 2.39 & 33.32 $\pm$ 1.68 & 28.80 $\pm$ 1.25 \\
+\quad + \texttt{norm\_last\_layer} & -- & -- & 37.44 $\pm$ 1.76 & -- & -- & 27.90 $\pm$ 1.49 \\
+\quad + $\tau_t{=}0.07$ & -- & -- & 54.24 $\pm$ 2.31 & -- & -- & 36.94 $\pm$ 2.09 \\
+\quad + $\tau_t{=}0.07$, \texttt{norm\_last\_layer} & 64.92 $\pm$ 2.34 & 65.08 $\pm$ 2.27 & 46.04 $\pm$ 2.23 & 44.54 $\pm$ 2.14 & 42.80 $\pm$ 1.86 & 32.44 $\pm$ 2.45 \\
+EMA $0.9 \rightarrow 0.996$ & 66.52 $\pm$ 2.61 & 62.94 $\pm$ 3.00 & 62.86 $\pm$ 3.05 & 43.70 $\pm$ 3.36 & 43.98 $\pm$ 4.78 & 42.74 $\pm$ 4.27 \\
+EMA $0.9 \rightarrow 0.996$, $\tau_t{=}0.07$ (defaults) & \textbf{73.50 $\pm$ 2.92} & \textbf{68.06 $\pm$ 2.74} & \textbf{66.98 $\pm$ 2.99} & \textbf{47.76 $\pm$ 4.56} & \textbf{45.64 $\pm$ 4.68} & \textbf{44.96 $\pm$ 3.80} \\ \bottomrule
+\end{tabular}
+\end{table*}
+
+\textbf{GraphDINO teacher.} With the reference values (EMA momentum 0.996 from the first step, $\tau_t{=}0.04$) accuracy drops as training continues, and after 3000 steps it is at or below that of an untrained encoder (\Cref{tab:backbone}). A faster teacher, with the momentum annealed from 0.9 to 0.996 over the run, removes most of the decline. A softer teacher ($\tau_t{=}0.07$, warmed up from 0.04) only slows it on its own, and fixing the prototype scale (\texttt{norm\_last\_layer}) has no measurable effect. The two effective changes together are best in every cell, and also on PubMed at 300 steps (75.56 $\pm$ 0.92 against 70.68 $\pm$ 2.02 with the reference values). They are now the library defaults, while \Cref{tab:accuracy} keeps the reference values, consistent with its untuned protocol. A milder decline (Cora 73.50 $\rightarrow$ 66.98) and a larger variance across seeds remain.
+
+\begin{table*}[htbp]
+\centering
+\small
+\caption{Linear-probe test accuracy (\%) after 300 steps with the GIN-2L and GCN-2L backbones, against the same encoders left untrained (5 seeds; mean $\pm$ sample std). AFGRL was run on Cora only.}
+\label{tab:backbone}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{GIN}} & \multicolumn{2}{c}{\textbf{GCN}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{Method} & Cora & CiteSeer & Cora & CiteSeer \\ \midrule
+Untrained encoder & 40.40 $\pm$ 2.15 & 36.14 $\pm$ 2.73 & 71.72 $\pm$ 1.67 & 56.96 $\pm$ 1.54 \\ \midrule
+Barlow Twins & 78.04 $\pm$ 1.33 & 63.00 $\pm$ 1.14 & 79.58 $\pm$ 0.61 & 61.30 $\pm$ 1.47 \\
+BGRL & 64.50 $\pm$ 2.39 & 46.44 $\pm$ 1.45 & 78.24 $\pm$ 1.93 & 57.82 $\pm$ 2.72 \\
+AFGRL & 70.58 $\pm$ 1.96 & -- & 76.84 $\pm$ 1.49 & -- \\
+GraphDINO (reference) & 63.34 $\pm$ 1.25 & 42.24 $\pm$ 2.39 & 73.28 $\pm$ 0.23 & 53.04 $\pm$ 2.97 \\
+GraphDINO (defaults) & 73.50 $\pm$ 2.92 & 47.76 $\pm$ 4.56 & 78.30 $\pm$ 2.19 & 54.48 $\pm$ 1.23 \\ \bottomrule
+\end{tabular}
+\end{table*}
+
+\textbf{Backbone.} Replacing GIN with a 2-layer GCN nearly closes the teacher-student gap on Cora (\Cref{tab:backbone}): BGRL moves from 13.5 points below Barlow Twins to 1.3 below, and the effective rank of its embeddings rises from 9 to 171 out of 256 dimensions. Most of this gain, however, is the backbone itself. An untrained GCN already reaches 71.72 on Cora and 56.96 on CiteSeer, against 40.40 and 36.14 for an untrained GIN. Relative to that reference, with GCN Barlow Twins adds 7.9 / 4.3 points (Cora / CiteSeer) and BGRL 6.5 / 0.9, while GraphDINO stays below it on CiteSeer with either setting. With GIN every objective is 23 to 38 points above the untrained encoder on Cora. \Cref{tab:accuracy} therefore measures how well each objective trains a GIN from scratch within 300 steps, and should not be read against GCN-based numbers from the literature without the untrained-encoder reference. The same reference puts \Cref{tab:bgrl-comparison} in context: with GCN and the same 300-step budget, our BGRL reaches 78.24 $\pm$ 1.93 on Cora.
 
 \section{Future Work}
 Beyond the evaluation roadmap outlined above, several directions are actively planned.

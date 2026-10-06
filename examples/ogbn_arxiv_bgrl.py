@@ -70,6 +70,15 @@ def main() -> None:
     except ImportError as e:
         raise ImportError("Install ogb: pip install ogb") from e
 
+    # ogb (<= 1.3.6) loads its processed file with a bare torch.load(); since PyTorch 2.6
+    # that defaults to weights_only=True and rejects PyG's Data classes unless allow-listed.
+    add_safe_globals = getattr(torch.serialization, "add_safe_globals", None)
+    if add_safe_globals is not None:
+        from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
+        from torch_geometric.data.storage import GlobalStorage
+
+        add_safe_globals([DataEdgeAttr, DataTensorAttr, GlobalStorage])
+
     dataset = PygNodePropPredDataset(name="ogbn-arxiv", root=args.data_dir)
     data = dataset[0]
     from torch_geometric.transforms import ToUndirected
@@ -96,6 +105,7 @@ def main() -> None:
     loader = dm.neighbor_loader(
         num_neighbors=[10] * args.layers,
         input_nodes=split_idx["train"],
+        shuffle=True,
     )
 
     model = build_model(make_config(args), in_channels=data.num_features)
@@ -107,8 +117,8 @@ def main() -> None:
     print(f"Training done in {time.time() - t0:.1f}s | final SSL loss: {losses[-1]:.4f}\n")
 
     model.eval()
-    full_loader = dm.train_dataloader()
-    z_full, y_full = extract_embeddings(model, full_loader, device=device)
+    # one full-graph forward pass; pass mini_batch=True if the graph doesn't fit in memory
+    z_full, y_full = extract_embeddings(model, dm, device=device)
 
     evaluator = LogRegEvaluator()
     results = evaluator.evaluate(

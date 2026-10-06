@@ -77,8 +77,10 @@ def linear_probe_mae(
     model.eval()
     z_train, y_train = extract_embeddings(model, train_dm, device=device)
     z_test, y_test = extract_embeddings(model, test_dm, device=device)
-    y_train = y_train.float().view(-1, 1)
-    y_test = y_test.float().view(-1, 1)
+    # extract_embeddings returns CPU tensors; the probe is trained on `device`
+    z_train, z_test = z_train.to(device), z_test.to(device)
+    y_train = y_train.float().view(-1, 1).to(device)
+    y_test = y_test.float().view(-1, 1).to(device)
 
     head = nn.Linear(hidden, 1).to(device)
     opt = AdamW(head.parameters(), lr=1e-3, weight_decay=1e-5)
