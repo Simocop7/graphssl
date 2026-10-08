@@ -84,10 +84,10 @@ def attr_mask(data: Data, p=0.2, mask_value=0, protected_nodes: Optional[Tensor]
     """Replace the features of a random fraction ``p`` of the nodes with ``mask_value``.
 
     Unlike ``feat_mask``, which hides the same feature columns on every node, this hides
-    whole nodes: the attribute masking used on molecules, where a node has one categorical
-    feature (its atom type). Give the encoder one more class than the data has
-    (``node_emb_num_classes``) and pass that extra index as ``mask_value`` to use a
-    dedicated mask token.
+    whole nodes. With continuous features ``mask_value=0`` zeroes them. With one categorical
+    feature per node (a node type, an atom type, a token id) give the encoder one more
+    class than the data has (``node_emb_num_classes``) and pass that extra index as
+    ``mask_value`` to use a dedicated mask token.
     """
     assert data.x is not None
     node_mask = torch.rand(data.x.size(0), device=data.x.device) < p

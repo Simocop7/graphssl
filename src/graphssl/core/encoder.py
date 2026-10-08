@@ -31,7 +31,8 @@ def encode(encoder: nn.Module, data: Data) -> Tensor:
 
     Every model reaches its encoder through this function. Calling the encoder with
     ``(x, edge_index, batch)`` alone drops ``edge_attr``, and an edge-aware encoder then runs
-    on zeros without complaining: bond types were ignored that way on molecules.
+    on zeros without complaining: edge features (relation types, weights, the bond types of
+    a molecule) used to be ignored that way.
     """
     batch = getattr(data, "batch", None)
     edge_attr = getattr(data, "edge_attr", None)

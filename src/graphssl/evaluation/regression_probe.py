@@ -12,7 +12,7 @@ DEFAULT_RIDGE_WEIGHT_DECAYS: Tuple[float, ...] = tuple(10.0**e for e in range(3,
 
 
 class RidgeEvaluator:
-    """Ridge regression on frozen embeddings, for regression targets (e.g. ZINC).
+    """Ridge regression on frozen embeddings, for node- or graph-level regression targets.
 
     Fits ``mean squared error + weight_decay * ||W||²`` on the training rows in closed form:
     no optimiser, no random initialisation, so the same embeddings always give the same

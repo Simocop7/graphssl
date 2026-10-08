@@ -38,6 +38,7 @@ class DGI(BaseSSLModel):
         cfg = DGIConfig.from_dict(config)
         self.encoder = cfg.encoder.build(in_channels)
         self.graph_level: bool = cfg.encoder.pool
+        self.readout: str = cfg.encoder.readout
         self.corruption: str = cfg.corruption
         self.shuffle_ratio: float = cfg.shuffle_ratio
         hidden_dim = cfg.encoder.hidden_dim
@@ -66,7 +67,7 @@ class DGI(BaseSSLModel):
         z = encode(self.encoder, data)
         if self.graph_level:
             # One embedding per graph, like every other model's forward().
-            z = pool_graph_embeddings(z, data.batch)
+            z = pool_graph_embeddings(z, data.batch, self.readout)
         return z
 
     def _embed_pair(self, data: Data) -> Tuple[Tensor, Tensor]:

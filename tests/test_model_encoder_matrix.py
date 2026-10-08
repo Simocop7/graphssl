@@ -11,6 +11,8 @@ import torch
 from torch_geometric.data import Batch, Data
 
 from graphssl.config.load import build_model
+from graphssl.core import encode, pretrained_encoder
+from graphssl.nn.pooling import pool_graph_embeddings
 from graphssl.utils.positive_miner import HAS_FAISS
 
 HIDDEN = 16
@@ -166,3 +168,44 @@ def test_edge_features_reach_the_encoder(model_name, encoder):
     other_bonds = batch.clone()
     other_bonds.edge_attr = (batch.edge_attr + 1) % N_BOND_TYPES
     assert not torch.allclose(model(batch), model(other_bonds))
+
+
+# ---------------------------------------------------------------------------
+# Graph readout
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("readout", ["mean", "sum", "max"])
+@pytest.mark.parametrize("model_name", MODELS)
+def test_graph_readout(model_name, readout):
+    """Graph embeddings are the configured readout of the encoder's node embeddings."""
+    torch.manual_seed(0)
+    cfg = _config(model_name, "gin", pool=True)
+    cfg["encoder"]["readout"] = readout
+    model = build_model(cfg, in_channels=IN_CHANNELS, num_classes=NUM_CLASSES)
+    batch = _graph_batch()
+
+    model.train()
+    assert torch.isfinite(model.compute_loss(batch))
+
+    model.eval()
+    with torch.no_grad():
+        nodes = encode(pretrained_encoder(model), batch)
+        expected = pool_graph_embeddings(nodes, batch.batch, readout)
+    assert torch.allclose(model(batch), expected, atol=1e-6)
+
+
+def test_readouts_differ_and_sum_sees_the_graph_size():
+    x = torch.tensor([[1.0, 4.0], [3.0, 0.0], [5.0, 5.0]])
+    batch = torch.tensor([0, 0, 1])
+    assert pool_graph_embeddings(x, batch, "mean").tolist() == [[2.0, 2.0], [5.0, 5.0]]
+    assert pool_graph_embeddings(x, batch, "sum").tolist() == [[4.0, 4.0], [5.0, 5.0]]
+    assert pool_graph_embeddings(x, batch, "max").tolist() == [[3.0, 4.0], [5.0, 5.0]]
+    assert pool_graph_embeddings(x, None, "sum").tolist() == [[9.0, 9.0]]  # one graph
+    with pytest.raises(ValueError, match="readout"):
+        pool_graph_embeddings(x, batch, "median")
+    with pytest.raises(ValueError, match="readout"):
+        build_model(
+            {"name": "dgi", "encoder": {**_config("dgi", "gin", True)["encoder"], "readout": "x"}},
+            in_channels=IN_CHANNELS,
+        )

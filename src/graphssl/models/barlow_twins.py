@@ -35,11 +35,12 @@ class BarlowTwins(BaseSSLModel):
         self.loss_fn = BarlowTwinsLoss(lambda_param=cfg.lambda_param, out_dim=cfg.proj_dim)
         self.aug_list: List[Tuple[str, dict]] = [(a.name, a.kwargs) for a in cfg.augment]
         self.graph_level: bool = cfg.encoder.pool
+        self.readout: str = cfg.encoder.readout
 
     def forward(self, data: Data) -> Tensor:
         z = encode(self.encoder, data)
         if self.graph_level:
-            z = pool_graph_embeddings(z, data.batch)
+            z = pool_graph_embeddings(z, data.batch, self.readout)
         return z
 
     def compute_loss(self, data: Data) -> Tensor:
@@ -58,8 +59,8 @@ class BarlowTwins(BaseSSLModel):
         h2 = encode(self.encoder, v2)
 
         if self.graph_level:
-            h1 = pool_graph_embeddings(h1, v1.batch)
-            h2 = pool_graph_embeddings(h2, v2.batch)
+            h1 = pool_graph_embeddings(h1, v1.batch, self.readout)
+            h2 = pool_graph_embeddings(h2, v2.batch, self.readout)
         elif batch_size is not None:
             h1, h2 = h1[:batch_size], h2[:batch_size]
 

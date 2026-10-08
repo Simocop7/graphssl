@@ -37,6 +37,7 @@ class EncoderConfig:
     mlp_ratio: float = 2.0
     drop: float = 0.2
     pool: bool = True
+    readout: str = "mean"  # graph-level pooling when pool=True: 'mean', 'sum' or 'max'
     norm_type: str = "batch"  # 'batch', 'layer', or 'none'
     weight_standardization: bool = False  # GCN only: standardize conv weights after layer 1
     edge_dim: Optional[int] = None  # enables edge-feature-aware conv (GINEConv / TransformerConv)
@@ -54,6 +55,8 @@ class EncoderConfig:
             raise ValueError(f"num_layers must be > 0, got {self.num_layers}")
         if not (0.0 <= self.drop < 1.0):
             raise ValueError(f"drop must be in [0, 1), got {self.drop}")
+        if self.readout not in ("mean", "sum", "max"):
+            raise ValueError(f"readout must be 'mean', 'sum' or 'max', got {self.readout!r}")
         if self.norm_type not in ("batch", "layer", "none"):
             raise ValueError(
                 f"norm_type must be 'batch', 'layer', or 'none', got {self.norm_type!r}"

@@ -56,6 +56,7 @@ class BGRL(BaseSSLModel):
         )
         self._step: int = 0
         self.graph_level: bool = cfg.encoder.pool
+        self.readout: str = cfg.encoder.readout
         self.loss_fn = CosineRegressionLoss(symmetric=True)
         self.aug_list: List[Tuple[str, dict]] = [(a.name, a.kwargs) for a in cfg.augment]
 
@@ -63,7 +64,7 @@ class BGRL(BaseSSLModel):
         with torch.no_grad():
             z = encode(self.online_enc, data)
             if self.graph_level:
-                z = pool_graph_embeddings(z, data.batch)
+                z = pool_graph_embeddings(z, data.batch, self.readout)
             return z.detach()
 
     def compute_loss(self, data: Data) -> Tensor:
@@ -87,10 +88,10 @@ class BGRL(BaseSSLModel):
             t2 = encode(self.target_enc, v2)
 
         if self.graph_level:
-            z1 = pool_graph_embeddings(z1, v1.batch)
-            z2 = pool_graph_embeddings(z2, v2.batch)
-            t1 = pool_graph_embeddings(t1, v1.batch)
-            t2 = pool_graph_embeddings(t2, v2.batch)
+            z1 = pool_graph_embeddings(z1, v1.batch, self.readout)
+            z2 = pool_graph_embeddings(z2, v2.batch, self.readout)
+            t1 = pool_graph_embeddings(t1, v1.batch, self.readout)
+            t2 = pool_graph_embeddings(t2, v2.batch, self.readout)
         elif batch_size is not None:
             z1, z2 = z1[:batch_size], z2[:batch_size]
             t1, t2 = t1[:batch_size], t2[:batch_size]

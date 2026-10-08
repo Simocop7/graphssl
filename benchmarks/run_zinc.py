@@ -93,6 +93,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--encoder", default="gin", choices=["gin", "transformer"])
     p.add_argument("--hidden", type=int, default=128)
     p.add_argument("--layers", type=int, default=4)
+    p.add_argument(
+        "--readout",
+        default="mean",
+        choices=["mean", "sum", "max"],
+        help="how node embeddings are pooled into a graph embedding",
+    )
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument(
         "--finetune-epochs",
@@ -129,6 +135,7 @@ def make_config(model_name: str, args: argparse.Namespace, total_steps: int) -> 
             "num_layers": args.layers,
             "norm_type": "batch",
             "pool": True,  # graph-level task
+            "readout": args.readout,
             "drop": 0.0,
             "node_emb_num_classes": N_ATOM_TYPES + 1,
             "edge_dim": args.hidden,

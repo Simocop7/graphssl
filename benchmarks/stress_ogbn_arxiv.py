@@ -28,7 +28,8 @@ Usage::
     python -u benchmarks/stress_ogbn_arxiv.py --epochs 50 2>&1 | tee -a stress_arxiv.log
 
 One JSON per model goes to ``--out-dir`` (default ``benchmarks/stress/ogbn_arxiv``), next to
-a ``summary.md`` table. The exit code is 1 if any model failed.
+a ``summary.md`` table and to the trained model (``<model>.pt``, git-ignored;
+``graphssl.config.load_model`` reads it back). The exit code is 1 if any model failed.
 """
 
 from __future__ import annotations
@@ -50,7 +51,7 @@ import torch_geometric
 from torch.optim import AdamW
 from torch_geometric.transforms import ToUndirected
 
-from graphssl.config.load import build_model
+from graphssl.config.load import build_model, save_model
 from graphssl.core.callback import Callback
 from graphssl.data import DataModule
 from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
@@ -351,6 +352,10 @@ def run_model(
 
         report["final"] = evaluate(model, dm, num_classes, device, args.knn_k, probe)
         print(f"  final: {fmt_eval(report['final'])}", flush=True)
+        # Kept so that another evaluation does not need another run.
+        checkpoint = Path(args.out_dir) / f"{model_name}.pt"
+        save_model(model, checkpoint, config, in_channels=dm.data.num_features)
+        report["checkpoint"] = checkpoint.name
         if not args.skip_extraction_check:
             rel = extraction_rel_diff(model, dm, args.layers, device)
             report["minibatch_extraction_rel_diff"] = rel

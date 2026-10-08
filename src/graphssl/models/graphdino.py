@@ -60,6 +60,7 @@ class GraphDINO(BaseSSLModel):
         self._n_global_views: int = cfg.n_global_views
         # pool=True means the encoder returns graph-level embeddings; no batch_size crop needed
         self._graph_level: bool = cfg.encoder.pool
+        self.readout: str = cfg.encoder.readout
 
         self._ema_tau: float = cfg.ema_tau_base
         self._loss_fn = DINOLoss()
@@ -93,13 +94,13 @@ class GraphDINO(BaseSSLModel):
         with torch.no_grad():
             z = encode(self.teacher_enc, data)
             if self._graph_level:
-                z = pool_graph_embeddings(z, data.batch)
+                z = pool_graph_embeddings(z, data.batch, self.readout)
             return z.detach()
 
     def _embed(self, enc: nn.Module, view: Data, batch_size: Optional[int]) -> Tensor:
         h = encode(enc, view)
         if self._graph_level:
-            h = pool_graph_embeddings(h, view.batch)
+            h = pool_graph_embeddings(h, view.batch, self.readout)
         elif batch_size is not None:
             h = h[:batch_size]
         return h

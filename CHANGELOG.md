@@ -72,6 +72,8 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 - `RidgeEvaluator`: closed-form ridge regression on frozen embeddings for regression
   targets, L2 strength selected on validation, MAE and RMSE.
 - `Supervised` takes `task: regression` (L1 loss on `num_classes` targets).
+- `EncoderConfig.readout`: `'mean'` (default, unchanged), `'sum'` or `'max'` pooling of the
+  node embeddings into a graph embedding. The mean does not see the size of a graph.
 - `graphssl.core.encode(encoder, data)`: runs an encoder on a graph or batch with its edge
   features, if any.
 - `save_model(model, path, config, in_channels, num_classes=None)` and `load_model(path)` in

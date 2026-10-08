@@ -244,7 +244,8 @@ All are registered via `@ENCODERS.register("name")`.
 | `num_layers` | int | — | number of layers |
 | `norm_type` | str | "batch" | 'batch', 'layer', 'none' — **uniform API across all encoders** |
 | `weight_standardization` | bool | False | GCN only: standardize the conv weights of every layer after the first |
-| `pool` | bool | True | global_add/mean_pool for graph-level tasks |
+| `pool` | bool | True | graph-level task: models pool the node embeddings per graph |
+| `readout` | str | "mean" | 'mean', 'sum', 'max' — the pooling used when `pool=True` (read by the models, not by the encoder) |
 | `drop` | float | 0.2 | dropout rate |
 | `mlp_ratio` | float | 2.0 | hidden-dim multiplier for the internal MLP |
 | `edge_dim` | int\|None | None | enables edge-feature-aware convolution (GINEConv / TransformerConv) |
@@ -370,7 +371,9 @@ Buffers are copied directly (not averaged).
 - `CosineEMAScheduler(ema_base, ema_end, total_steps)` — increasing cosine EMA momentum (BGRL/DINO)
 
 ### Pooling (`nn/pooling.py`)
-`pool_graph_embeddings(node_embeddings, batch)` — `global_mean_pool` with a fallback when `batch=None`.
+`pool_graph_embeddings(node_embeddings, batch, readout="mean")` — mean / sum / max pooling per
+graph (`batch=None`: one graph). Every model passes `cfg.encoder.readout`. The mean hides
+the size of a graph; the sum keeps it.
 
 ### extract_embeddings (`evaluation/visualization.py`)
 Extracts embeddings from a model given a datamodule (pass the `DataModule`, not a loader).
@@ -531,6 +534,26 @@ on_epoch_start → batches → on_epoch_end
 
   Ruled out: GraphDINO's center bug (rerun after the fix at `20cce09`: every number moved
   < 1 std).
+- **Alternatives tried on 2026-10-08, taken from the earlier Lightning/Hydra implementation
+  of the same models** (diagnostics from an uncommitted tree: 3 seeds, Cora | CiteSeer, GIN,
+  300 steps, current probe, linear accuracy — measure again before quoting):
+  - *Its GIN block* (BatchNorm after the input projection, inside every GIN MLP and before
+    the output, GELU, trainable eps) — **worse than ours for every method**: BGRL 65.0 →
+    52.8 | 48.0 → 36.0, Barlow Twins 79.1 → 69.4 | 64.8 → 58.4, GraphDINO 63.2 → 41.5 |
+    43.7 → 33.7, DGI 68.5 → 58.0 | 50.7 → 48.6. It has a higher effective rank (BGRL 9 → 40)
+    and lower accuracy: rank alone is not the goal. Keep the current block.
+  - *Milder augmentation* (`edge_drop` 0.2 instead of 0.5, `feat_mask` 0.2): helps BGRL
+    (65.2 → 67.9 | 46.3 → 52.0, rank 9 → 17), hurts Barlow Twins (79.4 → 76.6 | 64.1 →
+    61.6), neutral for GraphCL (82.0 → 81.0 | 65.0 → 64.9). Method-dependent: not a shared
+    default.
+  - *DINO-style asymmetric views for GraphDINO* (4 views, teacher views with `edge_drop` 0.2
+    only, student views with `edge_drop` 0.3 + `feat_mask` 0.3), on the library defaults:
+    much worse, 72.3 → 57.9 | 47.5 → 37.2.
+  - *AFGRL with a faster teacher* (`--ema-tau 0.9`, annealed to 1.0): 71.4 → 74.3 | 48.4 →
+    50.9, kNN 67.2 → 71.0 | 46.3 → 47.3. *AFGRL with lr 0.01*: much worse, 58.7 | 38.3
+    (55.6 | 38.5 with both). A candidate for a tuned AFGRL config, not for the shared one.
+  - With the current probe the top of the table is close to the literature: GraphCL 82.0 ±
+    1.0 on Cora (0.1.0 probe: 78.1).
 - The 20 JSONs at commit `e295451` say `"dirty": true` — false positive (untracked files were
   counted, fixed in `dae32cb`); the code that ran is exactly `e295451`. GraphDINO and
   Supervised were rerun at `20cce09`, Supervised std. recipe at `558af8e` (all clean).
@@ -572,9 +595,17 @@ encoder:
   own encoder **untrained** (0.598 MAE with seed 0), and `--model supervised` is the
   end-to-end reference (`task: regression`, test MAE of its head at the best-validation
   epoch). About 5 s per epoch on the A2.
+- `--readout mean|sum|max` (default mean) sets `encoder.readout`.
 - `--finetune-epochs N` adds the usual protocol for molecules: after pre-training, the
   encoder and a new linear head are trained on the labels (L1, best-validation epoch).
   Its reference is the supervised row — the same training from a random initialisation.
+- **First numbers** (diagnostic, one seed, 100 epochs, test MAE; untrained encoder 0.598):
+  frozen encoder — VICReg 0.589, GraphDINO 0.590, Barlow Twins 0.595, GraphCL 0.603, BGRL
+  0.697, AFGRL 0.704, DGI 0.792; supervised head 0.360. **No method beats the untrained
+  encoder with a frozen ridge probe**, BGRL and AFGRL collapse (effective rank ≈ 2.5) and
+  DGI is worse still. Fine-tuned (100 epochs): GraphCL 0.328, VICReg 0.355 against 0.360
+  from scratch — pre-training may help there, to be confirmed on several seeds. Sum readout
+  moves little (untrained 0.559, supervised head 0.341, VICReg frozen 0.577).
 - Bond types only count since `encode()` (see Key utilities): before, every ZINC run ignored
   them. The example's `feat_mask` hides the single atom-type column for every atom or for
   none — use `attr_mask` on molecules.
@@ -599,6 +630,8 @@ encoder:
   and accuracy curves, it is not a benchmark. Results go to
   `benchmarks/stress/ogbn_arxiv/` (one JSON per model + `summary.md`); a failing model doesn't
   stop the run. `--skip-linear-probe` for smoke runs (two probe fits per model otherwise).
+  Each trained model is saved next to its JSON (`<model>.pt`, git-ignored, `load_model()`
+  reads it): the 2026-10-06 run kept none, so re-evaluating it means running it again.
   The committed run (2026-10-06, `aaa280f`, 100 epochs) used the 0.1.0 probe: read its kNN
   column, not the linear one. `status: ok` only means the model ran to the end — DGI is `ok`
   there with embeddings worse than the untrained encoder's (kNN 33.7 vs 53.3).

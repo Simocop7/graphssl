@@ -41,12 +41,13 @@ class Supervised(BaseSSLModel):
         self.encoder = cfg.encoder.build(in_channels)
         self.head = nn.Linear(cfg.encoder.hidden_dim, num_classes)
         self.graph_level: bool = cfg.encoder.pool
+        self.readout: str = cfg.encoder.readout
         self.task: str = cfg.task
 
     def forward(self, data: Data) -> Tensor:
         z = encode(self.encoder, data)
         if self.graph_level:
-            z = pool_graph_embeddings(z, data.batch)
+            z = pool_graph_embeddings(z, data.batch, self.readout)
         return z
 
     def student_parameters(self) -> Iterator[nn.Parameter]:

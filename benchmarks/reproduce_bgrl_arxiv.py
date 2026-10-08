@@ -41,7 +41,8 @@ Usage::
     python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 5 2>&1 | tee -a reproduce_bgrl.log
 
 One JSON per invocation goes to ``--out-dir`` (default
-``benchmarks/reproductions/bgrl_ogbn_arxiv``).
+``benchmarks/reproductions/bgrl_ogbn_arxiv``), with the trained model of every seed next to
+it (``bgrl_seed<N>.pt``, git-ignored; ``graphssl.config.load_model`` reads it back).
 """
 
 from __future__ import annotations
@@ -60,7 +61,7 @@ import torch_geometric
 from stress_ogbn_arxiv import git_info, load_arxiv
 from torch.optim import AdamW, Optimizer
 
-from graphssl.config.load import build_model
+from graphssl.config.load import build_model, save_model
 from graphssl.core.callback import Callback
 from graphssl.data import DataModule
 from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
@@ -225,6 +226,10 @@ def run_seed(seed: int, args: argparse.Namespace, dm: DataModule, num_classes: i
     result["final_loss"] = losses[-1]
     result["curve"] = schedule.curve
     result["bgrl"] = evaluate(model, dm, num_classes, args, probe)
+    # Kept so that another evaluation does not cost another four hours of training.
+    checkpoint = Path(args.out_dir) / f"bgrl_seed{seed}.pt"
+    save_model(model, checkpoint, make_config(args.steps), in_channels=dm.data.num_features)
+    result["checkpoint"] = checkpoint.name
     print(f"  trained ({result['train_time_s']:.0f}s): {fmt(result['bgrl'])}", flush=True)
     return result
 

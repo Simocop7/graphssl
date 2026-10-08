@@ -66,6 +66,7 @@ class AFGRL(BaseSSLModel):
         self._step: int = 0
         self._topk: int = cfg.topk
         self.graph_level: bool = cfg.encoder.pool
+        self.readout: str = cfg.encoder.readout
         self._graph_loss = CosineRegressionLoss(symmetric=False)
         self.positive_miner = PositiveMiner(
             num_centroids=cfg.num_centroids,
@@ -79,7 +80,7 @@ class AFGRL(BaseSSLModel):
         with torch.no_grad():
             z = encode(self.online_enc, data)
             if self.graph_level:
-                z = pool_graph_embeddings(z, data.batch)
+                z = pool_graph_embeddings(z, data.batch, self.readout)
             return z.detach()
 
     def compute_loss(self, data: Data) -> Tensor:
@@ -87,10 +88,12 @@ class AFGRL(BaseSSLModel):
 
         # Graph-level: PositiveMiner doesn't generalise across graphs — use simple loss.
         if self.graph_level:
-            z = pool_graph_embeddings(z_online, data.batch)
+            z = pool_graph_embeddings(z_online, data.batch, self.readout)
             p = self.online_pred(z)
             with torch.no_grad():
-                z_target = pool_graph_embeddings(encode(self.target_enc, data), data.batch)
+                z_target = pool_graph_embeddings(
+                    encode(self.target_enc, data), data.batch, self.readout
+                )
             return self._graph_loss(p, z_target.detach())
 
         p_online = self.online_pred(z_online)

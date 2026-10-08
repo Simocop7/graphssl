@@ -18,7 +18,8 @@ and are registered via `@ENCODERS.register("name")` (see [Registry Pattern](arch
 | `num_layers` | int | — | number of layers |
 | `norm_type` | str | `"batch"` | `'batch'`, `'layer'`, `'none'` — uniform across all encoders |
 | `weight_standardization` | bool | `False` | GCN only: standardize the convolution weights of every layer after the first |
-| `pool` | bool | `True` | `global_mean_pool` for graph-level tasks |
+| `pool` | bool | `True` | graph-level task: the model pools the node embeddings per graph |
+| `readout` | str | `"mean"` | `'mean'`, `'sum'` or `'max'`: the pooling used when `pool=True` |
 | `drop` | float | `0.2` | dropout rate |
 | `mlp_ratio` | float | `2.0` | hidden-dim multiplier for the internal MLP |
 | `edge_dim` | int \| None | `None` | enables edge-feature-aware convolution (GINEConv / TransformerConv) |
