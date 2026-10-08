@@ -80,6 +80,45 @@ def fmt_pct(agg: dict) -> str:
     return f"{agg['mean'] * 100:.2f} ± {agg['std'] * 100:.2f}"
 
 
+def describe_probe(settings: dict | None) -> str:
+    """The linear-probe protocol of a result, from its ``hyperparameters.linear_probe``."""
+    if settings is None:  # saved before the probe's settings were recorded
+        return "0.1.0 probe (100 Adam steps on raw features, no regularisation)"
+    features = "standardized" if settings["standardize"] else "raw"
+    grid = ", ".join(f"{v:g}" for v in settings["weight_decays"])
+    return (
+        f"L2-regularised logistic regression on {features} features, fitted with L-BFGS "
+        f"(up to {settings['max_iter']} iterations), L2 strength selected on validation "
+        f"among {{{grid}}}"
+    )
+
+
+def probe_note(results: dict[str, dict]) -> str:
+    """One line on the linear probe behind a table's rows ({row label: result}).
+
+    Rows evaluated with different protocols are not comparable in the linear column: the
+    note then lists which rows used which, instead of presenting them as one table.
+    """
+    by_protocol: dict[str, list[str]] = defaultdict(list)
+    unconverged = total = 0
+    for label, d in results.items():
+        by_protocol[describe_probe(d["hyperparameters"].get("linear_probe"))].append(label)
+        flags = [r["probe_converged"] for r in d["per_seed"] if "probe_converged" in r]
+        unconverged += flags.count(False)
+        total += len(flags)
+    if len(by_protocol) == 1:
+        note = f"*Linear probe: {next(iter(by_protocol))}.*"
+    else:
+        parts = "; ".join(f"{', '.join(rows)}: {desc}" for desc, rows in by_protocol.items())
+        note = (
+            "**Mixed linear-probe protocols: the linear column is not comparable across "
+            f"these rows.** {parts}."
+        )
+    if unconverged:
+        note += f" *{unconverged} of {total} probe fits did not converge.*"
+    return note
+
+
 def render_markdown(dataset: str, models: dict) -> str:
     lines = [
         f"### {dataset}",
@@ -99,6 +138,10 @@ def render_markdown(dataset: str, models: dict) -> str:
             f"| {MODEL_DISPLAY_NAMES[model]} | {fmt_pct(d['aggregate']['test_acc_linear'])} | "
             f"{fmt_pct(d['aggregate']['test_acc_knn'])} | {n_seeds} | {epochs} |"
         )
+    lines.append("")
+    lines.append(
+        probe_note({MODEL_DISPLAY_NAMES[m]: models[m] for m in MODEL_ORDER if m in models})
+    )
     if "supervised" in models or "supervised_reg" in models:
         lines.append("")
         lines.append(
@@ -132,6 +175,8 @@ def render_latex(dataset: str, models: dict) -> str:
             rf"{knn['mean'] * 100:.2f} $\pm$ {knn['std'] * 100:.2f} \\"
         )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    note = probe_note({MODEL_DISPLAY_NAMES[m]: models[m] for m in MODEL_ORDER if m in models})
+    lines.append("% " + note.replace("*", ""))
     return "\n".join(lines)
 
 

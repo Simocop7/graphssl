@@ -123,7 +123,7 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 
 ### Benchmark results (citation networks)
 
-All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%), mean ± std over 10 seeds; best SSL method per dataset in bold. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint), not ranked:
+All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%), mean ± std over 10 seeds; best SSL method per dataset in bold. These numbers were produced with the 0.1.0 linear probe (100 Adam steps on raw features); they have not been rerun with the current one (regularised logistic regression fitted to convergence) yet. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint), not ranked:
 
 | Method | Cora | CiteSeer | PubMed |
 |---|---|---|---|

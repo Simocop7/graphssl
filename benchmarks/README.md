@@ -83,31 +83,49 @@ python benchmarks/render_ablation.py benchmarks/ablations/teacher_student
 
 `stress_ogbn_arxiv.py` runs every SSL method through the **mini-batch** path on ogbn-arxiv
 (169k nodes, 2.3M edges), which the full-batch citation benchmark never touches:
-`NeighborLoader` training, the trainer's callback hooks with a probe running during training,
-full-graph extraction and linear-probe / kNN evaluation at that scale, and mini-batch
-extraction checked against the full-graph pass. It is a robustness test, not a benchmark
+`NeighborLoader` training, the trainer's callback hooks with an evaluation (kNN, effective
+rank) running during training, full-graph extraction and linear-probe / kNN evaluation at
+that scale, and mini-batch extraction checked against the full-graph pass. It is a robustness test, not a benchmark
 (one seed, no tuning). A model that fails does not stop the run: its error is saved and the
 next model starts.
 
 ```bash
 # smoke test, a few minutes
 python benchmarks/stress_ogbn_arxiv.py --epochs 2 --max-steps 5 --eval-every 1 \
-    --out-dir benchmarks/stress/smoke
+    --skip-linear-probe --out-dir benchmarks/stress/smoke
 # the real run, inside tmux
 python -u benchmarks/stress_ogbn_arxiv.py --epochs 50 2>&1 | tee -a stress_arxiv.log
 ```
 
 One JSON per model goes to `benchmarks/stress/ogbn_arxiv/` (status, per-epoch loss / time /
-peak GPU memory / sampled-subgraph size, accuracy curve, effective rank, the untrained
-encoder as reference), next to a `summary.md` table.
+peak GPU memory / sampled-subgraph size, kNN accuracy and effective rank during training,
+the linear probe before and after it, the untrained encoder as reference), next to a
+`summary.md` table. The linear probe is fitted only twice per model because one fit takes
+minutes on 91k training nodes; `--skip-linear-probe` drops it for smoke tests.
+
+The committed run (2026-10-06, commit `aaa280f`) predates the current linear probe: its
+`Linear` columns come from the 0.1.0 probe, which on that graph gives 45–54% on the same
+embeddings depending on its random seed. Read its kNN column; the linear numbers cannot rank
+the methods. Its `ok` status means that a model ran to the end, not that it learned: DGI is
+`ok` with embeddings worse than the untrained encoder's.
 
 This intentionally does not replace `examples/*.py`, which stay as minimal
 single-file demos for learning the API — this is for producing citable,
 comparable numbers across the model zoo. See `../CLAUDE.md` (Benchmarks
 section) for the methodology and current status.
 
+**Linear probe.** `LogRegEvaluator`'s default protocol: standardized features, L2-regularised
+logistic regression fitted to convergence, L2 strength selected on the validation split.
+Each JSON records the settings (`hyperparameters.linear_probe`) and, per seed, the selected
+strength and whether the fit converged (`probe_weight_decay`, `probe_converged`). A JSON
+without `linear_probe` was evaluated with the 0.1.0 probe (100 Adam steps on raw features).
+Both renderers print the protocol under each table and say so when its rows mix the two.
+`run_benchmark.py` fits the probe on the CPU with 4 threads: with 60–140 training nodes
+that takes 1–5 s, against 20–40 s with 48 threads or on a busy GPU.
+
 **Current results:** all 7 SSL models × Cora/CiteSeer/PubMed × 10 seeds are committed under
-`results/` and rendered in `../docs/benchmarks.md`. Budget for a full sweep: most models take
+`results/` and rendered in `../docs/benchmarks.md`. They were evaluated with the 0.1.0 probe
+and have not been rerun with the current one yet. Budget for a full sweep: most models take
 ~10–60 s per seed on an NVIDIA A2, but on PubMed GraphCL (O(N²) NT-Xent) and AFGRL (dense
 N×N kNN + per-step k-means) take ~7–9 min per seed, so ~75–85 min each for 10 seeds.
 

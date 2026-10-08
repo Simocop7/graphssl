@@ -158,6 +158,69 @@ class TestGCNEncoderNormType:
 
 
 # ---------------------------------------------------------------------------
+# GCNEncoder: depth and weight standardization
+# ---------------------------------------------------------------------------
+
+
+class TestGCNEncoderDepth:
+    @pytest.mark.parametrize("num_layers", [1, 2, 3])
+    def test_num_layers(self, num_layers):
+        enc = GCNEncoder(in_channels=7, hidden_dim=32, out_dim=16, num_layers=num_layers)
+        data = _make_continuous_batch(n_feat=7, n_graphs=1)[0]
+        assert len(enc.convs) == num_layers
+        assert enc(data.x, data.edge_index).shape == (8, 16)
+
+    def test_default_is_two_layers(self):
+        assert len(GCNEncoder(in_channels=7, hidden_dim=32).convs) == 2
+
+    def test_config_num_layers_reaches_the_encoder(self):
+        # It used to be dropped on the way: every GCN had two layers whatever the config said.
+        enc = EncoderConfig(name="gcn", hidden_dim=32, num_layers=3, pool=False).build(7)
+        assert len(enc.convs) == 3
+
+    def test_invalid_num_layers_raises(self):
+        with pytest.raises(ValueError, match="num_layers"):
+            GCNEncoder(in_channels=7, hidden_dim=32, num_layers=0)
+
+    def test_reset_parameters_changes_every_layer(self):
+        enc = GCNEncoder(in_channels=7, hidden_dim=32, num_layers=3)
+        before = [conv.lin.weight.detach().clone() for conv in enc.convs]
+        enc.reset_parameters()
+        after = [conv.lin.weight for conv in enc.convs]
+        assert all(not torch.equal(b, a) for b, a in zip(before, after, strict=True))
+
+
+class TestGCNWeightStandardization:
+    def _forward(self, **kwargs):
+        enc = GCNEncoder(in_channels=7, hidden_dim=32, num_layers=3, **kwargs)
+        before = [conv.lin.weight.detach().clone() for conv in enc.convs]
+        data = _make_continuous_batch(n_feat=7, n_graphs=1)[0]
+        enc(data.x, data.edge_index)
+        return enc, before
+
+    def test_standardizes_every_layer_but_the_first(self):
+        # The helper used to look for a direct `weight` parameter, which GCNConv does not
+        # have (it is `lin.weight`): the option did nothing.
+        enc, before = self._forward(weight_standardization=True)
+        assert torch.equal(enc.convs[0].lin.weight, before[0])
+        for conv in enc.convs[1:]:
+            weight = conv.lin.weight
+            assert torch.allclose(weight.mean(dim=1), torch.zeros(32), atol=1e-6)
+            assert torch.allclose(weight.var(dim=1), torch.ones(32), atol=1e-2)
+
+    def test_off_by_default(self):
+        enc, before = self._forward()
+        after = [conv.lin.weight for conv in enc.convs]
+        assert all(torch.equal(b, a) for b, a in zip(before, after, strict=True))
+
+    def test_config_field_reaches_the_encoder(self):
+        cfg = {"hidden_dim": 32, "num_layers": 2, "pool": False, "weight_standardization": True}
+        assert EncoderConfig(name="gcn", **cfg).build(7).weight_standardization
+        # Encoders without the option ignore it, like every field they don't take.
+        EncoderConfig(name="gin", **cfg).build(7)
+
+
+# ---------------------------------------------------------------------------
 # TransformerEncoder: edge features, norm_type, node embedding
 # ---------------------------------------------------------------------------
 

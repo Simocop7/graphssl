@@ -3,23 +3,27 @@
 The citation benchmark (run_benchmark.py) is full-batch on graphs of a few thousand nodes,
 so it never touches what this script exercises:
 
-- NeighborLoader training (seed-node cropping, protected nodes) on 169k nodes / 2.3M edges;
-- the trainer's callback hooks, with a linear probe run *during* training;
+- NeighborLoader training (loss on the seed nodes only) on 169k nodes / 2.3M edges;
+- the trainer's callback hooks, with an evaluation (kNN, effective rank) run *during* training;
 - full-graph embedding extraction and linear-probe / kNN evaluation at that scale;
 - mini-batch embedding extraction, checked against the full-graph pass.
+
+It does not exercise ``protected_nodes``: the shared augmentations (``edge_drop``,
+``feat_mask``) never remove a node, so there is nothing to protect.
 
 It is a robustness test, not a benchmark: one seed, no tuning. A model that fails (exception,
 out of memory, non-finite loss) does not stop the run; its error is saved and the next model
 starts. Per model it records the status, per-epoch loss / wall time / peak GPU memory / mean
-sampled-subgraph size, the accuracy curve (linear probe and kNN) with the effective rank, and
-the same encoder left untrained as the reference.
+sampled-subgraph size, the kNN accuracy and effective rank during training, the linear probe
+before and after it (one fit of the probe takes minutes on 91k training nodes, so it is not
+repeated at every evaluation), and the same encoder left untrained as the reference.
 
 Usage::
 
     pip install "graphssl[benchmark]"
     # smoke test, a few minutes: 2 short epochs per model
     python benchmarks/stress_ogbn_arxiv.py --epochs 2 --max-steps 5 --eval-every 1 \\
-        --out-dir benchmarks/stress/smoke
+        --skip-linear-probe --out-dir benchmarks/stress/smoke
     # the real run, inside tmux
     python -u benchmarks/stress_ogbn_arxiv.py --epochs 50 2>&1 | tee -a stress_arxiv.log
 
@@ -60,10 +64,13 @@ EXTRACTION_TOLERANCE = 1e-3
 
 
 def fmt_eval(ev: dict) -> str:
-    return (
-        f"linear {ev['test_acc_linear']:.4f} | knn {ev['test_acc_knn']:.4f} "
-        f"| rank {ev['eff_rank']:.1f}"
-    )
+    line = f"knn {ev['test_acc_knn']:.4f} | rank {ev['eff_rank']:.1f}"
+    if "test_acc_linear" in ev:
+        note = "" if ev["probe_converged"] else ", NOT converged"
+        line = (
+            f"linear {ev['test_acc_linear']:.4f} (L2 {ev['probe_weight_decay']:g}{note}) | {line}"
+        )
+    return line
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,7 +91,7 @@ def parse_args() -> argparse.Namespace:
         "--eval-every",
         type=int,
         default=10,
-        help="linear probe every N epochs during training (0: only at the end)",
+        help="kNN accuracy and effective rank every N epochs during training (0: never)",
     )
     p.add_argument(
         "--max-steps",
@@ -93,6 +100,11 @@ def parse_args() -> argparse.Namespace:
         help="stop each epoch after N mini-batches (smoke tests)",
     )
     p.add_argument("--knn-k", type=int, default=5)
+    p.add_argument(
+        "--skip-linear-probe",
+        action="store_true",
+        help="no linear probe before/after training (minutes per fit on ogbn-arxiv): smoke tests",
+    )
     p.add_argument(
         "--skip-extraction-check",
         action="store_true",
@@ -242,7 +254,7 @@ class StressMonitor(Callback):
             ev = {"epoch": epoch + 1, **self.eval_fn()}
             self.curve.append(ev)
             line += f" | {fmt_eval(ev)}"
-            model.train()  # the probe put the model in eval mode
+            model.train()  # the evaluation put the model in eval mode
         print(line, flush=True)
 
 
@@ -252,24 +264,33 @@ def evaluate(
     num_classes: int,
     device: torch.device,
     knn_k: int,
+    linear_probe: bool = True,
 ) -> dict:
-    """Linear-probe and kNN accuracy and effective rank of the full-graph embeddings."""
+    """kNN accuracy and effective rank of the full-graph embeddings, plus the linear probe."""
     z, y = extract_embeddings(model, dm, device=str(device))
     if not torch.isfinite(z).all():
         raise FloatingPointError("non-finite values in the extracted embeddings")
     assert y is not None and dm.train_idx is not None
     assert dm.val_idx is not None and dm.test_idx is not None
-    lin = LogRegEvaluator().evaluate(
-        z, y, dm.train_idx, dm.val_idx, dm.test_idx, num_classes=num_classes
-    )
     knn = KNNEvaluator(k=knn_k).evaluate(z, y, dm.train_idx, dm.val_idx, dm.test_idx)
-    return {
-        "val_acc_linear": lin["val_acc"],
-        "test_acc_linear": lin["test_acc"],
+    result = {
         "val_acc_knn": knn["val_acc"],
         "test_acc_knn": knn["test_acc"],
         "eff_rank": effective_rank(z),
     }
+    if linear_probe:
+        # One L-BFGS fit per L2 strength, the weakest taking thousands of iterations on 91k
+        # training nodes: minutes, on the training device.
+        lin = LogRegEvaluator().evaluate(
+            z.to(device), y, dm.train_idx, dm.val_idx, dm.test_idx, num_classes=num_classes
+        )
+        result.update(
+            val_acc_linear=lin["val_acc"],
+            test_acc_linear=lin["test_acc"],
+            probe_weight_decay=lin["weight_decay"],
+            probe_converged=lin["converged"],
+        )
+    return result
 
 
 def extraction_rel_diff(
@@ -313,11 +334,14 @@ def run_model(
             raise ImportError("faiss is not installed (pip install faiss-cpu)")
         torch.manual_seed(args.seed)
         model = build_model(config, in_channels=dm.data.num_features)
-        report["untrained"] = evaluate(model, dm, num_classes, device, args.knn_k)
+        probe = not args.skip_linear_probe
+        report["untrained"] = evaluate(model, dm, num_classes, device, args.knn_k, probe)
         print(f"  untrained: {fmt_eval(report['untrained'])}", flush=True)
 
         monitor = StressMonitor(
-            eval_fn=lambda: evaluate(model, dm, num_classes, device, args.knn_k),
+            eval_fn=lambda: evaluate(
+                model, dm, num_classes, device, args.knn_k, linear_probe=False
+            ),
             eval_every=args.eval_every,
             num_epochs=args.epochs,
         )
@@ -325,7 +349,7 @@ def run_model(
         trainer = DINOTrainer(grad_clip_norm=None, device=device, callbacks=[monitor])
         trainer.train(model, loader, optimizer, num_epochs=args.epochs)
 
-        report["final"] = evaluate(model, dm, num_classes, device, args.knn_k)
+        report["final"] = evaluate(model, dm, num_classes, device, args.knn_k, probe)
         print(f"  final: {fmt_eval(report['final'])}", flush=True)
         if not args.skip_extraction_check:
             rel = extraction_rel_diff(model, dm, args.layers, device)
@@ -420,7 +444,16 @@ def main() -> None:
     for model_name in args.model:
         print(f"--- {model_name} ---", flush=True)
         report = run_model(model_name, args, dm, num_classes, device)
-        report.update(dataset="ogbn-arxiv", hyperparameters=vars(args), provenance=provenance)
+        probe = LogRegEvaluator()
+        hyperparameters = {
+            **vars(args),
+            "linear_probe": {
+                "standardize": probe.standardize,
+                "weight_decays": list(probe.weight_decays),
+                "max_iter": probe.max_iter,
+            },
+        }
+        report.update(dataset="ogbn-arxiv", hyperparameters=hyperparameters, provenance=provenance)
         path = out_dir / f"{model_name}__{provenance['timestamp_utc']}.json"
         path.write_text(json.dumps(report, indent=2))
         print(

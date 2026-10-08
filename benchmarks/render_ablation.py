@@ -19,6 +19,8 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+from render_tables import probe_note
+
 HEADER = (
     "| Model | Encoder | Steps | EMA τ start | Overrides | Linear | kNN | Rank "
     "| Alt. encoder | Alt. linear | Alt. rank | Seeds |"
@@ -79,6 +81,11 @@ def render(dataset: str, configs: dict) -> str:
             f"| {fmt_pct(agg.get('test_acc_linear_alt'))} | {fmt_rank(agg.get('eff_rank_alt'))} "
             f"| {len(d['seeds'])} |"
         )
+    labels = {
+        " ".join(str(part) for part in key if part not in (None, "")): d
+        for key, d in configs.items()
+    }
+    lines += ["", probe_note(labels)]
     return "\n".join(lines)
 
 

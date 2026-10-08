@@ -20,9 +20,35 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
   raises if the mask is missing. It used to train on every node's label.
 - **DGI.** In graph-level mode `forward()` returns one pooled embedding per graph. It used to
   return node embeddings.
+- **`subgraph` augmentation.** It raises when given `protected_nodes`, i.e. in mini-batch
+  node training: it keeps the neighbourhood of one random node and cannot keep the seed
+  nodes in place, so each view silently paired different nodes.
+- **GCN encoder state dict.** The layers live in `convs`, `norms` and `acts`; the keys were
+  `conv1`, `norm1`, `act1`, `conv2`, … A GCN checkpoint saved with 0.1.0 needs its keys
+  renamed.
+- **Linear probe.** `LogRegEvaluator` is now an L2-regularised logistic regression on
+  standardized features (statistics of the training rows), fitted full-batch with L-BFGS from
+  a zero initialisation. The L2 strength is selected on the validation split among
+  `weight_decay` (default: 10 down to 1e-6 by decades). The result also reports the selected
+  `weight_decay` and `converged`. The 0.1.0 probe trained a randomly initialised linear layer
+  for 100 Adam steps on raw features: on ogbn-arxiv the same embeddings scored 45–54%
+  depending on the seed, and 8 to 20 points below the converged probe. Arguments are now
+  keyword-only: `lr` and `epochs` are gone, `max_iter` is the L-BFGS budget. Accuracies are
+  not comparable with 0.1.0's. The new probe is slower: seconds on Planetoid-size splits,
+  minutes on ogbn-arxiv's 91k training nodes.
 
 ### Fixed
 
+- The GCN encoder honours `num_layers`. It always built two layers, whatever the config said.
+- The GCN encoder's `weight_standardization` standardizes the convolution weights. It did
+  nothing: the helper looked for a direct `weight` parameter, which `GCNConv` does not have.
+  It now applies to every layer after the first.
+- DGI encodes the real and the corrupted graph in one forward pass. With two passes each
+  graph was normalised with its own BatchNorm statistics, and in mini-batch training the
+  discriminator told them apart from those alone: on ogbn-arxiv the loss went to zero in two
+  epochs and the embeddings ended up worse than an untrained encoder's (kNN 33.7% vs 53.3%).
+  On a `NeighborLoader` batch the summary and the loss now use the seed nodes only; they
+  used to include the sampled neighbours, most of which have no incoming edge in the batch.
 - GraphDINO builds its encoders through `cfg.encoder.build()`, so it works with the GCN and
   Transformer backbones (it crashed with both).
 - AFGRL no longer lets FAISS use every core for k-means: `kmeans_threads` (default 8) caps
@@ -34,6 +60,9 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 
 ### Added
 
+- `EncoderConfig.weight_standardization` (GCN only, off by default).
+- `LinearEvalCallback(evaluator=...)`: the probe to run during training, e.g. a
+  `LogRegEvaluator` with a single `weight_decay` when the default one is too slow.
 - `HeadConfig.norm_last_layer`: fixes the prototypes' weight-norm scale at 1 (off by default).
 - `GraphCLConfig.loss_chunk_size`: NT-Xent in row chunks under gradient checkpointing, same
   value and gradients with bounded memory.

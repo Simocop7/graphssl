@@ -36,6 +36,13 @@ Then render Markdown tables from the saved results::
 
     python benchmarks/render_tables.py
 
+The linear probe is ``LogRegEvaluator``'s default protocol: standardized features,
+L2-regularised logistic regression fitted to convergence, L2 strength selected on the
+validation split. Its settings are saved under ``hyperparameters.linear_probe`` and each
+seed records the selected strength (``probe_weight_decay``) and whether the fit converged
+(``probe_converged``). Results without ``linear_probe`` predate it (0.1.0 probe: 100 Adam
+steps on raw features, no regularisation); the renderers never mix the two silently.
+
 Every result also records the effective rank of the evaluated embeddings (``eff_rank``,
 to spot dimensional collapse) and, for teacher-student models, the same metrics for the
 other encoder (``*_alt``: BGRL/AFGRL target, GraphDINO student). Ablations go outside
@@ -287,6 +294,19 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
 # ---------------------------------------------------------------------------
 
 
+PROBE_THREADS = 4
+
+
+def linear_probe_settings() -> dict:
+    """The linear probe's protocol, saved with every result: the renderers compare it."""
+    probe = LogRegEvaluator()
+    return {
+        "standardize": probe.standardize,
+        "weight_decays": list(probe.weight_decays),
+        "max_iter": probe.max_iter,
+    }
+
+
 def evaluate_embeddings(
     z: torch.Tensor,
     y: torch.Tensor,
@@ -298,11 +318,23 @@ def evaluate_embeddings(
     suffix: str = "",
 ) -> dict:
     """Linear probe + kNN accuracy and effective rank of frozen embeddings."""
-    lin = LogRegEvaluator().evaluate(z, y, train_idx, val_idx, test_idx, num_classes=num_classes)
+    # With 60-140 training nodes the probe's L-BFGS steps are all per-operation overhead:
+    # on the CPU, and with few threads (one Cora evaluation took 4.3 s with 4 threads,
+    # 20.7 s with the 48 of the benchmark machine, 31-38 s on its shared GPU).
+    threads = torch.get_num_threads()
+    torch.set_num_threads(min(threads, PROBE_THREADS))
+    try:
+        lin = LogRegEvaluator().evaluate(
+            z, y, train_idx, val_idx, test_idx, num_classes=num_classes
+        )
+    finally:
+        torch.set_num_threads(threads)
     knn = KNNEvaluator(k=knn_k).evaluate(z, y, train_idx, val_idx, test_idx)
     return {
         f"val_acc_linear{suffix}": lin["val_acc"],
         f"test_acc_linear{suffix}": lin["test_acc"],
+        f"probe_weight_decay{suffix}": lin["weight_decay"],
+        f"probe_converged{suffix}": lin["converged"],
         f"val_acc_knn{suffix}": knn["val_acc"],
         f"test_acc_knn{suffix}": knn["test_acc"],
         f"eff_rank{suffix}": effective_rank(z),
@@ -484,6 +516,7 @@ def save_result(
         "lr": args.lr,
         "weight_decay": args.weight_decay,
         "knn_k": args.knn_k,
+        "linear_probe": linear_probe_settings(),
     }
     if model_name == "supervised_reg":
         # Its recipe replaces the shared optimizer settings: record what actually ran.
@@ -581,7 +614,9 @@ def main() -> None:
                         f"rank={r['eff_rank_alt']:.1f} | "
                     )
                 print(
-                    f"  seed {seed}: linear test={r['test_acc_linear']:.4f} | "
+                    f"  seed {seed}: linear test={r['test_acc_linear']:.4f} "
+                    f"(L2 {r['probe_weight_decay']:g}"
+                    f"{'' if r['probe_converged'] else ', NOT converged'}) | "
                     f"knn test={r['test_acc_knn']:.4f} | rank {r['eff_rank']:.1f} | "
                     f"{alt}{time.time() - t0:.1f}s"
                 )

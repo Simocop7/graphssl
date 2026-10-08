@@ -38,6 +38,7 @@ class EncoderConfig:
     drop: float = 0.2
     pool: bool = True
     norm_type: str = "batch"  # 'batch', 'layer', or 'none'
+    weight_standardization: bool = False  # GCN only: standardize conv weights after layer 1
     edge_dim: Optional[int] = None  # enables edge-feature-aware conv (GINEConv / TransformerConv)
     node_emb_num_classes: Optional[int] = (
         None  # categorical node features (e.g. ZINC: 28 atom types)
@@ -73,7 +74,7 @@ class EncoderConfig:
         """Instantiate the encoder via the ENCODERS registry.
 
         Only the kwargs accepted by the encoder's __init__ are forwarded,
-        so EncoderConfig can carry universal fields (num_layers, drop, …)
+        so EncoderConfig can carry universal fields (drop, mlp_ratio, …)
         without breaking encoders that don't expose those parameters (e.g. GCN).
         """
         import inspect

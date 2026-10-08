@@ -13,7 +13,7 @@ come from the objective rather than from per-method tuning:
 | EMA (BGRL, AFGRL) | cosine schedule 0.99 → 1.0 over training |
 | GraphDINO | reference DINO values: EMA momentum 0.996, teacher temperature 0.04 — not the library defaults, see [Sensitivity](#sensitivity-budget-teacher-and-backbone) |
 | Split | public Planetoid train/val/test |
-| Evaluation | frozen embeddings → linear probe (Adam-trained) and kNN (k=5, cosine) |
+| Evaluation | frozen embeddings → linear probe (the 0.1.0 one: a linear layer trained with Adam for 100 steps, see the warning below) and kNN (k=5, cosine) |
 | Seeds | 10; mean ± sample std |
 | Hardware | NVIDIA A2 (16 GB), PyTorch 2.11 + CUDA 12.8, PyG 2.8 |
 | Supervised references (†) | same encoder, trained on the public split's training labels only: *Supervised* keeps the protocol above; *std. recipe* uses dropout 0.5, Adam lr 0.01 + L2 5e-4 and the best-validation checkpoint (adapted from Kipf & Welling) |
@@ -22,6 +22,17 @@ No per-method or per-dataset hyperparameter search is performed: the goal is to 
 objectives at equal budget, not to reproduce each paper's best reported number. Test accuracy
 (%), best SSL method per column in bold. The supervised rows (†) use labels during training:
 they are reference points, not ranked.
+
+!!! warning "The linear-probe numbers on this page predate the current probe"
+    Every linear-probe number on this page was produced with the 0.1.0 probe: a randomly
+    initialised linear layer trained for 100 Adam steps on raw features, with no
+    regularisation. `LogRegEvaluator` is now an L2-regularised logistic regression fitted to
+    convergence, with the L2 strength selected on the validation split, and the tables have
+    not been rerun yet. The kNN and effective-rank columns are not affected.
+
+    A spot check on the benchmark's own encoders (BGRL and Barlow Twins, 2 seeds per dataset)
+    moved test accuracy by −2.6 to +2.4 points. The untrained-encoder references move more:
+    the untrained GIN on PubMed goes from 44.1 to 57.0.
 
 ### Linear probe
 

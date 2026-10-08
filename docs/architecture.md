@@ -97,7 +97,7 @@ for batch in loader:
 | `CosineEMAScheduler` | `utils/schedulers.py` | Increasing cosine EMA momentum (BGRL/GraphDINO). |
 | `pool_graph_embeddings` | `nn/pooling.py` | `global_mean_pool` with a fallback when `batch=None`. |
 | `extract_embeddings` | `evaluation/visualization.py` | Extracts embeddings given a model + `DataModule`; handles graph-level, node full-batch, and node mini-batch (`NeighborLoader`) paths uniformly. |
-| `LogRegEvaluator` | `evaluation/linear_probe.py` | Pure-PyTorch linear evaluator; multilabel targets (e.g. ogbg-molpcba) use BCE + average precision. |
+| `LogRegEvaluator` | `evaluation/linear_probe.py` | Linear probe in pure PyTorch: L2-regularised logistic regression on standardized features, fitted to convergence with L-BFGS from zero (same embeddings, same result), L2 strength selected on the validation split. Multilabel targets (e.g. ogbg-molpcba) use BCE + average precision. |
 | `DataModule` | `data/datamodule.py` | Wraps a PyG dataset for both graph-level (`DataLoader`) and node-level (`Data` + masks + `neighbor_loader()`) tasks. |
 
 ## Project structure

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterator
+from typing import Dict, Iterator, Tuple
 
 import torch
 import torch.nn as nn
@@ -24,7 +24,8 @@ class DGI(BaseSSLModel):
 
     The summary vector s is computed as sigmoid(mean(h_pos)).  For graph-level
     mode (encoder.pool=True) one summary per graph is computed and broadcast
-    to the corresponding nodes via the batch index.
+    to the corresponding nodes via the batch index.  On a NeighborLoader batch
+    only the seed nodes (the first ``batch_size``) enter the summary and the loss.
 
     Args:
         config: Config dict validated against DGIConfig.
@@ -67,16 +68,38 @@ class DGI(BaseSSLModel):
             z = pool_graph_embeddings(z, data.batch)
         return z
 
-    def compute_loss(self, data: Data) -> Tensor:
-        h_pos = self.encoder(data.x, data.edge_index, data.batch)
+    def _embed_pair(self, data: Data) -> Tuple[Tensor, Tensor]:
+        """Node embeddings of the real and of the corrupted graph, from one forward pass.
+
+        Two passes would normalise each graph with its own batch statistics (BatchNorm in
+        training mode), and the discriminator can tell the passes apart from those alone.
+        On NeighborLoader batches it did: 100% accuracy even on nodes with no incoming
+        edge, where real and corrupted embeddings are identically distributed, with the
+        embeddings ending up worse than an untrained encoder's.
+        """
         corrupted = self._corrupt(data)
-        h_neg = self.encoder(corrupted.x, corrupted.edge_index, corrupted.batch)
+        n = data.x.size(0)
+        x = torch.cat([data.x, corrupted.x])
+        edge_index = torch.cat([data.edge_index, corrupted.edge_index + n], dim=1)
+        batch = data.batch
+        if batch is not None:
+            batch = torch.cat([batch, batch + int(batch.max()) + 1])
+        h = self.encoder(x, edge_index, batch)
+        return h[:n], h[n:]
+
+    def compute_loss(self, data: Data) -> Tensor:
+        h_pos, h_neg = self._embed_pair(data)
 
         if self.graph_level:
             # One summary per graph, broadcast to each node via batch index.
             s = torch.sigmoid(global_mean_pool(h_pos, data.batch))
             Ws = s[data.batch] @ self.W
         else:
+            # Mini-batch: the sampled neighbours exist for message passing only (most have
+            # no incoming edge in the batch), so the summary and the loss use the seeds.
+            batch_size = getattr(data, "batch_size", None)
+            if batch_size is not None:
+                h_pos, h_neg = h_pos[:batch_size], h_neg[:batch_size]
             s = torch.sigmoid(h_pos.mean(0, keepdim=True))
             Ws = s @ self.W  # broadcasts over nodes
 

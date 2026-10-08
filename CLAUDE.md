@@ -80,6 +80,26 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Discriminator: `pos_logits = (h_pos * W@s).sum(-1)`
 - Loss: BCEWithLogitsLoss over [pos_logits, neg_logits] with labels [1,1,...,0,0,...]
 - Hyperparameters: `corruption="shuffle_nodes", shuffle_ratio=1.0`
+- **One forward pass** for the real and the corrupted graph (`_embed_pair`: nodes
+  concatenated, the corrupted `edge_index` shifted by N, `batch` by the number of graphs).
+  Two passes normalise each graph with its own BatchNorm statistics and the discriminator can
+  read the pass from those alone — never go back to two passes with a batch-normalised
+  encoder. Found by the ogbn-arxiv stress test: loss ≈ 0 from epoch 2, 100% discriminator
+  accuracy even on nodes with no incoming edge in the sampled batch (79% of the batch nodes,
+  real and corrupted identically distributed there; 50% with running statistics), kNN
+  55.0 → 48.2 → 33.7 at epochs 10 / 20 / 100 against 53.3 untrained.
+- **Mini-batch**: summary and loss on the seed nodes only (`[:batch_size]`).
+- With both changes on ogbn-arxiv (one seed, 100 epochs): kNN 57.9 / 58.2 / 58.1 / 56.1 /
+  51.5 at epochs 10 / 20 / 40 / 70 / 100. **The collapse is gone, a slow decline is not**:
+  past epoch 40 the effective rank shrinks (4.8 → 1.6) and at 100 epochs the embeddings are
+  below the untrained encoder again (kNN 51.5 vs 53.3, linear probe 44.2 vs 55.2). Cause not
+  identified — don't state one. Until it is, stop DGI early in mini-batch (20–40 epochs).
+- Full-batch is unaffected by either problem. One pass vs the committed two-pass benchmark
+  row (10 seeds, kNN, Cora / CiteSeer / PubMed): 64.8 ± 2.4 / 44.2 ± 3.4 / 65.8 ± 3.0 vs
+  65.4 ± 2.9 / 46.1 ± 3.6 / 64.5 ± 3.0, all within seed noise (a 5-seed check with the old
+  probe had the linear accuracy 2–3 points lower with one pass on Cora and CiteSeer, about
+  one std). No decline with budget: Cora kNN 64.8 / 63.1 / 65.6 and rank 35 / 43 / 44 at
+  300 / 1000 / 3000 steps (CiteSeer 44.2 / 41.6 / 42.6).
 
 ### GraphCL (Graph Contrastive Learning)
 - NT-Xent loss over 2 augmented views
@@ -206,6 +226,7 @@ All are registered via `@ENCODERS.register("name")`.
 | `hidden_dim` | int | — | hidden/output dimension |
 | `num_layers` | int | — | number of layers |
 | `norm_type` | str | "batch" | 'batch', 'layer', 'none' — **uniform API across all encoders** |
+| `weight_standardization` | bool | False | GCN only: standardize the conv weights of every layer after the first |
 | `pool` | bool | True | global_add/mean_pool for graph-level tasks |
 | `drop` | float | 0.2 | dropout rate |
 | `mlp_ratio` | float | 2.0 | hidden-dim multiplier for the internal MLP |
@@ -217,8 +238,13 @@ All are registered via `@ENCODERS.register("name")`.
 accepted by the specific encoder — unsupported fields are silently ignored.
 
 ### GCN
-- 2-layer GCNConv with norm + PReLU
-- Optional weight standardization on the second layer
+- `num_layers` × (GCNConv → norm → PReLU), 2 by default. Until this was fixed the encoder
+  always had two layers: `num_layers` from the config was dropped on the way.
+- `weight_standardization` (`EncoderConfig` field, off by default): standardizes the GCNConv
+  weights of every layer after the first before each forward, as BGRL does on ogbn-arxiv.
+  It used to do nothing — the helper looked for a direct `weight` parameter, GCNConv keeps
+  its weight in `lin.weight` — and could not be set from a config.
+- State-dict keys are `convs.N` / `norms.N` / `acts.N` (0.1.0: `conv1`, `norm1`, …).
 - Backward compatible: still accepts `batchnorm=True/False` and `layernorm=True/False`
 - `reset_parameters()` exposed (used by BGRL for the target encoder)
 
@@ -253,7 +279,7 @@ Available operations:
 | `feat_mask` | p | masks node features with probability p |
 | `feat_noise` | std | adds Gaussian noise to features |
 | `feat_shuffle` | p | swaps features between random nodes |
-| `subgraph` | num_hops | extracts a k-hop subgraph from a random seed |
+| `subgraph` | num_hops | extracts a k-hop subgraph from a random seed; **raises** if given `protected_nodes` (it cannot keep the seeds of a mini-batch in place) |
 | `node_drop` | p | drops nodes; `protected_nodes` are never removed |
 
 Two APIs:
@@ -346,7 +372,35 @@ identical predictions; the full `[|split|, |train|]` similarity (~17 GB for the 
 test split) is never built.
 
 ### LogRegEvaluator (`evaluation/linear_probe.py`)
-Pure-PyTorch linear evaluator. For multilabel targets (e.g. ogbg-molpcba) uses BCE + average precision.
+L2-regularised logistic regression on frozen embeddings, pure PyTorch:
+`LogRegEvaluator(*, weight_decay=DEFAULT_WEIGHT_DECAYS, max_iter=5000, standardize=True, multilabel=False)`
+(keyword-only: 0.1.0's positional `lr, epochs` must fail loudly).
+- Features are standardized with the **training rows'** statistics. The classifier starts from
+  zero and is fitted full-batch with L-BFGS (history 100, strong Wolfe) on
+  `mean CE + weight_decay / 2 * ||W||²`: no seed, no learning rate. Same embeddings, same
+  result (CPU and GPU agree within 0.1 points).
+- `weight_decay`: one value or several (default 10 … 1e-6 by decades). The value with the best
+  **validation** metric is used (the strongest on ties); fits go strongest → weakest, each
+  starting from the previous solution. Planetoid selects 1e-4 … 10, ogbn-arxiv 1e-6.
+- Returns `val_acc` / `test_acc` (`val_ap` / `test_ap` when multilabel), the selected
+  `weight_decay`, and `converged` (False when the selected fit used up `max_iter`).
+- **Why it replaced the 0.1.0 probe** (random init, 100 Adam steps on raw features): on
+  ogbn-arxiv the same embeddings scored 45–54% depending on the seed, and 8–20 points below
+  convergence — most for low-rank embeddings (untrained GIN 35 → 55, BGRL after 10 epochs
+  46 → 57, GraphCL 53 → 62), i.e. against the teacher-student methods. On Planetoid the old
+  probe was within about ±2.6 points of the new one (seed range up to 4.8 on BGRL).
+- **Cost.** The weak end of the grid needs thousands of L-BFGS iterations on low-rank
+  embeddings. ogbn-arxiv (91k training nodes): under 90 s per evaluation on the idle A2,
+  6–10 min when the GPU is shared, 5 min on the CPU. Planetoid: 1–5 s on the CPU with ≤ 4
+  threads, but 20 s with the VM's 48 threads and 30–40 s on its busy GPU — the steps are all
+  per-operation overhead. Hence `run_benchmark.py` fits it on the CPU with
+  `PROBE_THREADS = 4`, and the stress script only before and after training.
+- Measured and dropped — don't retry without new evidence: more Adam steps (unregularised,
+  it overfits 60–140 labels: Barlow Twins on CiteSeer 61 → 54; and 1000 steps are still short
+  of convergence on arxiv); PCA whitening as the feature map (Cora 46%); L-BFGS history 10
+  (stops at a worse objective); scaling the variables by the feature eigenvalues × class
+  frequencies (7 iterations instead of 190 at strong L2, no gain at the weak end, where the
+  time goes). A faster solver would not change any number: the optimum is unique.
 
 ### effective_rank (`evaluation/diagnostics.py`)
 `effective_rank(z)` = `exp(entropy)` of the normalized singular values of the centered
@@ -383,7 +437,8 @@ on_epoch_start → batches → on_epoch_end
 
 **Available callbacks:**
 - `EmbeddingLoggerCallback` — saves embeddings every N epochs as `.pt`
-- `LinearEvalCallback` — periodic linear probe during training
+- `LinearEvalCallback` — periodic linear probe during training; `evaluator=` takes a
+  configured `LogRegEvaluator` (the default one fits 8 classifiers: minutes on a large graph)
 - `VisualizationCallback` — UMAP scatter plot (requires `pip install umap-learn matplotlib`)
 
 ---
@@ -398,6 +453,16 @@ on_epoch_start → batches → on_epoch_end
 - Shared protocol (all 7 methods): GIN-2L, `hidden_dim=256`, no dropout, full-batch 300 steps,
   AdamW lr 5e-4 / wd 1e-5, `edge_drop` 0.5 + `feat_mask` 0.2 (augmentation-based methods),
   public Planetoid split, 10 seeds. Run 2026-09-28 on the NECSTLab VM (NVIDIA A2 16 GB).
+- **Every linear-probe number in this file, the docs, the README and the paper was produced
+  with the 0.1.0 probe** (see LogRegEvaluator): none has been rerun with the current one.
+  kNN and effective rank are unaffected. Spot check on the benchmark's encoders (BGRL, Barlow
+  Twins, 2 seeds per dataset): −2.6 to +2.4 points; the untrained GIN on PubMed 44.1 → 57.0,
+  so the untrained-encoder references move the most. Rerun cost from the recorded wall times:
+  benchmark ≈ 5 h, the two ablation directories ≈ 10 h more.
+- Results saved since record the probe's settings (`hyperparameters.linear_probe`) and, per
+  seed, `probe_weight_decay` / `probe_converged`. `render_tables.py` and `render_ablation.py`
+  print the probe protocol under each table, and say so when its rows mix protocols — a JSON
+  without `linear_probe` is a 0.1.0-probe result.
 - Linear-probe test accuracy (%), mean ± std over 10 seeds (kNN table in `docs/benchmarks.md`):
 
 | Method | Cora | CiteSeer | PubMed |
@@ -479,12 +544,40 @@ encoder:
   allow-list PyG's `DataEdgeAttr`, `DataTensorAttr`, `GlobalStorage` via
   `torch.serialization.add_safe_globals` first (done in the example and the stress test)
 - **Stress test**: `benchmarks/stress_ogbn_arxiv.py` runs all 7 SSL methods through the
-  mini-batch path (NeighborLoader, callbacks with a probe during training, full-graph
-  evaluation, mini-batch extraction checked against the full-graph pass). One seed, no tuning:
-  it reports failures, time, memory and accuracy curves, it is not a benchmark. Results go to
+  mini-batch path (NeighborLoader, callbacks with a kNN / effective-rank evaluation during
+  training, linear probe before and after it, full-graph evaluation, mini-batch extraction
+  checked against the full-graph pass). One seed, no tuning: it reports failures, time, memory
+  and accuracy curves, it is not a benchmark. Results go to
   `benchmarks/stress/ogbn_arxiv/` (one JSON per model + `summary.md`); a failing model doesn't
-  stop the run. Both example scripts (this one and `examples/zinc_bgrl.py`) crashed before
-  `6493aa3` — examples are not covered by the test suite, so smoke-run them after API changes.
+  stop the run. `--skip-linear-probe` for smoke runs (two probe fits per model otherwise).
+  The committed run (2026-10-06, `aaa280f`, 100 epochs) used the 0.1.0 probe: read its kNN
+  column, not the linear one. `status: ok` only means the model ran to the end — DGI is `ok`
+  there with embeddings worse than the untrained encoder's (kNN 33.7 vs 53.3).
+- **Reproduction of the BGRL paper** (`benchmarks/reproduce_bgrl_arxiv.py`, results in
+  `benchmarks/reproductions/bgrl_ogbn_arxiv/`): the paper's own protocol, not the shared
+  benchmark one. Thakoor et al., ICLR 2022, Table 5 / Table 8 / Appendix F (checked against
+  the PDF): symmetrized graph, full-graph training, 10,000 steps; 3 GCN layers × 256 with
+  layer norm + weight standardization + PReLU; predictor hidden 256; edges dropped with
+  p = 0.6 in both views, no feature masking; AdamW lr 1e-2 (1,000 warm-up steps, cosine
+  decay to 0), wd 1e-5; EMA 0.99 → 1.0. Paper (20 seeds, val / test): BGRL 72.53 ± 0.09 /
+  71.64 ± 0.12, the same encoder untrained 69.90 ± 0.11 / 68.94 ± 0.15, DGI 71.26 / 70.34,
+  MLP on raw features 57.65 / 55.50, supervised GCN 73.00 / 71.74.
+  - **The untrained encoder reproduces the paper**: 70.21 / 69.50 with the library probe
+    (seed 0). It validates the GCN encoder and the evaluation independently of training.
+  - The paper's linear evaluation (L2-normalized rows, 100 AdamW steps at lr 0.01, weight
+    decay searched), implemented literally, is far from fitted: 44.1 on the untrained
+    encoder, 66.5 after 1,000 steps, 68.8 after 5,000. The script therefore uses the library
+    probe and reports BGRL's **gain over the untrained encoder** (paper: +2.63 / +2.70),
+    which does not depend on how strong the classifier is.
+  - Known difference left: the library's predictor is Linear → BatchNorm → ReLU → Linear;
+    the reference implementation (nerdslab/bgrl) uses Linear → PReLU → Linear.
+  - An untrained GCN-3L (69.5) is far above every GIN-2L result of the stress test (kNN ≤
+    59.5; linear ≤ 62 where re-evaluated): on ogbn-arxiv the backbone, not the SSL method,
+    sets the level. Read the stress test as a robustness check only.
+  - One seed takes hours on the A2 (full-graph, 8 GiB).
+- Both example scripts (`examples/ogbn_arxiv_bgrl.py` and `examples/zinc_bgrl.py`) crashed
+  before `6493aa3` — examples are not covered by the test suite, so smoke-run them after API
+  changes.
 
 ---
 
@@ -497,7 +590,7 @@ pytest tests/ -v
 | File | Model | Notes |
 |---|---|---|
 | `test_bgrl.py` | BGRL | teacher frozen, reset → different weights, EMA scheduler, step counter |
-| `test_dgi.py` | DGI | W learnable, shuffle_nodes/shuffle_edges |
+| `test_dgi.py` | DGI | W learnable, shuffle_nodes/shuffle_edges, one forward pass (an untouched isolated node gets the same embedding in the real and in the corrupted graph), mini-batch loss on the seed nodes only |
 | `test_graphcl.py` | GraphCL | projector dim, NT-Xent ≥ 0, chunked NT-Xent == full (value + grads) |
 | `test_vicreg.py` | VICReg | 3-layer projector, loss ≥ 0 |
 | `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
@@ -506,8 +599,11 @@ pytest tests/ -v
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
 | `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; AFGRL rows need faiss |
-| `test_new_features.py` | — | edge_emb_num_classes, norm_type API, CombinedLoss |
-| `test_evaluation.py` | — | LogRegEvaluator/KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, chunked kNN == single pass, `extract_embeddings` leaves the datamodule's graph in place, `effective_rank` |
+| `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN depth (`num_layers`) and weight standardization, CombinedLoss |
+| `test_callbacks.py` | — | `EmbeddingLoggerCallback` files, `LinearEvalCallback` history and custom `evaluator`, the model trains again after an evaluation |
+| `test_schedulers.py` | — | `CosineDecayScheduler` (linear warm-up, cosine decay, BGRL's formula), `CosineEMAScheduler` (BGRL's formula, monotonic, clamped) |
+| `test_augmentation.py` | — | protected nodes (`node_drop` keeps them in the leading rows, views stay aligned, models pass a mini-batch's seeds, `subgraph` refuses them), each augmentation's basic behaviour |
+| `test_evaluation.py` | — | LogRegEvaluator (result independent of the seed, L2 selected on validation, invariant to feature scale/offset, `converged` flag, multilabel selection needs scikit-learn), KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, chunked kNN == single pass, `extract_embeddings` leaves the datamodule's graph in place, `effective_rank` |
 
 ---
 
@@ -535,9 +631,10 @@ return type is more generic than what the surrounding code actually guarantees. 
 ### Test coverage
 `pytest-cov` measures coverage (`[tool.coverage.run]` / `[tool.coverage.report]` in
 `pyproject.toml`); CI uploads the report to Codecov from the Python-3.12 matrix leg. Current
-baseline is ~70%. Known gaps: `training/callbacks.py` (~27%) and `utils/schedulers.py`
-(~53%) are largely untested — treat behavior there as less battle-tested than the core
-model/loss code.
+baseline is ~83% (2026-10-08; it was ~70% with `training/callbacks.py` at 27%,
+`utils/schedulers.py` at 53% and no test of the augmentation module). Remaining gaps:
+`VisualizationCallback` (needs umap/matplotlib) and the benchmark/example scripts, which the
+suite does not run — smoke-run them after API changes.
 
 ### Pre-commit hooks
 `.pre-commit-config.yaml`: `ruff check --fix` + `ruff format`, plus standard hygiene hooks
@@ -618,6 +715,14 @@ In mini-batch node training, `batch.batch_size` gives the seed-node count.
 The loss must be computed only on `z[:batch.batch_size]`.
 `compose()` accepts `protected_nodes=torch.arange(batch.batch_size)` and propagates it to
 every augmentation; `node_drop` uses this parameter to never remove seed nodes.
+Only `node_drop` reads it: with `edge_drop` / `feat_mask` (the benchmark's and the stress
+test's augmentations) there is nothing to protect, so no experiment exercises it yet.
+`tests/test_augmentation.py` checks the mechanism itself (there was no test of it before,
+whatever the paper said): protected nodes stay in the leading rows of every view, without
+protection they don't, and GraphCL / BGRL pass a mini-batch's seeds to `compose()`.
+`subgraph` cannot honour it and raises instead of silently pairing the wrong nodes.
+**AFGRL is the exception to the seed crop**: it mines positives and computes its loss over
+every node of the batch, sampled neighbours included — it has no proper mini-batch mode.
 
 ### BGRL vs. AFGRL: target-encoder initialization
 - **BGRL**: `deepcopy(encoder)` + `reset_parameters()` — weights DIFFER from online (critical, paper Appendix B)
@@ -636,7 +741,8 @@ and without edge features during training.
 
 ### LogRegEvaluator: multilabel
 For ogbg-molpcba, labels are multilabel floats `[N, 128]` with NaNs.
-Uses average precision score instead of accuracy.
+Uses average precision score instead of accuracy. Average precision needs scikit-learn:
+without it a single `weight_decay` returns NaN metrics, and selecting among several raises.
 
 ### extract_embeddings: global_to_local mapping
 In mini-batch mode, NeighborLoader batches arrive in a different order than the original

@@ -23,7 +23,7 @@ def _make_norm(norm_type: str, dim: int, batchnorm_mm: float = 0.01) -> nn.Modul
 
 @ENCODERS.register("gcn")
 class GCNEncoder(nn.Module):
-    """2-layer GCNConv backbone.
+    """GCNConv backbone (2 layers by default).
 
     Architecture per layer: GCNConv → Norm → PReLU.
 
@@ -32,12 +32,14 @@ class GCNEncoder(nn.Module):
 
     Args:
         in_channels: Input node feature dimension.
-        hidden_dim: Hidden (and output) dimension for layer 1.
-        out_dim: Output dimension for layer 2 (defaults to hidden_dim).
+        hidden_dim: Output dimension of every layer but the last.
+        out_dim: Output dimension of the last layer (defaults to hidden_dim).
         norm_type: 'batch', 'layer', or 'none' — same API as GINEncoder.
-        weight_standardization: Standardize GCNConv weights before layer 2 forward.
+        weight_standardization: Standardize the GCNConv weights of every layer after the
+            first, before each forward (BGRL's setting on ogbn-arxiv, with layer norm).
         batchnorm_mm: BatchNorm momentum (standard PyTorch convention; default 0.01).
         pool: If True, apply global_mean_pool to produce graph-level embeddings.
+        num_layers: Number of GCNConv layers.
     """
 
     def __init__(
@@ -52,10 +54,13 @@ class GCNEncoder(nn.Module):
         # Legacy aliases kept for backwards compatibility — map to norm_type internally.
         batchnorm: bool | None = None,
         layernorm: bool | None = None,
+        num_layers: int = 2,
     ):
         super().__init__()
         if out_dim is None:
             out_dim = hidden_dim
+        if num_layers <= 0:
+            raise ValueError(f"num_layers must be > 0, got {num_layers}")
 
         # --- Backwards-compatible norm resolution ---
         # If the caller uses the old batchnorm/layernorm bool flags, honour them.
@@ -72,12 +77,10 @@ class GCNEncoder(nn.Module):
         self.weight_standardization = weight_standardization
         self.pool = pool
 
-        self.conv1 = GCNConv(in_channels, hidden_dim)
-        self.conv2 = GCNConv(hidden_dim, out_dim)
-        self.norm1 = _make_norm(norm_type, hidden_dim, batchnorm_mm)
-        self.norm2 = _make_norm(norm_type, out_dim, batchnorm_mm)
-        self.act1 = nn.PReLU()
-        self.act2 = nn.PReLU()
+        dims = [in_channels] + [hidden_dim] * (num_layers - 1) + [out_dim]
+        self.convs = nn.ModuleList(GCNConv(i, o) for i, o in zip(dims[:-1], dims[1:], strict=True))
+        self.norms = nn.ModuleList(_make_norm(norm_type, d, batchnorm_mm) for d in dims[1:])
+        self.acts = nn.ModuleList(nn.PReLU() for _ in dims[1:])
 
     def forward(
         self,
@@ -86,20 +89,17 @@ class GCNEncoder(nn.Module):
         batch: Tensor | None = None,
         edge_attr: Tensor | None = None,
     ) -> Tensor:
-        x = self.act1(self.norm1(self.conv1(x, edge_index)))
-
-        if self.weight_standardization:
-            apply_weight_standardization(self.conv2)
-        x = self.act2(self.norm2(self.conv2(x, edge_index)))
-
+        layers = zip(self.convs, self.norms, self.acts, strict=True)
+        for i, (conv, norm, act) in enumerate(layers):
+            if self.weight_standardization and i > 0:
+                apply_weight_standardization(conv)
+            x = act(norm(conv(x, edge_index)))
         return x
 
     def reset_parameters(self) -> None:
-        self.conv1.reset_parameters()
-        self.conv2.reset_parameters()
-        for norm in (self.norm1, self.norm2):
-            reset_fn = getattr(norm, "reset_parameters", None)
+        for module in (*self.convs, *self.norms):
+            reset_fn = getattr(module, "reset_parameters", None)
             if callable(reset_fn):
                 reset_fn()
-        self.act1 = nn.PReLU().to(next(self.parameters()).device)
-        self.act2 = nn.PReLU().to(next(self.parameters()).device)
+        device = next(self.parameters()).device
+        self.acts = nn.ModuleList(nn.PReLU() for _ in self.convs).to(device)

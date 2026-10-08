@@ -12,10 +12,10 @@ A torchvision-style composable system in `augmentation/`:
 |---|---|---|
 | `edge_drop` | `p` | drops edges with probability `p` |
 | `edge_add` | `p` | adds random edges (fraction `p` of existing ones) |
-| `feat_mask` | `p` | masks node features with probability `p` |
+| `feat_mask` | `p` | masks feature columns with probability `p` (the same columns for every node) |
 | `feat_noise` | `std` | adds Gaussian noise to features |
 | `feat_shuffle` | `p` | swaps features between random nodes |
-| `subgraph` | `num_hops` | extracts a k-hop subgraph from a random seed |
+| `subgraph` | `num_hops` | extracts a k-hop subgraph from a random seed; raises if given `protected_nodes` |
 | `node_drop` | `p` | drops nodes; `protected_nodes` are never removed |
 
 ## Two APIs
@@ -50,9 +50,12 @@ argument automatically — you don't need to pass it yourself unless you're call
 directly.
 
 !!! note "Current granularity"
-    Protected-node enforcement is active for `node_drop` (the only node-destructive
-    augmentation). Per-augmentation protection for feature-level transforms (e.g. exempting
-    seed nodes from `feat_mask`) isn't implemented yet.
+    Protected-node enforcement is active for `node_drop`. `subgraph`, the other augmentation
+    that removes nodes, cannot keep the seeds in place and raises when it is given protected
+    nodes, so it is not usable in mini-batch node training. The class-based transforms do not
+    take protected nodes: `MultiView` forwards them only with registry-style augmentations.
+    Per-augmentation protection for feature-level transforms (e.g. exempting seed nodes from
+    `feat_mask`) isn't implemented yet.
 
 ## Reference
 

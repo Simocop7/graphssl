@@ -2,7 +2,9 @@
 
 import pytest
 import torch
+from torch_geometric.data import Data
 
+import graphssl.models.dgi as dgi_module
 from graphssl.models import DGI
 from helpers import make_batch as _make_batch
 from helpers import make_graph as _make_graph
@@ -67,6 +69,66 @@ class TestDGIGraphLevel:
         loss = model.compute_loss(batch)
         assert loss.dim() == 0
         assert torch.isfinite(loss)
+
+
+class TestDGISharedForwardPass:
+    """The real and the corrupted graph go through the encoder in one forward pass."""
+
+    N_ISOLATED = 5
+
+    def _graph_with_isolated_nodes(self, n_connected=30, n_feat=7):
+        g = torch.Generator().manual_seed(0)
+        n = self.N_ISOLATED + n_connected
+        edge_index = torch.randint(self.N_ISOLATED, n, (2, 4 * n_connected), generator=g)
+        return Data(x=torch.randn(n, n_feat, generator=g), edge_index=edge_index)
+
+    def test_batch_statistics_do_not_tell_the_two_graphs_apart(self, monkeypatch):
+        # A node without edges whose features the corruption leaves alone is the same node
+        # in both graphs. Its two embeddings can differ only if each graph is normalised
+        # with its own batch statistics: the shortcut that gave the discriminator 100%
+        # accuracy on such nodes in mini-batch training (ogbn-arxiv stress test).
+        cfg = _make_config()
+        cfg["encoder"]["drop"] = 0.0
+        model = DGI(cfg, in_channels=7)
+        model.train()  # BatchNorm uses the statistics of the batch
+        graph = self._graph_with_isolated_nodes()
+        k = self.N_ISOLATED
+
+        def corrupt_connected_nodes_only(data):
+            x = data.x.clone()
+            x[k:] = data.x[k + torch.randperm(data.x.size(0) - k)]
+            return Data(x=x, edge_index=data.edge_index, batch=data.batch)
+
+        monkeypatch.setattr(model, "_corrupt", corrupt_connected_nodes_only)
+        h_pos, h_neg = model._embed_pair(graph)
+
+        assert torch.allclose(h_pos[:k], h_neg[:k], atol=1e-6)
+        assert not torch.allclose(h_pos[k:], h_neg[k:], atol=1e-3)
+
+
+class TestDGIMiniBatch:
+    def _logits_in_loss(self, monkeypatch, graph):
+        model = DGI(_make_config(), in_channels=7)
+        seen = {}
+        bce = dgi_module.F.binary_cross_entropy_with_logits
+
+        def spy(logits, labels):
+            seen["n"] = logits.numel()
+            return bce(logits, labels)
+
+        monkeypatch.setattr(dgi_module.F, "binary_cross_entropy_with_logits", spy)
+        assert torch.isfinite(model.compute_loss(graph))
+        return seen["n"]
+
+    def test_loss_uses_seed_nodes_only(self, monkeypatch):
+        """On a NeighborLoader batch the loss covers the first batch_size nodes."""
+        graph = _make_graph(n_nodes=20)
+        graph.batch_size = 8  # as NeighborLoader sets it: the seed nodes come first
+        assert self._logits_in_loss(monkeypatch, graph) == 2 * 8  # real + corrupted
+
+    def test_full_batch_loss_uses_every_node(self, monkeypatch):
+        graph = _make_graph(n_nodes=20)
+        assert self._logits_in_loss(monkeypatch, graph) == 2 * 20
 
 
 class TestDGICorruption:

@@ -16,9 +16,10 @@ def weight_standardize(weight: Tensor, eps: float = 1e-5) -> Tensor:
 def apply_weight_standardization(module: nn.Module, eps: float = 1e-5) -> None:
     """In-place weight standardization on all weight parameters of *module*.
 
-    Applies to any parameter whose name contains 'weight' and has >= 2 dims.
+    Applies to any parameter whose name contains 'weight' and has >= 2 dims, submodules
+    included: a ``GCNConv`` keeps its weight in ``lin.weight``, not as a direct parameter.
     Called inside forward() before the convolution, so gradients remain intact.
     """
-    for name, param in module.named_parameters(recurse=False):
+    for name, param in module.named_parameters():
         if "weight" in name and param.dim() >= 2:
             param.data = weight_standardize(param.data, eps)

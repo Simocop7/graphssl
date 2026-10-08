@@ -42,6 +42,16 @@ def edge_add(data: Data, p=0.1, protected_nodes: Optional[Tensor] = None):
 
 @AUGMENTS.register("subgraph")
 def subgraph(data: Data, num_hops=2, protected_nodes: Optional[Tensor] = None):
+    """Keep the k-hop subgraph around one random node.
+
+    It cannot keep protected nodes in place: on a mini-batch the rows read as the seed
+    nodes would belong to other nodes, differently in every view, so it refuses to run.
+    """
+    if protected_nodes is not None:
+        raise ValueError(
+            "subgraph cannot preserve protected nodes (the seed nodes of a mini-batch): "
+            "use node_drop or an edge/feature augmentation for mini-batch node training."
+        )
     assert data.edge_index is not None
     assert data.num_nodes is not None
     n = data.num_nodes

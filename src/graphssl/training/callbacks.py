@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import torch
 import torch.nn as nn
 
 from graphssl.core.callback import Callback
+
+if TYPE_CHECKING:
+    from graphssl.evaluation.linear_probe import LogRegEvaluator
 
 
 class EmbeddingLoggerCallback(Callback):
@@ -57,6 +60,10 @@ class LinearEvalCallback(Callback):
         every_n_epochs: Evaluation frequency.
         device: Inference device.
         multilabel: Use binary CE + average precision (e.g. ogbg-molpcba).
+        evaluator: The probe to run. Default: ``LogRegEvaluator(multilabel=multilabel)``,
+            which fits one classifier per L2 strength — seconds on a small graph, minutes
+            on 100k training nodes. Pass e.g. ``LogRegEvaluator(weight_decay=1e-4)`` for a
+            cheaper probe during training.
     """
 
     def __init__(
@@ -66,12 +73,14 @@ class LinearEvalCallback(Callback):
         every_n_epochs: int = 10,
         device: str = "cpu",
         multilabel: bool = False,
+        evaluator: Optional[LogRegEvaluator] = None,
     ):
         self.datamodule = datamodule
         self.num_classes = num_classes
         self.every_n_epochs = every_n_epochs
         self.device = device
         self.multilabel = multilabel
+        self.evaluator = evaluator
         self._history: list[Dict[str, Any]] = []
 
     @property
@@ -90,8 +99,8 @@ class LinearEvalCallback(Callback):
         assert labels is not None, (
             "LinearEvalCallback requires labelled data (datamodule.data.y / batch.y is None)"
         )
-        evaluator = LogRegEvaluator(multilabel=self.multilabel)
-        results = evaluator.evaluate(
+        evaluator = self.evaluator or LogRegEvaluator(multilabel=self.multilabel)
+        results: Dict[str, Any] = evaluator.evaluate(
             embeddings.to(self.device),
             labels,
             self.datamodule.train_idx,

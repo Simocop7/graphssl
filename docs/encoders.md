@@ -17,6 +17,7 @@ and are registered via `@ENCODERS.register("name")` (see [Registry Pattern](arch
 | `hidden_dim` | int | — | hidden/output dimension |
 | `num_layers` | int | — | number of layers |
 | `norm_type` | str | `"batch"` | `'batch'`, `'layer'`, `'none'` — uniform across all encoders |
+| `weight_standardization` | bool | `False` | GCN only: standardize the convolution weights of every layer after the first |
 | `pool` | bool | `True` | `global_mean_pool` for graph-level tasks |
 | `drop` | float | `0.2` | dropout rate |
 | `mlp_ratio` | float | `2.0` | hidden-dim multiplier for the internal MLP |
@@ -30,8 +31,9 @@ config schema works across encoders that don't share every feature.
 
 ## GCN
 
-- 2-layer `GCNConv` with norm + `PReLU`.
-- Optional weight standardization on the second layer.
+- `num_layers` × (`GCNConv` → norm → `PReLU`).
+- Optional weight standardization (`weight_standardization`) of the convolution weights of
+  every layer after the first — BGRL's setting on ogbn-arxiv, together with layer norm.
 - Backward compatible with the older `batchnorm=True/False` / `layernorm=True/False` flags.
 - Exposes `reset_parameters()` — used by BGRL to give its target encoder different initial
   weights (see [BGRL](models/bgrl.md)).
