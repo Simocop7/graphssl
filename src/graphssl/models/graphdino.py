@@ -10,6 +10,7 @@ from torch_geometric.data import Data
 
 from graphssl.augmentation import compose
 from graphssl.config.schema import GraphDINOConfig, HeadConfig
+from graphssl.core.encoder import encode
 from graphssl.core.model import BaseSSLModel
 from graphssl.losses.dino import DINOLoss
 from graphssl.nn.dino_head import DINOHead
@@ -90,13 +91,13 @@ class GraphDINO(BaseSSLModel):
 
     def forward(self, data: Data) -> Tensor:
         with torch.no_grad():
-            z = self.teacher_enc(data.x, data.edge_index, data.batch)
+            z = encode(self.teacher_enc, data)
             if self._graph_level:
                 z = pool_graph_embeddings(z, data.batch)
             return z.detach()
 
     def _embed(self, enc: nn.Module, view: Data, batch_size: Optional[int]) -> Tensor:
-        h = enc(view.x, view.edge_index, view.batch)
+        h = encode(enc, view)
         if self._graph_level:
             h = pool_graph_embeddings(h, view.batch)
         elif batch_size is not None:

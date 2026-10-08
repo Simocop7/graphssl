@@ -13,15 +13,16 @@ encoder:
   pool: true
   drop: 0.0
   mlp_ratio: 2
-  node_emb_num_classes: 28
+  node_emb_num_classes: 29   # 28 atom types + the mask token used by attr_mask
   edge_dim: 64
   edge_emb_num_classes: 4
 
 augment:
   - name: edge_drop
-    p: 0.3
-  - name: feat_mask
-    p: 0.1
+    p: 0.2
+  - name: attr_mask   # hides whole atoms; feat_mask would hide the only column for all of them
+    p: 0.2
+    mask_value: 28
 
 pred_hidden: 128
 ema_tau: 0.99

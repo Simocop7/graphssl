@@ -13,6 +13,7 @@ A torchvision-style composable system in `augmentation/`:
 | `edge_drop` | `p` | drops edges with probability `p` |
 | `edge_add` | `p` | adds random edges (fraction `p` of existing ones) |
 | `feat_mask` | `p` | masks feature columns with probability `p` (the same columns for every node) |
+| `attr_mask` | `p`, `mask_value` | replaces the features of a fraction `p` of the nodes with `mask_value` (attribute masking for molecules) |
 | `feat_noise` | `std` | adds Gaussian noise to features |
 | `feat_shuffle` | `p` | swaps features between random nodes |
 | `subgraph` | `num_hops` | extracts a k-hop subgraph from a random seed; raises if given `protected_nodes` |

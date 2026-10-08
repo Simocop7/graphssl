@@ -79,6 +79,36 @@ bash benchmarks/ablation_teacher_student.sh 2>&1 | tee -a ablation.log
 python benchmarks/render_ablation.py benchmarks/ablations/teacher_student
 ```
 
+## Molecules (ZINC)
+
+`run_zinc.py` runs every SSL method on ZINC-12k, a graph-level regression task on molecules:
+the encoder is pre-trained on the training molecules without labels, frozen, and a ridge
+regression on its graph embeddings predicts the target. It reports test MAE (lower is
+better) and the effective rank, next to the same encoder left untrained. `--model
+supervised` trains the encoder end to end on the labels as a reference.
+
+```bash
+python benchmarks/run_zinc.py --model bgrl --epochs 2 --seeds 1 --out-dir benchmarks/zinc/smoke
+python -u benchmarks/run_zinc.py --model all supervised --seeds 3 2>&1 | tee -a zinc.log
+```
+
+One shared, untuned protocol (GINE with 4 layers of 128 units, 100 epochs, 20% of the atoms
+masked and 20% of the bonds dropped): like the citation benchmark it compares the objectives
+at equal budget. Results go to `benchmarks/zinc/` (one JSON per model and `summary.md`).
+
+## Reproductions
+
+`reproduce_bgrl_arxiv.py` runs BGRL on ogbn-arxiv with the protocol of the BGRL paper
+(3 GCN layers with layer normalization and weight standardization, full-graph training,
+10,000 steps) instead of the shared benchmark protocol, and compares with the paper's
+Table 5. It also evaluates the encoder left untrained, which checks the encoder and the
+evaluation independently of training. One seed takes about four hours on the A2. Results go
+to `benchmarks/reproductions/bgrl_ogbn_arxiv/`.
+
+```bash
+python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 5 2>&1 | tee -a reproduce_bgrl.log
+```
+
 ## Stress test (ogbn-arxiv)
 
 `stress_ogbn_arxiv.py` runs every SSL method through the **mini-batch** path on ogbn-arxiv

@@ -4,11 +4,13 @@
 # ── Augmentation ──────────────────────────────────────────────────────────────
 from graphssl.augmentation import MultiView, compose
 from graphssl.augmentation.transforms import (
+    AttrMask,
     EdgeAdd,
     EdgeDrop,
     FeatMask,
     FeatNoise,
     FeatShuffle,
+    NodeDrop,
     Subgraph,
 )
 from graphssl.core.augmentation import BaseAugmentation
@@ -24,7 +26,13 @@ from graphssl.data import DataModule
 from graphssl.encoders import GCNEncoder, GINEncoder, TransformerEncoder
 
 # ── Evaluation ────────────────────────────────────────────────────────────────
-from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
+from graphssl.evaluation import (
+    KNNEvaluator,
+    LogRegEvaluator,
+    RidgeEvaluator,
+    effective_rank,
+    extract_embeddings,
+)
 
 # ── Losses ────────────────────────────────────────────────────────────────────
 from graphssl.losses import (

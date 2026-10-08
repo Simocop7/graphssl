@@ -12,6 +12,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import global_mean_pool
 
 from graphssl.config.schema import DGIConfig
+from graphssl.core.encoder import encode
 from graphssl.core.model import BaseSSLModel
 from graphssl.nn.pooling import pool_graph_embeddings
 
@@ -62,7 +63,7 @@ class DGI(BaseSSLModel):
         return Data(x=data.x, edge_index=torch.stack([data.edge_index[0], dst]), batch=data.batch)
 
     def forward(self, data: Data) -> Tensor:
-        z = self.encoder(data.x, data.edge_index, data.batch)
+        z = encode(self.encoder, data)
         if self.graph_level:
             # One embedding per graph, like every other model's forward().
             z = pool_graph_embeddings(z, data.batch)
@@ -84,7 +85,11 @@ class DGI(BaseSSLModel):
         batch = data.batch
         if batch is not None:
             batch = torch.cat([batch, batch + int(batch.max()) + 1])
-        h = self.encoder(x, edge_index, batch)
+        edge_attr = getattr(data, "edge_attr", None)
+        if edge_attr is not None:
+            edge_attr = torch.cat([edge_attr, edge_attr])  # both corruptions keep the edge order
+        both = Data(x=x, edge_index=edge_index, batch=batch, edge_attr=edge_attr)
+        h = encode(self.encoder, both)
         return h[:n], h[n:]
 
     def compute_loss(self, data: Data) -> Tensor:

@@ -8,6 +8,7 @@ from typing import List, Literal, Optional, Tuple
 import torch
 from torch import Tensor
 
+from graphssl.core.encoder import encode
 from graphssl.data import DataModule
 
 try:
@@ -76,7 +77,7 @@ def extract_embeddings(
     def _extract(batch) -> Tensor:
         if use_model_forward:
             return model(batch)
-        return _enc(batch.x, batch.edge_index, getattr(batch, "batch", None))
+        return encode(_enc, batch)
 
     with torch.no_grad():
         if datamodule.is_graph_level:

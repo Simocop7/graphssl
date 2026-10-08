@@ -39,6 +39,11 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 
 ### Fixed
 
+- Edge features reach the encoder. Every model called its encoder without `edge_attr`, so an
+  edge-aware encoder (GIN with `edge_dim`, the Transformer) ran on zeros: on molecules the
+  bond types were ignored, in training and in `extract_embeddings`, without any error.
+  Models now go through `graphssl.core.encode(encoder, data)`.
+- `edge_add` works with one-dimensional edge attributes (one categorical value per edge).
 - The GCN encoder honours `num_layers`. It always built two layers, whatever the config said.
 - The GCN encoder's `weight_standardization` standardizes the convolution weights. It did
   nothing: the helper looked for a direct `weight` parameter, which `GCNConv` does not have.
@@ -60,6 +65,19 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 
 ### Added
 
+- `attr_mask` augmentation (`AttrMask`): replaces the features of a random fraction of the
+  nodes with a mask value — the attribute masking used on molecules. `feat_mask` hides the
+  same feature columns on every node, which on a single categorical column masks every atom
+  or none.
+- `RidgeEvaluator`: closed-form ridge regression on frozen embeddings for regression
+  targets, L2 strength selected on validation, MAE and RMSE.
+- `Supervised` takes `task: regression` (L1 loss on `num_classes` targets).
+- `graphssl.core.encode(encoder, data)`: runs an encoder on a graph or batch with its edge
+  features, if any.
+- `save_model(model, path, config, in_channels, num_classes=None)` and `load_model(path)` in
+  `graphssl.config`: a checkpoint that carries what is needed to rebuild the model.
+- `graphssl.core.pretrained_encoder(model)`: the encoder a model embeds with, to fine-tune
+  from (`supervised.encoder.load_state_dict(pretrained_encoder(model).state_dict())`).
 - `EncoderConfig.weight_standardization` (GCN only, off by default).
 - `LinearEvalCallback(evaluator=...)`: the probe to run during training, e.g. a
   `LogRegEvaluator` with a single `weight_decay` when the default one is too slow.

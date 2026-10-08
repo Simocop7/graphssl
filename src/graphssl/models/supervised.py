@@ -10,12 +10,15 @@ from torch import Tensor
 from torch_geometric.data import Data
 
 from graphssl.config.schema import SupervisedConfig
+from graphssl.core.encoder import encode
 from graphssl.core.model import BaseSSLModel
 from graphssl.nn.pooling import pool_graph_embeddings
 
 
 class Supervised(BaseSSLModel):
-    """Encoder + linear head with CrossEntropyLoss.
+    """Encoder + linear head, with CrossEntropyLoss or — ``task: regression`` — L1 loss.
+
+    For regression ``num_classes`` is the number of targets and ``data.y`` holds floats.
 
     The labels the loss may see depend on the mode:
 
@@ -38,9 +41,10 @@ class Supervised(BaseSSLModel):
         self.encoder = cfg.encoder.build(in_channels)
         self.head = nn.Linear(cfg.encoder.hidden_dim, num_classes)
         self.graph_level: bool = cfg.encoder.pool
+        self.task: str = cfg.task
 
     def forward(self, data: Data) -> Tensor:
-        z = self.encoder(data.x, data.edge_index, data.batch)
+        z = encode(self.encoder, data)
         if self.graph_level:
             z = pool_graph_embeddings(z, data.batch)
         return z
@@ -63,4 +67,6 @@ class Supervised(BaseSSLModel):
                         "without it the loss would include validation/test labels."
                     )
                 logits, y = logits[train_mask], y[train_mask]
+        if self.task == "regression":
+            return F.l1_loss(logits, y.float().view_as(logits))
         return F.cross_entropy(logits, y)

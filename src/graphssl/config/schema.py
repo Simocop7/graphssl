@@ -367,10 +367,15 @@ class SupervisedConfig:
     """Validated configuration for the supervised baseline."""
 
     encoder: EncoderConfig
+    task: str = "classification"  # or 'regression': L1 loss on `num_classes` targets
+
+    def __post_init__(self):
+        if self.task not in ("classification", "regression"):
+            raise ValueError(f"task must be 'classification' or 'regression', got {self.task!r}")
 
     @classmethod
     def from_dict(cls, d: dict) -> SupervisedConfig:
-        return cls(encoder=EncoderConfig(**d["encoder"]))
+        return cls(encoder=EncoderConfig(**d["encoder"]), task=d.get("task", "classification"))
 
 
 @dataclass

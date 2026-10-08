@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
 
+import torch
 import torch.nn as nn
 from torch_geometric.loader import DataLoader, NeighborLoader
 
@@ -112,3 +113,38 @@ def build_model(
             raise ValueError("num_classes is required for the Supervised model")
         return cls(config, in_channels, num_classes)
     return cls(config, in_channels)
+
+
+def save_model(
+    model: nn.Module,
+    path: Union[str, Path],
+    config: dict,
+    in_channels: int,
+    num_classes: Optional[int] = None,
+) -> None:
+    """Save a model together with what ``load_model()`` needs to rebuild it.
+
+    Args:
+        model: A model built with ``build_model(config, in_channels, num_classes)``.
+        path: Destination file.
+        config: The config dict the model was built from.
+        in_channels: The ``in_channels`` it was built with.
+        num_classes: The ``num_classes`` it was built with (``supervised`` only).
+    """
+    torch.save(
+        {
+            "config": config,
+            "in_channels": in_channels,
+            "num_classes": num_classes,
+            "state_dict": model.state_dict(),
+        },
+        path,
+    )
+
+
+def load_model(path: Union[str, Path], map_location: str = "cpu") -> nn.Module:
+    """Rebuild a model saved with ``save_model()`` and load its weights."""
+    checkpoint = torch.load(path, map_location=map_location)
+    model = build_model(checkpoint["config"], checkpoint["in_channels"], checkpoint["num_classes"])
+    model.load_state_dict(checkpoint["state_dict"])
+    return model

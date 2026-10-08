@@ -98,6 +98,8 @@ for batch in loader:
 | `pool_graph_embeddings` | `nn/pooling.py` | `global_mean_pool` with a fallback when `batch=None`. |
 | `extract_embeddings` | `evaluation/visualization.py` | Extracts embeddings given a model + `DataModule`; handles graph-level, node full-batch, and node mini-batch (`NeighborLoader`) paths uniformly. |
 | `LogRegEvaluator` | `evaluation/linear_probe.py` | Linear probe in pure PyTorch: L2-regularised logistic regression on standardized features, fitted to convergence with L-BFGS from zero (same embeddings, same result), L2 strength selected on the validation split. Multilabel targets (e.g. ogbg-molpcba) use BCE + average precision. |
+| `RidgeEvaluator` | `evaluation/regression_probe.py` | Probe for regression targets: closed-form ridge regression on standardized embeddings, L2 strength selected on validation MAE. |
+| `encode` | `core/encoder.py` | Runs an encoder on a graph or batch with its edge features, if any; every model reaches its encoder through it. |
 | `DataModule` | `data/datamodule.py` | Wraps a PyG dataset for both graph-level (`DataLoader`) and node-level (`Data` + masks + `neighbor_loader()`) tasks. |
 
 ## Project structure

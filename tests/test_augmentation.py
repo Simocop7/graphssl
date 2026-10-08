@@ -5,6 +5,7 @@ import torch
 from torch_geometric.data import Data
 
 from graphssl.augmentation import (
+    AttrMask,
     EdgeAdd,
     EdgeDrop,
     FeatMask,
@@ -213,3 +214,45 @@ class TestAugmentations:
     def test_unknown_augmentation_raises(self):
         with pytest.raises(KeyError):
             compose(_graph(), [("no_such_augmentation", {})])
+
+
+class TestAttrMask:
+    def test_masks_whole_nodes_not_columns(self):
+        data = _graph()
+        torch.manual_seed(0)
+        out = F.attr_mask(data, p=0.5, mask_value=-1)
+        masked = (out.x == -1).all(dim=1)
+        untouched = (out.x == data.x).all(dim=1)
+        assert 0 < masked.sum() < N_NODES
+        assert torch.all(masked | untouched)  # every node is either fully masked or intact
+
+    def test_categorical_features_keep_their_dtype(self):
+        # Molecules: one integer atom type per node, masked with an extra token index.
+        x = torch.randint(0, 28, (N_NODES, 1))
+        data = Data(x=x, edge_index=_graph().edge_index)
+        torch.manual_seed(0)
+        out = F.attr_mask(data, p=0.5, mask_value=28)
+        assert out.x.dtype == torch.long
+        assert set(out.x[out.x != x].tolist()) == {28}
+
+    def test_extremes_and_input_untouched(self):
+        data = _graph()
+        x = data.x.clone()
+        assert torch.equal(F.attr_mask(data, p=0.0).x, x)
+        assert torch.all(F.attr_mask(data, p=1.0, mask_value=7).x == 7)
+        assert torch.equal(data.x, x)
+
+    def test_available_from_compose_and_as_a_class(self):
+        data = _graph()
+        torch.manual_seed(0)
+        from_registry = compose(data, [("attr_mask", {"p": 0.5, "mask_value": -1})])
+        from_class = AttrMask(p=1.0, mask_value=-1)(data)
+        assert (from_registry.x == -1).any() and torch.all(from_class.x == -1)
+
+
+def test_edge_add_pads_one_dimensional_edge_attributes():
+    data = _graph()
+    data.edge_attr = torch.randint(1, 4, (data.edge_index.size(1),))  # one bond type per edge
+    out = F.edge_add(data, p=0.25)
+    assert out.edge_attr.shape == (out.edge_index.size(1),)
+    assert out.edge_attr.dtype == data.edge_attr.dtype

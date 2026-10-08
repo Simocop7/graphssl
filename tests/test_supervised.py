@@ -152,3 +152,24 @@ class TestSupervised:
         assert model.graph_level
         assert emb.shape == (4, 32)
         assert torch.allclose(loss, expected)
+
+    def test_regression_task_uses_l1_on_float_targets(self):
+        """task='regression' (e.g. ZINC): one output per target, mean absolute error."""
+        config = _make_config(
+            encoder={"name": "gin", "hidden_dim": 32, "num_layers": 2, "pool": True},
+            task="regression",
+        )
+        model = Supervised(config, in_channels=self.in_channels, num_classes=1)
+        model.eval()
+        batch = _make_batch(n_graphs=4, n_feat=self.in_channels)
+        batch.y = torch.randn(4)  # one float target per graph
+
+        with torch.no_grad():
+            loss = model.compute_loss(batch)
+            expected = (model.head(model(batch)).squeeze(-1) - batch.y).abs().mean()
+
+        assert torch.allclose(loss, expected)
+
+    def test_invalid_task_raises(self):
+        with pytest.raises(ValueError, match="task"):
+            Supervised(_make_config(task="ranking"), in_channels=7, num_classes=3)

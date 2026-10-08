@@ -12,6 +12,7 @@ from torch_geometric.data import Data
 
 from graphssl.augmentation.compose import compose
 from graphssl.config.schema import BGRLConfig
+from graphssl.core.encoder import encode
 from graphssl.core.model import BaseSSLModel
 from graphssl.losses.regression import CosineRegressionLoss
 from graphssl.nn.mlp import Predictor
@@ -60,7 +61,7 @@ class BGRL(BaseSSLModel):
 
     def forward(self, data: Data) -> Tensor:
         with torch.no_grad():
-            z = self.online_enc(data.x, data.edge_index, data.batch)
+            z = encode(self.online_enc, data)
             if self.graph_level:
                 z = pool_graph_embeddings(z, data.batch)
             return z.detach()
@@ -78,12 +79,12 @@ class BGRL(BaseSSLModel):
         v1 = compose(data, self.aug_list, protected_nodes=protected)
         v2 = compose(data, self.aug_list, protected_nodes=protected)
 
-        z1 = self.online_enc(v1.x, v1.edge_index, v1.batch)
-        z2 = self.online_enc(v2.x, v2.edge_index, v2.batch)
+        z1 = encode(self.online_enc, v1)
+        z2 = encode(self.online_enc, v2)
 
         with torch.no_grad():
-            t1 = self.target_enc(v1.x, v1.edge_index, v1.batch)
-            t2 = self.target_enc(v2.x, v2.edge_index, v2.batch)
+            t1 = encode(self.target_enc, v1)
+            t2 = encode(self.target_enc, v2)
 
         if self.graph_level:
             z1 = pool_graph_embeddings(z1, v1.batch)

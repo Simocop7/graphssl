@@ -104,3 +104,65 @@ def test_graph_level_builds_and_trains(model_name, encoder):
     loss.backward()
     model.eval()
     assert model(batch).shape == (batch.num_graphs, HIDDEN)
+
+
+# ---------------------------------------------------------------------------
+# Edge features (molecules: one bond type per edge)
+# ---------------------------------------------------------------------------
+
+EDGE_AWARE_ENCODERS = ["gin", "transformer"]
+N_ATOM_TYPES, N_BOND_TYPES = 5, 3
+
+
+def _molecule_batch(n_graphs: int = 4, n: int = 8) -> Batch:
+    """ZINC-like graphs: an integer atom type per node, an integer bond type per edge."""
+    g = torch.Generator().manual_seed(0)
+    graphs = [
+        Data(
+            x=torch.randint(0, N_ATOM_TYPES, (n, 1), generator=g),
+            edge_index=torch.randint(0, n, (2, 3 * n), generator=g),
+            edge_attr=torch.randint(0, N_BOND_TYPES, (3 * n,), generator=g),
+            y=torch.tensor([i % NUM_CLASSES]),
+        )
+        for i in range(n_graphs)
+    ]
+    return Batch.from_data_list(graphs)
+
+
+@pytest.mark.parametrize("encoder", EDGE_AWARE_ENCODERS)
+@pytest.mark.parametrize("model_name", MODELS)
+def test_edge_features_reach_the_encoder(model_name, encoder):
+    """Bond types must reach the encoder, in training and in forward().
+
+    Every model used to call its encoder without ``edge_attr``; an edge-aware encoder then
+    ran on zeros, so the bond types of a molecule were ignored without any error.
+    """
+    torch.manual_seed(0)
+    cfg = _config(model_name, encoder, pool=True)
+    cfg["encoder"].update(
+        node_emb_num_classes=N_ATOM_TYPES,
+        edge_dim=HIDDEN,
+        edge_emb_num_classes=N_BOND_TYPES,
+        drop=0.0,
+    )
+    model = build_model(cfg, in_channels=1, num_classes=NUM_CLASSES)
+    batch = _molecule_batch()
+
+    got_edge_attr = []
+
+    def record(module, args, kwargs):
+        got_edge_attr.append(kwargs.get("edge_attr") is not None or len(args) > 3)
+
+    encoders = [m for m in model.modules() if hasattr(m, "edge_proj")]
+    assert encoders
+    for enc in encoders:
+        enc.register_forward_pre_hook(record, with_kwargs=True)
+
+    model.train()
+    assert torch.isfinite(model.compute_loss(batch))
+    assert got_edge_attr and all(got_edge_attr)
+
+    model.eval()
+    other_bonds = batch.clone()
+    other_bonds.edge_attr = (batch.edge_attr + 1) % N_BOND_TYPES
+    assert not torch.allclose(model(batch), model(other_bonds))

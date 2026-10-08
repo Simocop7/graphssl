@@ -33,9 +33,7 @@ def edge_add(data: Data, p=0.1, protected_nodes: Optional[Tensor] = None):
     out.edge_index = torch.cat([data.edge_index, torch.stack([src, dst])], dim=1)
     if data.edge_attr is not None:
         # Synthetic edges have no known features — pad with zeros.
-        pad = torch.zeros(
-            n_add, data.edge_attr.size(1), dtype=data.edge_attr.dtype, device=data.edge_attr.device
-        )
+        pad = data.edge_attr.new_zeros((n_add, *data.edge_attr.shape[1:]))
         out.edge_attr = torch.cat([data.edge_attr, pad], dim=0)
     return out
 
@@ -78,6 +76,24 @@ def feat_mask(data: Data, p=0.2, protected_nodes: Optional[Tensor] = None):
     mask = (torch.rand(data.x.size(1), device=data.x.device) > p).float()
     out = data.clone()
     out.x = data.x * mask
+    return out
+
+
+@AUGMENTS.register("attr_mask")
+def attr_mask(data: Data, p=0.2, mask_value=0, protected_nodes: Optional[Tensor] = None):
+    """Replace the features of a random fraction ``p`` of the nodes with ``mask_value``.
+
+    Unlike ``feat_mask``, which hides the same feature columns on every node, this hides
+    whole nodes: the attribute masking used on molecules, where a node has one categorical
+    feature (its atom type). Give the encoder one more class than the data has
+    (``node_emb_num_classes``) and pass that extra index as ``mask_value`` to use a
+    dedicated mask token.
+    """
+    assert data.x is not None
+    node_mask = torch.rand(data.x.size(0), device=data.x.device) < p
+    out = data.clone()
+    out.x = data.x.clone()
+    out.x[node_mask] = mask_value
     return out
 
 

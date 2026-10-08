@@ -49,6 +49,17 @@ class FeatMask:
         return F.feat_mask(data, p=self.p)
 
 
+class AttrMask:
+    """Replace the features of a random fraction p of the nodes with mask_value."""
+
+    def __init__(self, p: float = 0.2, mask_value: float = 0):
+        self.p = p
+        self.mask_value = mask_value
+
+    def __call__(self, data: Data) -> Data:
+        return F.attr_mask(data, p=self.p, mask_value=self.mask_value)
+
+
 class FeatNoise:
     """Add Gaussian noise with standard deviation std to node features."""
 

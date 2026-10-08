@@ -34,6 +34,21 @@ cfg = load_config("configs/bgrl.yaml")
 model = build_model(cfg, in_channels=dataset.num_features)
 ```
 
+**Checkpoints and fine-tuning:**
+```python
+from graphssl.config import save_model, load_model
+from graphssl.core import pretrained_encoder
+save_model(model, "bgrl.pt", cfg, in_channels=dataset.num_features)
+model = load_model("bgrl.pt")            # rebuilt from the saved config, weights loaded
+# pre-train -> fine-tune: same encoder config, task head on top
+supervised = build_model({"name": "supervised", "encoder": cfg["encoder"], "task": "regression"},
+                         in_channels=dataset.num_features, num_classes=1)
+supervised.encoder.load_state_dict(pretrained_encoder(model).state_dict())
+```
+`pretrained_encoder(model)` is the encoder `forward()` embeds with: `encoder`, the online
+encoder of BGRL / AFGRL, the teacher of GraphDINO. There was no way to save a model before
+2026-10-08.
+
 **Per-model config dataclass:**
 | Model        | Config dataclass    |
 |--------------|---------------------|
@@ -57,6 +72,8 @@ No access to the trainer, logger, or datamodule from inside a model.
 
 ### Supervised
 - Encoder + linear head `nn.Linear(hidden_dim, num_classes)`, CrossEntropyLoss
+- `task: regression` (`SupervisedConfig`): L1 loss, `num_classes` = number of targets, float
+  `data.y` (ZINC)
 - `graph_level` derived from `cfg.encoder.pool`: embeddings mean-pooled per graph, loss on every graph
 - Node-level mini-batch: crop to `[:batch_size]` seed nodes (build `NeighborLoader` with `input_nodes=train_idx`)
 - Node-level full-batch: loss on `data.train_mask` only; **raises** if `train_mask` is missing —
@@ -276,7 +293,8 @@ Available operations:
 |---|---|---|
 | `edge_drop` | p | drops edges with probability p |
 | `edge_add` | p | adds random edges (fraction p of existing ones) |
-| `feat_mask` | p | masks node features with probability p |
+| `feat_mask` | p | masks feature **columns** with probability p (the same columns on every node) |
+| `attr_mask` | p, mask_value | replaces the features of a fraction p of the **nodes** with `mask_value` (molecules: mask token = one index past the atom types, with `node_emb_num_classes` one larger) |
 | `feat_noise` | std | adds Gaussian noise to features |
 | `feat_shuffle` | p | swaps features between random nodes |
 | `subgraph` | num_hops | extracts a k-hop subgraph from a random seed; **raises** if given `protected_nodes` (it cannot keep the seeds of a mini-batch in place) |
@@ -401,6 +419,22 @@ L2-regularised logistic regression on frozen embeddings, pure PyTorch:
   (stops at a worse objective); scaling the variables by the feature eigenvalues × class
   frequencies (7 iterations instead of 190 at strong L2, no gain at the weak end, where the
   time goes). A faster solver would not change any number: the optimum is unique.
+
+### RidgeEvaluator (`evaluation/regression_probe.py`)
+`RidgeEvaluator(*, weight_decay=DEFAULT_RIDGE_WEIGHT_DECAYS, standardize=True)` — the probe
+for **regression** targets (ZINC). Closed-form ridge on standardized embeddings (training
+rows' statistics), in float64, one eigendecomposition shared by every L2 strength (default
+1e3 … 1e-6): deterministic, no optimiser. The strength with the lowest **validation MAE** is
+used (the strongest on ties). Returns `val_mae` / `test_mae`, `val_rmse` / `test_rmse`,
+`weight_decay`. Targets `[N]` or `[N, T]`, no NaN.
+
+### encode (`core/encoder.py`)
+`encode(encoder, data)` runs an encoder with `x, edge_index, batch` and, when the graph has
+them, `edge_attr`. **Every model reaches its encoder through it.** Until 2026-10-08 every
+model called `encoder(x, edge_index, batch)`: edge-aware encoders fall back to zeros when
+`edge_attr` is missing, so the bond types of molecules were silently ignored in training and
+in `extract_embeddings`. `tests/test_model_encoder_matrix.py` now checks, for every model,
+that the encoder receives them and that changing them changes the embeddings.
 
 ### effective_rank (`evaluation/diagnostics.py`)
 `effective_rank(z)` = `exp(entropy)` of the normalized singular values of the centered
@@ -529,6 +563,21 @@ encoder:
 ```
 - `in_channels` is ignored when `node_emb_num_classes` is set
 - Script: `examples/zinc_bgrl.py`, config: `configs/zinc_bgrl.yaml`
+- **Cross-method runner**: `benchmarks/run_zinc.py --model all supervised --seeds 3` → one
+  JSON per model in `benchmarks/zinc/` + `summary.md`. Shared untuned protocol: ZINC-12k
+  (10k / 1k / 1k), GINE-4L, 128 units, batch norm, mean readout, 100 epochs, batch 256,
+  AdamW lr 1e-3 / wd 1e-5; augmentations `attr_mask` 0.2 (mask token = index 28, so
+  `node_emb_num_classes: 29`) + `edge_drop` 0.2. Evaluation: `RidgeEvaluator` on the frozen
+  graph embeddings → test MAE (lower is better) + effective rank. Every run also saves its
+  own encoder **untrained** (0.598 MAE with seed 0), and `--model supervised` is the
+  end-to-end reference (`task: regression`, test MAE of its head at the best-validation
+  epoch). About 5 s per epoch on the A2.
+- `--finetune-epochs N` adds the usual protocol for molecules: after pre-training, the
+  encoder and a new linear head are trained on the labels (L1, best-validation epoch).
+  Its reference is the supervised row — the same training from a random initialisation.
+- Bond types only count since `encode()` (see Key utilities): before, every ZINC run ignored
+  them. The example's `feat_mask` hides the single atom-type column for every atom or for
+  none — use `attr_mask` on molecules.
 
 ### ogbn-arxiv (node-level, classification)
 ```yaml
@@ -596,14 +645,15 @@ pytest tests/ -v
 | `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
 | `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored; **auto-skipped if faiss isn't installed** |
 | `test_positive_miner.py` | AFGRL | chunked top-k search == full matrix, self always first, `knn_chunk_size` validation (no faiss needed) |
-| `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling |
+| `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling, regression task (L1) |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
-| `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; AFGRL rows need faiss |
+| `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; edge features reach the encoder in training and in `forward()` (gin/transformer); AFGRL rows need faiss |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN depth (`num_layers`) and weight standardization, CombinedLoss |
+| `test_checkpoint.py` | all | `save_model` / `load_model` give the same embeddings, `pretrained_encoder` is the encoder `forward()` uses, fine-tuning starts from its weights |
 | `test_callbacks.py` | — | `EmbeddingLoggerCallback` files, `LinearEvalCallback` history and custom `evaluator`, the model trains again after an evaluation |
 | `test_schedulers.py` | — | `CosineDecayScheduler` (linear warm-up, cosine decay, BGRL's formula), `CosineEMAScheduler` (BGRL's formula, monotonic, clamped) |
-| `test_augmentation.py` | — | protected nodes (`node_drop` keeps them in the leading rows, views stay aligned, models pass a mini-batch's seeds, `subgraph` refuses them), each augmentation's basic behaviour |
-| `test_evaluation.py` | — | LogRegEvaluator (result independent of the seed, L2 selected on validation, invariant to feature scale/offset, `converged` flag, multilabel selection needs scikit-learn), KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, chunked kNN == single pass, `extract_embeddings` leaves the datamodule's graph in place, `effective_rank` |
+| `test_augmentation.py` | — | `attr_mask` (whole nodes, categorical dtype kept), `edge_add` with 1-D edge attributes, protected nodes (`node_drop` keeps them in the leading rows, views stay aligned, models pass a mini-batch's seeds, `subgraph` refuses them), each augmentation's basic behaviour |
+| `test_evaluation.py` | — | RidgeEvaluator (recovers a linear target, L2 selected on validation MAE, scale invariance), LogRegEvaluator (result independent of the seed, L2 selected on validation, invariant to feature scale/offset, `converged` flag, multilabel selection needs scikit-learn), KNNEvaluator, OGB-style 2D labels (`[N,1]`) equivalent to 1D, chunked kNN == single pass, `extract_embeddings` leaves the datamodule's graph in place, `effective_rank` |
 
 ---
 
@@ -787,6 +837,8 @@ For each new model:
 
 ### 3. Dependency checklist
 For every modified model, check:
+- the encoder is called through `encode(encoder, data)` (`core/encoder.py`), never as
+  `encoder(x, edge_index, batch)` — that drops the edge features
 - `losses/` — is the loss testable standalone?
 - `utils/ema.py`, `utils/schedulers.py` — are EMA and the scheduler used correctly in `post_step()`?
 - `augmentation/` — does `compose()` pass `protected_nodes`?

@@ -1,6 +1,6 @@
 from .augmentation import BaseAugmentation
 from .callback import Callback
-from .encoder import BaseEncoder
+from .encoder import BaseEncoder, encode, pretrained_encoder
 from .model import BaseModel, BaseSSLModel
 from .registry import Registry
 
@@ -11,4 +11,6 @@ __all__ = [
     "BaseSSLModel",
     "Callback",
     "Registry",
+    "encode",
+    "pretrained_encoder",
 ]

@@ -11,6 +11,7 @@ from torch_geometric.data import Data
 
 from graphssl.augmentation.compose import compose
 from graphssl.config.schema import GraphCLConfig
+from graphssl.core.encoder import encode
 from graphssl.core.model import BaseSSLModel
 from graphssl.losses.nt_xent import NTXentLoss
 from graphssl.nn.mlp import Projector
@@ -36,7 +37,7 @@ class GraphCL(BaseSSLModel):
         self.graph_level: bool = cfg.encoder.pool
 
     def forward(self, data: Data) -> Tensor:
-        z = self.encoder(data.x, data.edge_index, data.batch)
+        z = encode(self.encoder, data)
         if self.graph_level:
             z = pool_graph_embeddings(z, data.batch)
         return z
@@ -53,8 +54,8 @@ class GraphCL(BaseSSLModel):
         v1 = compose(data, self.aug_list, protected_nodes=protected)
         v2 = compose(data, self.aug_list, protected_nodes=protected)
 
-        h1 = self.encoder(v1.x, v1.edge_index, v1.batch)
-        h2 = self.encoder(v2.x, v2.edge_index, v2.batch)
+        h1 = encode(self.encoder, v1)
+        h2 = encode(self.encoder, v2)
 
         if self.graph_level:
             h1 = pool_graph_embeddings(h1, v1.batch)

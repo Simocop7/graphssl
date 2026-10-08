@@ -4,6 +4,8 @@
 
 ::: graphssl.evaluation.LogRegEvaluator
 
+::: graphssl.evaluation.RidgeEvaluator
+
 ::: graphssl.evaluation.KNNEvaluator
 
 ::: graphssl.evaluation.effective_rank

@@ -12,6 +12,7 @@ from torch import Tensor
 from torch_geometric.data import Data
 
 from graphssl.config.schema import AFGRLConfig
+from graphssl.core.encoder import encode
 from graphssl.core.model import BaseSSLModel
 from graphssl.losses.regression import CosineRegressionLoss
 from graphssl.nn.mlp import Predictor
@@ -76,28 +77,26 @@ class AFGRL(BaseSSLModel):
 
     def forward(self, data: Data) -> Tensor:
         with torch.no_grad():
-            z = self.online_enc(data.x, data.edge_index, data.batch)
+            z = encode(self.online_enc, data)
             if self.graph_level:
                 z = pool_graph_embeddings(z, data.batch)
             return z.detach()
 
     def compute_loss(self, data: Data) -> Tensor:
-        z_online = self.online_enc(data.x, data.edge_index, data.batch)
+        z_online = encode(self.online_enc, data)
 
         # Graph-level: PositiveMiner doesn't generalise across graphs — use simple loss.
         if self.graph_level:
             z = pool_graph_embeddings(z_online, data.batch)
             p = self.online_pred(z)
             with torch.no_grad():
-                z_target = pool_graph_embeddings(
-                    self.target_enc(data.x, data.edge_index, data.batch), data.batch
-                )
+                z_target = pool_graph_embeddings(encode(self.target_enc, data), data.batch)
             return self._graph_loss(p, z_target.detach())
 
         p_online = self.online_pred(z_online)
 
         with torch.no_grad():
-            z_target = self.target_enc(data.x, data.edge_index, data.batch)
+            z_target = encode(self.target_enc, data)
 
         # Build sparse adjacency for local positive mining (kNN ∩ adj).
         edge_attr = getattr(data, "edge_attr", None)

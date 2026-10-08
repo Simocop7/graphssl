@@ -5,7 +5,13 @@ import torch
 from torch_geometric.data import Data
 
 from graphssl.data import DataModule
-from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
+from graphssl.evaluation import (
+    KNNEvaluator,
+    LogRegEvaluator,
+    RidgeEvaluator,
+    effective_rank,
+    extract_embeddings,
+)
 from graphssl.evaluation.linear_probe import DEFAULT_WEIGHT_DECAYS
 
 
@@ -224,3 +230,59 @@ class TestEffectiveRank:
 
     def test_no_variance_is_zero(self):
         assert effective_rank(torch.ones(50, 8)) == 0.0
+
+
+class TestRidgeEvaluator:
+    def _linear_data(self, noise=0.0, n=200, dim=8, targets=1, seed=0):
+        g = torch.Generator().manual_seed(seed)
+        embeddings = torch.randn(n, dim, generator=g)
+        weight = torch.randn(dim, targets, generator=g)
+        y = embeddings @ weight + 3.0 + noise * torch.randn(n, targets, generator=g)
+        idx = torch.randperm(n, generator=g)
+        return embeddings, y, idx[: n // 2], idx[n // 2 : 3 * n // 4], idx[3 * n // 4 :]
+
+    def test_recovers_a_linear_target(self):
+        embeddings, y, *splits = self._linear_data()
+        results = RidgeEvaluator().evaluate(embeddings, y, *splits)
+        assert results["test_mae"] < 1e-3 and results["test_rmse"] < 1e-3
+        assert results["weight_decay"] == 1e-6  # no noise: the weakest regularisation wins
+
+    def test_1d_targets_match_a_single_column(self):
+        embeddings, y, *splits = self._linear_data(noise=0.5)
+        assert RidgeEvaluator().evaluate(embeddings, y, *splits) == RidgeEvaluator().evaluate(
+            embeddings, y.squeeze(-1), *splits
+        )
+
+    def test_weight_decay_is_selected_on_validation_mae(self):
+        embeddings, y, *splits = self._linear_data(noise=2.0, n=60, dim=24, seed=1)
+        grid = (10.0, 1.0, 0.1, 1e-3)
+        single = {
+            wd: RidgeEvaluator(weight_decay=wd).evaluate(embeddings, y, *splits) for wd in grid
+        }
+        expected = min(grid, key=lambda wd: (single[wd]["val_mae"], -wd))
+        selected = RidgeEvaluator(weight_decay=grid).evaluate(embeddings, y, *splits)
+        assert selected["weight_decay"] == expected
+        assert selected["test_mae"] == pytest.approx(single[expected]["test_mae"])
+
+    def test_standardization_removes_feature_scale_and_offset(self):
+        embeddings, y, *splits = self._linear_data(noise=0.5, seed=2)
+        embeddings = embeddings.double()  # float32 loses the small-scale columns to the offset
+        scale = torch.logspace(-3, 3, embeddings.size(1), dtype=torch.float64)
+        moved = RidgeEvaluator().evaluate(embeddings * scale + 50.0, y, *splits)
+        plain = RidgeEvaluator().evaluate(embeddings, y, *splits)
+        assert moved["weight_decay"] == plain["weight_decay"]
+        assert moved["test_mae"] == pytest.approx(plain["test_mae"], rel=1e-4)
+
+    def test_several_targets_and_constant_features(self):
+        embeddings, y, *splits = self._linear_data(noise=0.1, targets=3, seed=3)
+        embeddings[:, 0] = 1.0  # zero variance
+        results = RidgeEvaluator().evaluate(embeddings, y, *splits)
+        assert 0.0 <= results["test_mae"] < 1.0
+
+    def test_invalid_inputs(self):
+        embeddings, y, *splits = self._linear_data()
+        with pytest.raises(ValueError, match="weight_decay"):
+            RidgeEvaluator(weight_decay=[])
+        y[0, 0] = float("nan")
+        with pytest.raises(ValueError, match="NaN"):
+            RidgeEvaluator().evaluate(embeddings, y, *splits)
