@@ -486,6 +486,9 @@ on_epoch_start → batches → on_epoch_end
 - Cross-method runner: `benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all --seeds 10`
   → one JSON per (dataset, model) in `benchmarks/results/`; `benchmarks/render_tables.py [--latex]`
   rebuilds the tables. **Never retype benchmark numbers by hand** — regenerate them from the JSONs.
+- `render_tables.py` keeps the latest run per (dataset, **encoder**, model): a run with
+  `--encoder gcn` in `benchmarks/results/` is rendered as its own table ("Cora (GCN
+  encoder)"), it does not replace the GIN rows.
 - BGRL-only demo: `examples/benchmark_planetoid.py`; smoke test: `examples/cora_bgrl.py` (`configs/cora_bgrl.yaml`)
 - Shared protocol (all 7 methods): GIN-2L, `hidden_dim=256`, no dropout, full-batch 300 steps,
   AdamW lr 5e-4 / wd 1e-5, `edge_drop` 0.5 + `feat_mask` 0.2 (augmentation-based methods),
@@ -552,8 +555,47 @@ on_epoch_start → batches → on_epoch_end
   - *AFGRL with a faster teacher* (`--ema-tau 0.9`, annealed to 1.0): 71.4 → 74.3 | 48.4 →
     50.9, kNN 67.2 → 71.0 | 46.3 → 47.3. *AFGRL with lr 0.01*: much worse, 58.7 | 38.3
     (55.6 | 38.5 with both). A candidate for a tuned AFGRL config, not for the shared one.
+  - *Reference BGRL predictor* (Linear → PReLU → Linear instead of the library's Linear →
+    BatchNorm → ReLU → Linear), BGRL and AFGRL, GIN and GCN: within one std in 6 of 8
+    cells. With GIN on CiteSeer it gains about 4 points (BGRL 48.9 → 53.1, AFGRL 49.2 →
+    53.0) at half the effective rank and, for BGRL, a lower kNN (42.1 → 35.1). Not what
+    holds the teacher-student methods back. Keep the library's.
   - With the current probe the top of the table is close to the literature: GraphCL 82.0 ±
     1.0 on Cora (0.1.0 probe: 78.1).
+- **The shared protocol with the GCN backbone and the current probe** (diagnostic,
+  2026-10-08, uncommitted tree: `--encoder gcn --model all`, 3 seeds, 300 steps, linear
+  accuracy — rerun from committed code before quoting; the GIN column collects the
+  same-protocol diagnostics above):
+
+  | Method | Cora GCN | Cora GIN | CiteSeer GCN | CiteSeer GIN |
+  |---|---|---|---|---|
+  | *Untrained encoder* | 72.4 ± 0.9 | 40.7 ± 1.3 | 58.4 ± 0.8 | 36.6 ± 2.5 |
+  | DGI | 77.6 ± 2.0 | 66.9 ± 0.9 | 65.4 ± 1.2 | 46.2 ± 5.2 |
+  | GraphCL | 82.6 ± 0.9 | 82.0 ± 1.0 | 69.3 ± 0.7 | 65.0 |
+  | BGRL | 81.4 ± 1.3 | 65.4 ± 2.6 | 67.7 ± 0.7 | 48.9 ± 1.1 |
+  | AFGRL | 79.4 ± 1.7 | 71.5 ± 2.7 | 62.7 ± 1.5 | 49.9 ± 2.4 |
+  | VICReg | 81.6 ± 0.8 | 78.3 ± 0.6 | 67.4 ± 0.8 | 63.3 ± 3.8 |
+  | Barlow Twins | 81.7 ± 0.9 | 79.4 | 69.5 ± 1.5 | 64.1 |
+  | GraphDINO (benchmark values) | 76.6 ± 0.9 | 63.2 | 61.2 ± 1.0 | 43.7 |
+  | GraphDINO (library defaults) | 78.9 ± 1.7 | 72.3 | 59.5 ± 3.8 | 47.5 |
+
+  - With GCN, GraphCL, Barlow Twins, VICReg and BGRL are within 1.2 points on Cora and 2.1
+    on CiteSeer: **BGRL trailing is a property of the GIN backbone** (effective rank 9 of
+    256 with GIN, 171 with GCN), not of the method. AFGRL (−3 / −7 from the best) and
+    GraphDINO (−4 to −10) still trail with GCN; DGI is last of the non-teacher-student
+    methods on both.
+  - Every method is above the untrained GCN: +4 to +10 on Cora, +1 to +11 on CiteSeer
+    (BGRL +9.0 / +9.3, Barlow Twins +9.2 / +11.1). **This replaces the 0.1.0-probe reading
+    above** (BGRL + GCN +6.5 / +0.9): the old probe had BGRL + GCN on CiteSeer at 57.8, the
+    current one at 67.7, while the untrained GCN barely moves (57.0 → 58.4). The exception is
+    GraphDINO on CiteSeer (+1.2 with the library defaults, std 3.8; +2.8 with the benchmark
+    values).
+  - Against the BGRL paper's Table 7 (GRACE 83.0 / 71.6, BGRL 83.8 / 72.3 — 20 random
+    splits and a tuned encoder, not the public split): untuned BGRL + GCN is 2.4 / 4.6
+    points below. With GIN it was 18 / 23.
+  - Consequence for the benchmark: GCN is the backbone the node-level SSL literature uses,
+    and the GIN table mostly measures which objectives survive GIN. Report both
+    (`render_tables.py` renders one table per encoder).
 - The 20 JSONs at commit `e295451` say `"dirty": true` — false positive (untracked files were
   counted, fixed in `dae32cb`); the code that ran is exactly `e295451`. GraphDINO and
   Supervised were rerun at `20cce09`, Supervised std. recipe at `558af8e` (all clean).
@@ -646,6 +688,34 @@ encoder:
   MLP on raw features 57.65 / 55.50, supervised GCN 73.00 / 71.74.
   - **The untrained encoder reproduces the paper**: 70.21 / 69.50 with the library probe
     (seed 0). It validates the GCN encoder and the evaluation independently of training.
+  - **Trained BGRL does not reproduce it** (seed 0, 10,000 steps, 2026-10-08, uncommitted
+    tree, 7.6 h on the shared A2): 68.23 / 67.38, i.e. **−1.98 / −2.12 against the untrained
+    encoder** where the paper gains +2.63 / +2.70. The paper's std is 0.12: not seed noise.
+    kNN goes 66.7 → 63.2 in the first 1,000 steps and stays at 64.6–64.9 from step 3,000
+    on; final loss 0.0041, effective rank 116 → 159; the probe selects the weakest L2 of its
+    grid (1e-6). Cause not identified — don't state one. No checkpoint was kept (the run
+    predates the checkpoint saving).
+  - **The same recipe at Cora scale** (diagnostic, 2026-10-08, uncommitted tree: BGRL + GCN
+    through `run_benchmark.py`, constant lr, 3 seeds, linear accuracy Cora | CiteSeer, gain
+    over the same encoder untrained), one ingredient at a time from the shared protocol to
+    the paper's ogbn-arxiv recipe:
+
+    | Variant (cumulative) | Steps | Trained | Gain | Rank |
+    |---|---|---|---|---|
+    | batch norm, 2 layers, shared protocol | 300 | 81.4 \| 67.7 | +9.0 \| +9.3 | 171 \| 189 |
+    | layer norm | 300 | 78.5 \| 68.5 | +6.5 \| +8.8 | 150 \| 177 |
+    | + weight standardization | 300 | 80.7 \| 66.8 | +8.6 \| +7.5 | 169 \| 189 |
+    | + 3 layers | 300 | 78.4 \| 64.8 | +6.5 \| +6.4 | 144 \| 170 |
+    | + `edge_drop` 0.6 only, predictor 256 | 300 | 76.3 \| 62.4 | +4.4 \| +4.0 | 156 \| 179 |
+    | + lr 1e-2 | 300 | 75.3 \| 60.7 | +3.4 \| +2.3 | 29 \| 76 |
+    | same, ten times longer | 3000 | 71.3 \| 58.9 | −0.6 \| +0.5 | 11 \| 31 |
+    | batch norm instead of layer norm + WS (3 layers, `edge_drop` 0.6, lr 1e-2) | 300 | 79.5 \| 61.3 | +6.8 \| +4.7 | 127 \| 140 |
+
+    No single ingredient breaks BGRL, but the gain shrinks at every step towards the paper's
+    recipe and is gone at 3,000 steps, with the embeddings collapsed to rank 11 on Cora.
+    The rank drop comes with lr 1e-2 on the layer-norm encoder (156 → 29); the batch-norm
+    encoder keeps its rank at the same lr. Not the same symptom as on ogbn-arxiv, where the
+    rank grows while accuracy falls — a lead, not the explanation.
   - The paper's linear evaluation (L2-normalized rows, 100 AdamW steps at lr 0.01, weight
     decay searched), implemented literally, is far from fitted: 44.1 on the untrained
     encoder, 66.5 after 1,000 steps, 68.8 after 5,000. The script therefore uses the library

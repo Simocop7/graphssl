@@ -1,8 +1,8 @@
 """Render Markdown/LaTeX benchmark tables from the JSON files run_benchmark.py saves.
 
 Reads every ``benchmarks/results/<Dataset>/<model>__<timestamp>.json``, keeps
-only the latest run per (dataset, model) pair, and prints one table per
-dataset — paste straight into README.md / paper.tex instead of retyping
+only the latest run per (dataset, encoder, model), and prints one table per
+dataset and encoder — paste straight into README.md / paper.tex instead of retyping
 numbers by hand (the exact failure mode this script exists to avoid: today
 the same benchmark numbers are copied manually into README.md, CLAUDE.md and
 paper.tex, and they *will* eventually drift out of sync).
@@ -59,21 +59,26 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_latest_results(results_dir: Path, datasets: list[str] | None) -> dict:
-    """Returns {dataset: {model: result_dict}}, keeping only the latest file per pair."""
-    latest: dict[str, dict[str, tuple[str, dict]]] = defaultdict(dict)
+    """Returns {(dataset, encoder): {model: result_dict}}, keeping the latest file of each.
+
+    The encoder is part of the key: a run with another backbone is another table, not a
+    newer version of the same rows.
+    """
+    latest: dict[tuple[str, str], dict[str, tuple[str, dict]]] = defaultdict(dict)
     for path in sorted(results_dir.glob("*/*.json")):
         dataset = path.parent.name
         if datasets and dataset not in datasets:
             continue
         data = json.loads(path.read_text())
         model = data["model"]
+        key = (dataset, data["hyperparameters"]["encoder"])
         timestamp = data["provenance"]["timestamp_utc"]
         # Filenames sort chronologically (UTC timestamp in the name), so the
-        # last one seen per (dataset, model) via sorted glob is the latest —
+        # last one seen per key via sorted glob is the latest —
         # but compare timestamps explicitly rather than relying on glob order.
-        if model not in latest[dataset] or timestamp > latest[dataset][model][0]:
-            latest[dataset][model] = (timestamp, data)
-    return {ds: {m: d for m, (_, d) in models.items()} for ds, models in latest.items()}
+        if model not in latest[key] or timestamp > latest[key][model][0]:
+            latest[key][model] = (timestamp, data)
+    return {key: {m: d for m, (_, d) in models.items()} for key, models in latest.items()}
 
 
 def fmt_pct(agg: dict) -> str:
@@ -155,11 +160,12 @@ def render_markdown(dataset: str, models: dict) -> str:
 
 
 def render_latex(dataset: str, models: dict) -> str:
+    slug = "-".join(dataset.lower().replace("(", "").replace(")", "").split())
     lines = [
         r"\begin{table}[htbp]",
         r"\centering",
         rf"\caption{{Test Accuracy (\%) on {dataset}}}",
-        rf"\label{{tab:{dataset.lower()}-comparison}}",
+        rf"\label{{tab:{slug}-comparison}}",
         r"\begin{tabular}{@{}lcc@{}}",
         r"\toprule",
         r"\textbf{Model} & \textbf{Linear Probe} & \textbf{$k$NN} \\ \midrule",
@@ -187,16 +193,22 @@ def main() -> None:
         print(f"No results found at {results_dir} — run benchmarks/run_benchmark.py first.")
         return
 
-    by_dataset = load_latest_results(results_dir, args.dataset)
-    if not by_dataset:
+    tables = load_latest_results(results_dir, args.dataset)
+    if not tables:
         print(f"No result JSON files found under {results_dir}.")
         return
 
-    for dataset in sorted(by_dataset):
-        print(render_markdown(dataset, by_dataset[dataset]))
+    encoders_per_dataset = defaultdict(set)
+    for dataset, encoder in tables:
+        encoders_per_dataset[dataset].add(encoder)
+    for dataset, encoder in sorted(tables):
+        # Name the encoder only when a dataset has results with more than one.
+        several = len(encoders_per_dataset[dataset]) > 1
+        title = f"{dataset} ({encoder.upper()} encoder)" if several else dataset
+        print(render_markdown(title, tables[(dataset, encoder)]))
         print()
         if args.latex:
-            print(render_latex(dataset, by_dataset[dataset]))
+            print(render_latex(title, tables[(dataset, encoder)]))
             print()
 
 
