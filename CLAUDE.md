@@ -79,7 +79,9 @@ No access to the trainer, logger, or datamodule from inside a model.
 - Node-level full-batch: loss on `data.train_mask` only; **raises** if `train_mask` is missing —
   never trains silently on val/test labels (it used to, until the benchmark runner exposed it)
 - Benchmark runner (neither is part of `all`; both save the head's own accuracy as
-  `test_acc_head` next to linear probe/kNN):
+  `test_acc_head` next to linear probe/kNN). `--model all supervised supervised_reg` runs
+  all nine; up to `49e92ee` `all` replaced the whole list and the supervised models were
+  dropped without a word:
   - `--model supervised`: shared SSL protocol unchanged (no dropout, AdamW, last checkpoint) —
     overfits the 60–140 labels (head: Cora 73.2, CiteSeer 51.7, PubMed 74.4)
   - `--model supervised_reg`: recipe adapted from Kipf & Welling (dropout 0.5, Adam lr 0.01 +
@@ -131,6 +133,11 @@ No access to the trainer, logger, or datamodule from inside a model.
 ### BGRL (Bootstrapped Graph Representation Learning)
 - Teacher-student with an EMA update on the target encoder
 - Online encoder (student) + predictor MLP `Predictor(hidden_dim, pred_hidden, hidden_dim)`; target encoder (teacher, no grad)
+- Predictor layout (`BGRLConfig` and `AFGRLConfig`): `pred_norm` ('batch' | 'none') and
+  `pred_activation` ('relu' | 'prelu'). Default Linear → BatchNorm → ReLU → Linear;
+  `pred_norm: none` + `pred_activation: prelu` = Linear → PReLU → Linear, the predictor of
+  the reference implementation (nerdslab/bgrl). On ogbn-arxiv with the paper's layer-norm
+  encoder the default one makes BGRL lose accuracy — see the reproduction below.
 - Loss: `2 - cos(pred1, target2) - cos(pred2, target1)` — `CosineRegressionLoss(symmetric=True)`
   - Correct call: `loss_fn(p1, t1, p2, t2)` → internally the loss pairs t2 with p1 and t1 with p2
 - EMA update of the target encoder in `post_step()` via `update_ema_params()`
@@ -138,7 +145,8 @@ No access to the trainer, logger, or datamodule from inside a model.
   If `total_steps=0`, τ is fixed.
 - Target encoder: `deepcopy(encoder)` + `reset_parameters()` — weights intentionally differ
   from the online encoder (critical for convergence, Appendix B of the BGRL paper)
-- Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, pred_hidden=512`
+- Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, pred_hidden=512,
+  pred_norm="batch", pred_activation="relu"`
 
 ### AFGRL (Augmentation-Free Graph Representation Learning)
 - Like BGRL but without structural augmentation: positive pairs are mined from graph structure
@@ -151,7 +159,7 @@ No access to the trainer, logger, or datamodule from inside a model.
 - EMA: identical to BGRL — `CosineEMAScheduler` in `post_step()`
 - Hyperparameters: `ema_tau=0.99, ema_tau_end=1.0, total_steps=0, topk=5,
   num_centroids=50, num_kmeans=4, clus_num_iters=20, kmeans_threads=8, knn_chunk_size=4096,
-  pred_hidden=512`
+  pred_hidden=512, pred_norm="batch", pred_activation="relu"` (predictor layout as in BGRL)
 - `knn_chunk_size`: the top-k search (`topk_similar` in `utils/positive_miner.py`) computes the
   N×N similarity in row chunks — identical neighbors, peak memory `O(chunk · N)` instead of
   `O(N²)` (~115 GB on ogbn-arxiv unchunked). Time is still `O(N² d)` per step and mining is
@@ -693,8 +701,9 @@ encoder:
     encoder** where the paper gains +2.63 / +2.70. The paper's std is 0.12: not seed noise.
     kNN goes 66.7 → 63.2 in the first 1,000 steps and stays at 64.6–64.9 from step 3,000
     on; final loss 0.0041, effective rank 116 → 159; the probe selects the weakest L2 of its
-    grid (1e-6). Cause not identified — don't state one. No checkpoint was kept (the run
-    predates the checkpoint saving).
+    grid (1e-6). No checkpoint was kept (the run predates the checkpoint saving). That run
+    used the library's predictor (BatchNorm): see "What breaks it" below. The script now
+    defaults to the reference predictor (`--predictor reference`; `library` for the old one).
   - **The same recipe at Cora scale** (diagnostic, 2026-10-08, uncommitted tree: BGRL + GCN
     through `run_benchmark.py`, constant lr, 3 seeds, linear accuracy Cora | CiteSeer, gain
     over the same encoder untrained), one ingredient at a time from the shared protocol to
@@ -716,13 +725,57 @@ encoder:
     The rank drop comes with lr 1e-2 on the layer-norm encoder (156 → 29); the batch-norm
     encoder keeps its rank at the same lr. Not the same symptom as on ogbn-arxiv, where the
     rank grows while accuracy falls — a lead, not the explanation.
+
+    Follow-up at 3,000 steps, still the library predictor (3 seeds, GPU, gain over the same
+    encoder untrained): batch-norm encoder at lr 1e-2 76.5 | 61.1, +3.7 | +4.5, rank 167 |
+    161; layer norm + WS at lr 5e-4 73.4 | 58.5, +1.4 | +0.1, rank 179 | 193 — the gain goes
+    at the low learning rate too, with no rank drop at all; layer norm without WS at lr 1e-2
+    72.3 | 55.0, rank 3 | 4, kNN 42.5 | 37.0.
+  - **What breaks it: the predictor's BatchNorm on top of the layer-norm encoder**
+    (diagnostics, 2026-10-08/09, uncommitted trees, the arxiv rows one seed stopped at
+    2,000 of the 10,000 steps — rerun from committed code before quoting; the mechanism is
+    not identified, don't state one). ogbn-arxiv, seed 0, the paper's schedule, one change
+    per run; linear val / test, gain over the same encoder untrained:
+
+    | Run | Untrained | Step 2,000 | Gain | kNN test | Loss | Pair cos | Rank |
+    |---|---|---|---|---|---|---|---|
+    | paper recipe, library predictor | 70.20 / 69.49 | 68.31 / 67.92 | −1.89 / −1.57 | 66.70 → 64.43 | 0.006 | 0.92 → 0.99 | 116 → 117 |
+    | reference predictor (Linear → PReLU → Linear) | 70.22 / 69.48 | 71.71 / 70.72 | +1.49 / +1.24 | 66.70 → 68.02 | 0.221 | 0.92 → 0.12 | 116 → 135 |
+    | batch-norm encoder, no WS, library predictor | 70.22 / 68.96 | 72.05 / 71.03 | +1.83 / +2.07 | 67.34 → 67.76 | 0.197 | 0.96 → 0.21 | 63 → 169 |
+    | peak lr 1e-3, library predictor | 70.21 / 69.50 | 70.23 / 69.22 | +0.02 / −0.28 | 66.70 → 65.24 | 0.025 | 0.92 → 0.88 | 116 → 63 |
+
+    "Pair cos" is the mean cosine between the embeddings of random node pairs. In the
+    failing runs the loss goes to ≈ 0 and the embeddings stay almost parallel (0.88–0.99):
+    a collapse towards one direction that the effective rank, computed on centered
+    embeddings, does not show. The runs that gain settle at a loss of ≈ 0.2 with pair cos
+    0.1–0.2. Either change alone (reference predictor, or batch norm in the encoder) is
+    enough. The paper gains +2.63 / +2.70 at 10,000 steps: the full run with the reference
+    predictor is not measured yet.
+
+    The same at Cora scale (BGRL + GCN-3L, layer norm + WS, `edge_drop` 0.6, lr 1e-2, 300
+    steps, 3 seeds, laptop CPU, Cora | CiteSeer; untrained 71.9 | 58.4, rank 186 | 199),
+    changing the predictor only:
+
+    | Predictor | Linear | Gain | kNN | Rank |
+    |---|---|---|---|---|
+    | BatchNorm + ReLU (library default) | 77.2 ± 1.3 \| 60.1 ± 2.1 | +5.2 \| +1.7 | 62.2 \| 51.1 | 29 \| 64 |
+    | BatchNorm + PReLU | 71.5 ± 2.4 \| 61.3 ± 0.8 | −0.5 \| +2.9 | 60.3 \| 50.6 | 39 \| 105 |
+    | no norm + ReLU | 80.4 ± 0.6 \| 66.2 ± 1.3 | +8.5 \| +7.8 | 71.7 \| 61.0 | 98 \| 111 |
+    | no norm + PReLU (reference) | 79.9 ± 0.8 \| 66.0 ± 0.4 | +8.0 \| +7.6 | 71.6 \| 60.7 | 108 \| 121 |
+
+    It is the normalization, not the activation. In the shared protocol (batch-norm
+    encoders, lr 5e-4) the same swap changes little — see "Reference BGRL predictor" in the
+    Planetoid section — so the library default (`pred_norm="batch"`) is unchanged for now.
+    Whether it should become `"none"` is open: it needs the full arxiv run and the BGRL /
+    AFGRL benchmark rows with `--set pred_norm=none` (10 seeds, both encoders).
   - The paper's linear evaluation (L2-normalized rows, 100 AdamW steps at lr 0.01, weight
     decay searched), implemented literally, is far from fitted: 44.1 on the untrained
     encoder, 66.5 after 1,000 steps, 68.8 after 5,000. The script therefore uses the library
     probe and reports BGRL's **gain over the untrained encoder** (paper: +2.63 / +2.70),
     which does not depend on how strong the classifier is.
-  - Known difference left: the library's predictor is Linear → BatchNorm → ReLU → Linear;
-    the reference implementation (nerdslab/bgrl) uses Linear → PReLU → Linear.
+  - Known difference left: the reference implementation (nerdslab/bgrl) uses PyG's
+    graph-mode `LayerNorm`, the library per-node `nn.LayerNorm`. The predictor is no longer
+    one (`pred_norm: none`, `pred_activation: prelu`).
   - An untrained GCN-3L (69.5) is far above every GIN-2L result of the stress test (kNN ≤
     59.5; linear ≤ 62 where re-evaluated): on ogbn-arxiv the backbone, not the SSL method,
     sets the level. Read the stress test as a robustness check only.
@@ -741,12 +794,12 @@ pytest tests/ -v
 
 | File | Model | Notes |
 |---|---|---|
-| `test_bgrl.py` | BGRL | teacher frozen, reset → different weights, EMA scheduler, step counter |
+| `test_bgrl.py` | BGRL | teacher frozen, reset → different weights, EMA scheduler, step counter, predictor layout (`pred_norm` / `pred_activation`: default and reference, slope trained, invalid values) |
 | `test_dgi.py` | DGI | W learnable, shuffle_nodes/shuffle_edges, one forward pass (an untouched isolated node gets the same embedding in the real and in the corrupted graph), mini-batch loss on the seed nodes only |
 | `test_graphcl.py` | GraphCL | projector dim, NT-Xent ≥ 0, chunked NT-Xent == full (value + grads) |
 | `test_vicreg.py` | VICReg | 3-layer projector, loss ≥ 0 |
 | `test_barlow_twins.py` | BarlowTwins | lambda default = 1/proj_dim |
-| `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored; **auto-skipped if faiss isn't installed** |
+| `test_afgrl.py` | AFGRL | `kmeans_threads` applied + restored, reference predictor; **auto-skipped if faiss isn't installed** |
 | `test_positive_miner.py` | AFGRL | chunked top-k search == full matrix, self always first, `knn_chunk_size` validation (no faiss needed) |
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling, regression task (L1) |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |

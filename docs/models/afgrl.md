@@ -28,6 +28,7 @@ from the graph's own structure and embedding geometry.
 | Field | Default | Notes |
 |---|---|---|
 | `pred_hidden` | `512` | predictor hidden dimension |
+| `pred_norm` / `pred_activation` | `"batch"` / `"relu"` | predictor layout, same semantics as BGRL |
 | `ema_tau` / `ema_tau_end` / `total_steps` | `0.99` / `1.0` / `0` | same semantics as BGRL |
 | `topk` | `5` | neighbors considered for both local and global mining |
 | `num_centroids` | `50` | k-means clusters |

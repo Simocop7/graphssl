@@ -2,6 +2,7 @@
 
 import pytest
 import torch
+import torch.nn as nn
 
 from graphssl.models import BGRL
 from helpers import make_batch as _make_batch
@@ -139,3 +140,34 @@ class TestBGRLEMAScheduler:
         assert model._step == 1
         model.post_step()
         assert model._step == 2
+
+
+class TestBGRLPredictor:
+    """`pred_norm` / `pred_activation`: the library's predictor and the reference one."""
+
+    def test_default_is_linear_batchnorm_relu_linear(self):
+        model = BGRL(_make_config(), in_channels=7)
+        layers = [type(m) for m in model.online_pred.net]
+        assert layers == [nn.Linear, nn.BatchNorm1d, nn.ReLU, nn.Linear]
+
+    def test_reference_predictor_is_linear_prelu_linear(self):
+        cfg = _make_config(pred_norm="none", pred_activation="prelu")
+        model = BGRL(cfg, in_channels=7)
+        layers = [type(m) for m in model.online_pred.net]
+        assert layers == [nn.Linear, nn.PReLU, nn.Linear]
+
+    def test_reference_predictor_trains(self):
+        """The loss reaches the PReLU slope: it is a parameter of the student."""
+        cfg = _make_config(pred_norm="none", pred_activation="prelu")
+        model = BGRL(cfg, in_channels=7)
+        slope = model.online_pred.net[1].weight
+        assert any(p is slope for p in model.student_parameters())
+        loss = model.compute_loss(_make_batch(n_feat=7))
+        assert torch.isfinite(loss)
+        loss.backward()
+        assert slope.grad is not None
+
+    @pytest.mark.parametrize("field, value", [("pred_norm", "layer"), ("pred_activation", "gelu")])
+    def test_invalid_predictor_option_raises(self, field, value):
+        with pytest.raises(ValueError, match=field):
+            BGRL(_make_config(**{field: value}), in_channels=7)

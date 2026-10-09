@@ -81,6 +81,11 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 - `graphssl.core.pretrained_encoder(model)`: the encoder a model embeds with, to fine-tune
   from (`supervised.encoder.load_state_dict(pretrained_encoder(model).state_dict())`).
 - `EncoderConfig.weight_standardization` (GCN only, off by default).
+- `BGRLConfig` / `AFGRLConfig`: `pred_norm` (`'batch'` by default, or `'none'`) and
+  `pred_activation` (`'relu'` by default, or `'prelu'`) set the predictor's layout. The
+  default is unchanged (Linear → BatchNorm → ReLU → Linear); `pred_norm: none` with
+  `pred_activation: prelu` is the predictor of the BGRL reference implementation
+  (Linear → PReLU → Linear). `MLP` takes the matching `activation` argument.
 - `LinearEvalCallback(evaluator=...)`: the probe to run during training, e.g. a
   `LogRegEvaluator` with a single `weight_decay` when the default one is too slow.
 - `HeadConfig.norm_last_layer`: fixes the prototypes' weight-norm scale at 1 (off by default).

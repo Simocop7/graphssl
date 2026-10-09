@@ -128,6 +128,15 @@ class TestAFGRL:
         with pytest.raises(ValueError, match="num_centroids"):
             AFGRL(bad, in_channels=self.in_channels)
 
+    def test_reference_predictor(self):
+        """`pred_norm` / `pred_activation` give Linear - PReLU - Linear, as for BGRL."""
+        cfg = _make_config(pred_norm="none", pred_activation="prelu")
+        model = AFGRL(cfg, in_channels=self.in_channels)
+        layers = [type(m) for m in model.online_pred.net]
+        assert layers == [torch.nn.Linear, torch.nn.PReLU, torch.nn.Linear]
+        with pytest.raises(ValueError, match="pred_norm"):
+            AFGRL(_make_config(pred_norm="layer"), in_channels=self.in_channels)
+
     def test_invalid_kmeans_threads_raises(self):
         bad = _make_config(kmeans_threads=0)
         with pytest.raises(ValueError, match="kmeans_threads"):

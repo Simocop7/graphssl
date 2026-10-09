@@ -162,8 +162,10 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
-    if "all" in args.model:
-        args.model = SSL_MODELS
+    models: list[str] = []
+    for name in args.model:
+        models += [m for m in (SSL_MODELS if name == "all" else [name]) if m not in models]
+    args.model = models
     if args.ema_tau is not None and not 0.0 < args.ema_tau < 1.0:
         p.error(f"--ema-tau must be in (0, 1), got {args.ema_tau}")
     overrides: dict = {}

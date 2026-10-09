@@ -103,7 +103,9 @@ at equal budget. Results go to `benchmarks/zinc/` (one JSON per model and `summa
 10,000 steps) instead of the shared benchmark protocol, and compares with the paper's
 Table 5. It also evaluates the encoder left untrained, which checks the encoder and the
 evaluation independently of training. One seed takes about four hours on the A2. Results go
-to `benchmarks/reproductions/bgrl_ogbn_arxiv/`.
+to `benchmarks/reproductions/bgrl_ogbn_arxiv/`. The predictor is the reference
+implementation's (Linear → PReLU → Linear); `--predictor library` uses the library's default
+(Linear → BatchNorm → ReLU → Linear).
 
 ```bash
 python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 5 2>&1 | tee -a reproduce_bgrl.log

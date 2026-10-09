@@ -276,6 +276,8 @@ class BGRLConfig:
     encoder: EncoderConfig
     augment: List[AugmentConfig] = field(default_factory=list)
     pred_hidden: int = 512
+    pred_norm: str = "batch"
+    pred_activation: str = "relu"
     ema_tau: float = 0.99
     ema_tau_end: float = 1.0
     total_steps: int = 0
@@ -283,6 +285,12 @@ class BGRLConfig:
     def __post_init__(self):
         if self.pred_hidden <= 0:
             raise ValueError(f"pred_hidden must be > 0, got {self.pred_hidden}")
+        if self.pred_norm not in ("batch", "none"):
+            raise ValueError(f"pred_norm must be 'batch' or 'none', got {self.pred_norm!r}")
+        if self.pred_activation not in ("relu", "prelu"):
+            raise ValueError(
+                f"pred_activation must be 'relu' or 'prelu', got {self.pred_activation!r}"
+            )
         if not (0.0 < self.ema_tau < 1.0):
             raise ValueError(f"ema_tau must be in (0, 1), got {self.ema_tau}")
         if not (0.0 < self.ema_tau_end <= 1.0):
@@ -300,6 +308,8 @@ class BGRLConfig:
             encoder=EncoderConfig(**d["encoder"]),
             augment=[AugmentConfig.from_dict(a) for a in d.get("augment", [])],
             pred_hidden=d.get("pred_hidden", 512),
+            pred_norm=d.get("pred_norm", "batch"),
+            pred_activation=d.get("pred_activation", "relu"),
             ema_tau=d.get("ema_tau", 0.99),
             ema_tau_end=d.get("ema_tau_end", 1.0),
             total_steps=d.get("total_steps", 0),
@@ -312,6 +322,8 @@ class AFGRLConfig:
 
     encoder: EncoderConfig
     pred_hidden: int = 512
+    pred_norm: str = "batch"
+    pred_activation: str = "relu"
     ema_tau: float = 0.99
     ema_tau_end: float = 1.0
     total_steps: int = 0
@@ -325,6 +337,12 @@ class AFGRLConfig:
     def __post_init__(self):
         if self.pred_hidden <= 0:
             raise ValueError(f"pred_hidden must be > 0, got {self.pred_hidden}")
+        if self.pred_norm not in ("batch", "none"):
+            raise ValueError(f"pred_norm must be 'batch' or 'none', got {self.pred_norm!r}")
+        if self.pred_activation not in ("relu", "prelu"):
+            raise ValueError(
+                f"pred_activation must be 'relu' or 'prelu', got {self.pred_activation!r}"
+            )
         if not (0.0 < self.ema_tau < 1.0):
             raise ValueError(f"ema_tau must be in (0, 1), got {self.ema_tau}")
         if not (0.0 < self.ema_tau_end <= 1.0):
@@ -353,6 +371,8 @@ class AFGRLConfig:
         return cls(
             encoder=EncoderConfig(**d["encoder"]),
             pred_hidden=d.get("pred_hidden", 512),
+            pred_norm=d.get("pred_norm", "batch"),
+            pred_activation=d.get("pred_activation", "relu"),
             ema_tau=d.get("ema_tau", 0.99),
             ema_tau_end=d.get("ema_tau_end", 1.0),
             total_steps=d.get("total_steps", 0),

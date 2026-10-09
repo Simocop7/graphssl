@@ -50,7 +50,13 @@ class AFGRL(BaseSSLModel):
         cfg = AFGRLConfig.from_dict(config)
         self.online_enc = cfg.encoder.build(in_channels)
         hidden_dim = cfg.encoder.hidden_dim
-        self.online_pred = Predictor(hidden_dim, cfg.pred_hidden, hidden_dim)
+        self.online_pred = Predictor(
+            hidden_dim,
+            cfg.pred_hidden,
+            hidden_dim,
+            norm=cfg.pred_norm == "batch",
+            activation=cfg.pred_activation,
+        )
 
         # Target encoder: same initial weights as online (no reset — unlike BGRL).
         self.target_enc = copy.deepcopy(self.online_enc)

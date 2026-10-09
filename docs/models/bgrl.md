@@ -27,9 +27,15 @@ representation of a differently-augmented view of the same graph.
 | Field | Default | Notes |
 |---|---|---|
 | `pred_hidden` | `512` | predictor hidden dimension |
+| `pred_norm` | `"batch"` | `"batch"`: batch normalization after the predictor's hidden layer; `"none"`: no normalization |
+| `pred_activation` | `"relu"` | `"relu"` or `"prelu"` |
 | `ema_tau` | `0.99` | starting EMA momentum |
 | `ema_tau_end` | `1.0` | final EMA momentum |
 | `total_steps` | `0` | EMA annealing horizon; `0` = fixed τ |
+
+The default predictor is Linear → BatchNorm → ReLU → Linear. `pred_norm: "none"` with
+`pred_activation: "prelu"` gives Linear → PReLU → Linear, the predictor of the authors'
+reference implementation.
 
 ## Config example
 

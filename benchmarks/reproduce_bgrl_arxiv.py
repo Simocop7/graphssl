@@ -10,7 +10,9 @@ paper's own setup (its Appendix F and Table 8):
 - symmetrized graph, full-graph training, 10,000 steps;
 - encoder: 3 GCN layers of 256 units, each followed by layer normalization and PReLU, with
   weight standardization;
-- predictor: MLP with one hidden layer of 256 units;
+- predictor: MLP with one hidden layer of 256 units (Linear - PReLU - Linear, as in the
+  authors' reference implementation; ``--predictor library`` uses the library's default
+  Linear - BatchNorm - ReLU - Linear instead);
 - augmentation: edges dropped with probability 0.6 in both views, no feature masking;
 - AdamW, weight decay 1e-5, learning rate 1e-2 with 1,000 linear warm-up steps and a cosine
   decay to zero; target momentum 0.99 -> 1.0 on a cosine schedule.
@@ -23,8 +25,6 @@ Known differences from the paper, all recorded in the output:
   reports 68.9%; 68.8% after 5,000 steps). This script uses the library's linear probe
   (``LogRegEvaluator``: regularised logistic regression fitted to convergence, strength
   selected on validation), which gives 69.5% there.
-- The library's predictor has batch normalization and ReLU after its hidden layer; the
-  paper describes a plain MLP.
 - The paper averages 20 seeds.
 
 The untrained encoder is evaluated first: it checks the encoder and the evaluation
@@ -98,6 +98,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="no linear probe before/after training (about a minute per fit): smoke tests",
     )
+    p.add_argument(
+        "--predictor",
+        default="reference",
+        choices=["reference", "library"],
+        help="reference: Linear - PReLU - Linear (the authors' implementation); library: "
+        "the library's default, Linear - BatchNorm - ReLU - Linear",
+    )
     p.add_argument("--knn-k", type=int, default=5)
     p.add_argument("--data-dir", default="data/ogbn-arxiv")
     p.add_argument("--out-dir", default="benchmarks/reproductions/bgrl_ogbn_arxiv")
@@ -110,8 +117,9 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def make_config(steps: int) -> dict:
+def make_config(steps: int, predictor: str = "reference") -> dict:
     """Table 8 of the paper, ogbn-arXiv column."""
+    reference = predictor == "reference"
     return {
         "name": "bgrl",
         "encoder": {
@@ -124,6 +132,8 @@ def make_config(steps: int) -> dict:
         },
         "augment": [{"name": "edge_drop", "p": 0.6}],  # p_e = 0.6, p_f = 0 in both views
         "pred_hidden": 256,
+        "pred_norm": "none" if reference else "batch",
+        "pred_activation": "prelu" if reference else "relu",
         "ema_tau": 0.99,
         "ema_tau_end": 1.0,
         "total_steps": steps,
@@ -208,7 +218,8 @@ def run_seed(seed: int, args: argparse.Namespace, dm: DataModule, num_classes: i
     assert dm.data is not None
     device = torch.device(args.device)
     torch.manual_seed(seed)
-    model = build_model(make_config(args.steps), in_channels=dm.data.num_features)
+    config = make_config(args.steps, args.predictor)
+    model = build_model(config, in_channels=dm.data.num_features)
 
     probe = not args.skip_linear_probe
     result: Dict[str, Any] = {"seed": seed}
@@ -228,7 +239,7 @@ def run_seed(seed: int, args: argparse.Namespace, dm: DataModule, num_classes: i
     result["bgrl"] = evaluate(model, dm, num_classes, args, probe)
     # Kept so that another evaluation does not cost another four hours of training.
     checkpoint = Path(args.out_dir) / f"bgrl_seed{seed}.pt"
-    save_model(model, checkpoint, make_config(args.steps), in_channels=dm.data.num_features)
+    save_model(model, checkpoint, config, in_channels=dm.data.num_features)
     result["checkpoint"] = checkpoint.name
     print(f"  trained ({result['train_time_s']:.0f}s): {fmt(result['bgrl'])}", flush=True)
     return result
@@ -281,7 +292,7 @@ def main() -> None:
         "protocol": "Thakoor et al., ICLR 2022, Appendix F and Table 8",
         "paper": PAPER,
         "summary": summary,
-        "model_config": make_config(args.steps),
+        "model_config": make_config(args.steps, args.predictor),
         "hyperparameters": {
             **vars(args),
             "lr": 1e-2,
@@ -295,7 +306,11 @@ def main() -> None:
         "differences_from_paper": [
             "evaluation: LogRegEvaluator, fitted to convergence (paper: 100 AdamW steps with "
             "a weight-decay search, on L2-normalized embeddings)",
-            "predictor: Linear - BatchNorm - ReLU - Linear (paper: MLP with one hidden layer)",
+            *(
+                ["predictor: Linear - BatchNorm - ReLU - Linear (paper: MLP with one hidden layer)"]
+                if args.predictor == "library"
+                else []
+            ),
             f"{args.seeds} seed(s) (paper: 20)",
         ],
         "per_seed": per_seed,
