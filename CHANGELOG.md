@@ -23,6 +23,16 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 - **`subgraph` augmentation.** It raises when given `protected_nodes`, i.e. in mini-batch
   node training: it keeps the neighbourhood of one random node and cannot keep the seed
   nodes in place, so each view silently paired different nodes.
+- **GCN encoder BatchNorm momentum.** 0.01 → 0.1, PyTorch's default and the value the GIN
+  and Transformer encoders already used. Training is unchanged (it uses batch statistics);
+  eval-mode outputs change for models trained for fewer than about a thousand forward
+  passes. With 0.01 the running statistics still held 5% of their initial values after 300
+  passes — a variance of 1, where the batch variance after the first GCN layer is 1e-4 to
+  1e-2 — so the embeddings in eval mode were not the ones the model had been trained with.
+  In the citation benchmark's protocol (300 full-batch steps) the linear probe did not move,
+  kNN accuracy was about 6 points lower for DGI and AFGRL on Cora, and the supervised
+  model's own head fell from 74% to 49–65% on PubMed (3 seeds each).
+  `GCNEncoder(batchnorm_mm=0.01)` gives the old behavior.
 - **GCN encoder state dict.** The layers live in `convs`, `norms` and `acts`; the keys were
   `conv1`, `norm1`, `act1`, `conv2`, … A GCN checkpoint saved with 0.1.0 needs its keys
   renamed.

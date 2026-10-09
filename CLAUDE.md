@@ -271,6 +271,23 @@ accepted by the specific encoder — unsupported fields are silently ignored.
   It used to do nothing — the helper looked for a direct `weight` parameter, GCNConv keeps
   its weight in `lin.weight` — and could not be set from a config.
 - State-dict keys are `convs.N` / `norms.N` / `acts.N` (0.1.0: `conv1`, `norm1`, …).
+- **BatchNorm momentum 0.1** (`batchnorm_mm`, constructor only; PyTorch's default, as GIN
+  and Transformer). It was 0.01 until 2026-10-09: after n forward passes the running
+  statistics keep `0.99^n` of their initial values (variance 1) — 4.9% after 300 — while
+  the batch variance after the first GCN layer is ~7e-3 on Cora and 1.4e-4 on PubMed, so
+  the running variance was 8× / 340× too large and eval mode did not reproduce what
+  training saw. Training itself never depended on it (every model, target encoders
+  included, runs in train mode: batch statistics). Measured with GCN, 300 steps, 3 seeds,
+  eval mode vs batch statistics (= eval mode after the fix): supervised head on PubMed
+  48.7 / 58.3 / 65.0 → 73.6 / 73.3 / 74.8; kNN on Cora, AFGRL 67.4 → 73.0 and DGI 65.4 →
+  71.3 (AFGRL on CiteSeer: no change, 56.0 vs 55.7); linear probe within ±0.7 everywhere (it refits on whatever it is given); BGRL and
+  Barlow Twins on Cora within noise — two views = 600 passes, residual 0.24%. **Every GCN
+  kNN, effective-rank and supervised-head number measured before the fix at ≤ 300 steps is
+  affected** (single-pass models most: Supervised, DGI, AFGRL), including the GCN JSONs of
+  the 2026-10-09 run at `49e92ee`: rerun the GCN rows from a commit with the fix before
+  rendering them. The untrained encoder (`--epochs 0`) is unchanged: at initialization
+  BatchNorm in eval mode is the identity, with any momentum.
+  `tests/test_new_features.py::test_eval_statistics_follow_a_short_training` fails with 0.01.
 - Backward compatible: still accepts `batchnorm=True/False` and `layernorm=True/False`
 - `reset_parameters()` exposed (used by BGRL for the target encoder)
 
@@ -763,6 +780,21 @@ encoder:
     | no norm + ReLU | 80.4 ± 0.6 \| 66.2 ± 1.3 | +8.5 \| +7.8 | 71.7 \| 61.0 | 98 \| 111 |
     | no norm + PReLU (reference) | 79.9 ± 0.8 \| 66.0 ± 0.4 | +8.0 \| +7.6 | 71.6 \| 60.7 | 108 \| 121 |
 
+    The same four at 3,000 steps (VM CPU, same seeds):
+
+    | Predictor | Linear | Gain | kNN | Rank |
+    |---|---|---|---|---|
+    | BatchNorm + ReLU (library default) | 74.4 ± 1.4 \| 58.6 ± 1.0 | +2.5 \| +0.2 | 62.7 \| 48.6 | 11 \| 26 |
+    | BatchNorm + PReLU | 71.5 ± 1.5 \| 55.6 ± 4.4 | −0.5 \| −2.8 | 62.1 \| 49.2 | 13 \| 92 |
+    | no norm + ReLU | 76.5 ± 0.8 \| 59.8 ± 1.0 | +4.6 \| +1.4 | 67.4 \| 53.4 | 180 \| 160 |
+    | no norm + PReLU (reference) | 76.8 ± 1.3 \| 60.3 ± 1.5 | +4.9 \| +1.9 | 66.3 \| 51.3 | 196 \| 185 |
+
+    Without the predictor's BatchNorm the rank no longer collapses (180–196 against 11–26),
+    but the gain still shrinks with training length (Cora +8.0 → +4.9, CiteSeer +7.6 →
+    +1.9): at this scale the BatchNorm explains the collapse, not the whole decline. The
+    first row on the GPU gave 71.3 | 58.9 with the same seeds: over 3,000 steps at lr 1e-2
+    CPU and GPU runs drift apart by up to 3 points, so compare within one device.
+
     It is the normalization, not the activation. In the shared protocol (batch-norm
     encoders, lr 5e-4) the same swap changes little — see "Reference BGRL predictor" in the
     Planetoid section — so the library default (`pred_norm="batch"`) is unchanged for now.
@@ -804,7 +836,7 @@ pytest tests/ -v
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling, regression task (L1) |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
 | `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; edge features reach the encoder in training and in `forward()` (gin/transformer); AFGRL rows need faiss |
-| `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN depth (`num_layers`) and weight standardization, CombinedLoss |
+| `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN eval-mode statistics after a short training (BatchNorm momentum), GCN depth (`num_layers`) and weight standardization, CombinedLoss |
 | `test_checkpoint.py` | all | `save_model` / `load_model` give the same embeddings, `pretrained_encoder` is the encoder `forward()` uses, fine-tuning starts from its weights |
 | `test_callbacks.py` | — | `EmbeddingLoggerCallback` files, `LinearEvalCallback` history and custom `evaluator`, the model trains again after an evaluation |
 | `test_schedulers.py` | — | `CosineDecayScheduler` (linear warm-up, cosine decay, BGRL's formula), `CosineEMAScheduler` (BGRL's formula, monotonic, clamped) |

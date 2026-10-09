@@ -10,7 +10,7 @@ from graphssl.nn.norm import apply_weight_standardization
 from graphssl.registry import ENCODERS
 
 
-def _make_norm(norm_type: str, dim: int, batchnorm_mm: float = 0.01) -> nn.Module:
+def _make_norm(norm_type: str, dim: int, batchnorm_mm: float = 0.1) -> nn.Module:
     """Create a normalisation layer by name, aligned with the GIN/Transformer API."""
     if norm_type == "batch":
         return nn.BatchNorm1d(dim, momentum=batchnorm_mm)
@@ -37,7 +37,11 @@ class GCNEncoder(nn.Module):
         norm_type: 'batch', 'layer', or 'none' — same API as GINEncoder.
         weight_standardization: Standardize the GCNConv weights of every layer after the
             first, before each forward (BGRL's setting on ogbn-arxiv, with layer norm).
-        batchnorm_mm: BatchNorm momentum (standard PyTorch convention; default 0.01).
+        batchnorm_mm: BatchNorm momentum (standard PyTorch convention; default 0.1, as in
+            the other encoders). With 0.01 the running statistics still hold 5% of their
+            initial values (variance 1) after 300 forward passes, where the batch variance
+            of a first GCN layer is 1e-4 to 1e-2: eval-mode outputs then differ from the
+            ones the model was trained with.
         pool: If True, apply global_mean_pool to produce graph-level embeddings.
         num_layers: Number of GCNConv layers.
     """
@@ -49,7 +53,7 @@ class GCNEncoder(nn.Module):
         out_dim: int | None = None,
         norm_type: str = "batch",
         weight_standardization: bool = False,
-        batchnorm_mm: float = 0.01,
+        batchnorm_mm: float = 0.1,
         pool: bool = False,
         # Legacy aliases kept for backwards compatibility — map to norm_type internally.
         batchnorm: bool | None = None,

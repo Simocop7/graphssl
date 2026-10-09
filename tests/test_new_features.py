@@ -156,6 +156,28 @@ class TestGCNEncoderNormType:
         with pytest.raises(ValueError):
             GCNEncoder(in_channels=7, hidden_dim=32, batchnorm=True, layernorm=True)
 
+    def test_eval_statistics_follow_a_short_training(self):
+        """After 300 full-batch passes eval mode gives what training saw.
+
+        Small-variance inputs, as bag-of-words features give: the running variance starts
+        at 1, far above the batch variance. With a BatchNorm momentum of 0.01 (the default
+        until 0.2.0) 5% of that initial value was still there after 300 passes and the
+        eval-mode embeddings were not the ones the model had been trained with.
+        """
+        torch.manual_seed(0)
+        n = 400
+        x = 0.01 * torch.randn(n, 7)
+        edge_index = torch.randint(0, n, (2, 4 * n))
+        enc = GCNEncoder(in_channels=7, hidden_dim=32)
+        enc.train()
+        with torch.no_grad():
+            for _ in range(300):
+                trained_with = enc(x, edge_index)
+            enc.eval()
+            in_eval = enc(x, edge_index)
+        gap = (in_eval - trained_with).abs().max()
+        assert gap < 0.05 * trained_with.std()
+
 
 # ---------------------------------------------------------------------------
 # GCNEncoder: depth and weight standardization
