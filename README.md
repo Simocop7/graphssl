@@ -9,7 +9,7 @@
 
 A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
 
-> **Status:** Alpha — all models train end-to-end and pass tests; all 7 SSL methods benchmarked on the citation networks under a shared protocol (see below), large-scale (OGB) benchmarks in progress.
+> **Status:** Alpha — all models train end-to-end and pass tests; all 7 SSL methods benchmarked under a shared protocol on the citation networks (two backbones, see below) and on ZINC; large-scale (OGB) benchmarks in progress.
 
 ---
 
@@ -123,27 +123,48 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 
 ### Benchmark results (citation networks)
 
-All 7 SSL methods under one shared protocol: GIN-2L encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%), mean ± std over 10 seeds; best SSL method per dataset in bold. These numbers were produced with the 0.1.0 linear probe (100 Adam steps on raw features); they have not been rerun with the current one (regularised logistic regression fitted to convergence) yet. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint), not ranked:
+All 7 SSL methods under one shared protocol, run with two backbones: a 2-layer GCN or GIN encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%) on the frozen embeddings (regularised logistic regression fitted to convergence, L2 strength selected on validation), mean ± std over 10 seeds; best SSL method per dataset in bold. *Untrained encoder* is the same encoder at initialization. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint), not ranked.
+
+**GCN encoder**
 
 | Method | Cora | CiteSeer | PubMed |
 |---|---|---|---|
-| DGI | 68.62 ± 2.77 | 51.10 ± 2.26 | 66.16 ± 2.83 |
-| GraphCL | 78.06 ± 1.48 | 59.22 ± 2.50 | **80.11 ± 1.24** |
-| BGRL | 64.18 ± 3.04 | 47.59 ± 2.22 | 68.67 ± 2.07 |
-| AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
-| VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
-| Barlow Twins | **78.13 ± 1.00** | **63.00 ± 1.31** | 77.82 ± 1.03 |
-| GraphDINO | 62.12 ± 1.98 | 42.12 ± 2.58 | 70.97 ± 2.85 |
-| *Supervised* † | 73.10 ± 1.54 | 51.81 ± 2.71 | 74.16 ± 1.72 |
-| *Supervised, std. recipe* † | 76.10 ± 1.65 | 60.97 ± 3.42 | 71.36 ± 1.27 |
+| *Untrained encoder* | 73.17 ± 0.99 | 57.69 ± 1.47 | 74.07 ± 1.60 |
+| DGI | 78.12 ± 1.22 | 65.07 ± 1.44 | 78.60 ± 1.35 |
+| GraphCL | **82.46 ± 1.08** | **69.59 ± 1.00** | 81.28 ± 0.77 |
+| BGRL | 80.82 ± 1.23 | 67.05 ± 0.89 | 79.85 ± 1.10 |
+| AFGRL | 79.18 ± 1.26 | 62.63 ± 2.01 | 78.43 ± 1.00 |
+| VICReg | 81.06 ± 1.10 | 66.78 ± 1.45 | **81.59 ± 0.70** |
+| Barlow Twins | 81.65 ± 0.93 | 68.95 ± 1.33 | 81.24 ± 0.72 |
+| GraphDINO | 77.53 ± 1.22 | 60.16 ± 1.40 | 76.97 ± 2.08 |
+| *Supervised* † | 72.67 ± 0.85 | 56.35 ± 1.52 | 74.12 ± 1.01 |
+| *Supervised, std. recipe* † | 78.89 ± 1.42 | 64.84 ± 3.84 | 75.45 ± 1.12 |
+
+**GIN encoder**
+
+| Method | Cora | CiteSeer | PubMed |
+|---|---|---|---|
+| *Untrained encoder* | 41.70 ± 2.44 | 36.06 ± 1.57 | 56.60 ± 1.50 |
+| DGI | 65.43 ± 3.03 | 49.18 ± 2.86 | 66.90 ± 3.87 |
+| GraphCL | **81.31 ± 1.14** | 65.17 ± 1.44 | **80.36 ± 0.82** |
+| BGRL | 63.77 ± 1.60 | 47.68 ± 2.30 | 68.52 ± 2.57 |
+| AFGRL | 70.75 ± 1.75 | 49.32 ± 3.02 | 74.51 ± 1.11 |
+| VICReg | 77.36 ± 1.88 | 63.52 ± 2.10 | 79.08 ± 1.27 |
+| Barlow Twins | 79.33 ± 0.75 | **65.60 ± 1.62** | 77.67 ± 1.49 |
+| GraphDINO | 62.53 ± 1.91 | 43.34 ± 3.27 | 70.38 ± 3.23 |
+| *Supervised* † | 71.46 ± 1.83 | 51.21 ± 3.73 | 71.49 ± 1.70 |
+| *Supervised, std. recipe* † | 75.83 ± 2.33 | 59.32 ± 4.51 | 71.96 ± 1.90 |
+
+With GCN every objective improves on the untrained encoder and the top four are within 1.6–2.8 points of each other; with GIN the objectives separate, and BGRL, AFGRL, GraphDINO and DGI fall well behind.
 
 ```bash
-python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model all --seeds 10
-python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model supervised supervised_reg --seeds 10
-python benchmarks/render_tables.py      # rebuilds these tables from benchmarks/results/*.json
+D="--dataset Cora CiteSeer PubMed --seeds 10"
+python benchmarks/run_benchmark.py $D --model all supervised supervised_reg                 # GIN
+python benchmarks/run_benchmark.py $D --model all supervised supervised_reg --encoder gcn
+python benchmarks/render_tables.py --summary   # rebuilds these tables from benchmarks/results/*.json
 ```
 
-This is a deliberately untuned configuration — no per-method or per-dataset hyperparameter search — so it compares objectives at equal budget rather than reproducing each paper's best reported number. kNN results, per-seed metrics and full provenance (git commit, package versions) are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`. ogbn-arxiv and OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are next.
+This is a deliberately untuned configuration — no per-method or per-dataset hyperparameter search — so it compares objectives at equal budget rather than reproducing each paper's best reported number. kNN results, the graph-level benchmark on ZINC (frozen probe and fine-tuning), per-seed metrics and full provenance (git commit, package versions) are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`. A reproduction of BGRL on ogbn-arxiv with its paper's protocol is running; OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are next.
 
 ---
 

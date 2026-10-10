@@ -12,8 +12,10 @@ python benchmarks/run_benchmark.py --dataset Cora --model all --seeds 10
 python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model bgrl
 
 # Render the results (paste straight into README.md / paper.tex)
-python benchmarks/render_tables.py
+python benchmarks/render_tables.py                     # one table per dataset and encoder
 python benchmarks/render_tables.py --latex
+python benchmarks/render_tables.py --summary           # methods x datasets, per encoder
+python benchmarks/render_tables.py --summary --latex
 ```
 
 Each run writes `results/<Dataset>/<model>__<UTC-timestamp>.json` — per-seed
@@ -21,7 +23,11 @@ metrics, aggregate mean/std, the exact hyperparameters and full model config
 (`model_config`, the dict passed to `build_model()`), the git commit (and whether tracked
 files had uncommitted changes), and package versions. Old files are never overwritten, so
 results accumulate as a history; `render_tables.py` always uses the most recent file per
-(dataset, model) pair.
+(dataset, encoder, model): a run with `--encoder gcn` is another table, it does not replace
+the GIN rows. `--summary` prints the layout of `../docs/benchmarks.md` (one row per method,
+one column per dataset, best SSL method in bold, the supervised heads apart) and adds the
+untrained encoder as the first row when `ablations/untrained_encoder` has the `--epochs 0`
+runs.
 
 Besides accuracy, every result records the **effective rank** of the evaluated embeddings
 (`eff_rank`, from `graphssl.evaluation.effective_rank`: 1 = everything along one direction,
@@ -89,8 +95,13 @@ supervised` trains the encoder end to end on the labels as a reference.
 
 ```bash
 python benchmarks/run_zinc.py --model bgrl --epochs 2 --seeds 1 --out-dir benchmarks/zinc/smoke
-python -u benchmarks/run_zinc.py --model all supervised --seeds 3 2>&1 | tee -a zinc.log
+python -u benchmarks/run_zinc.py --model all supervised --seeds 3 --finetune-epochs 100 \
+    2>&1 | tee -a zinc.log
 ```
+
+`--finetune-epochs N` adds the second evaluation: after pre-training, the encoder and a new
+linear head are trained on the labels for N epochs (best-validation epoch). Its reference is
+the supervised row, the same training from a random initialisation.
 
 One shared, untuned protocol (GINE with 4 layers of 128 units, 100 epochs, 20% of the atoms
 masked and 20% of the bonds dropped): like the citation benchmark it compares the objectives
@@ -155,14 +166,23 @@ Both renderers print the protocol under each table and say so when its rows mix 
 `run_benchmark.py` fits the probe on the CPU with 4 threads: with 60–140 training nodes
 that takes 1–5 s, against 20–40 s with 48 threads or on a busy GPU.
 
-**Current results:** all 7 SSL models × Cora/CiteSeer/PubMed × 10 seeds are committed under
-`results/` and rendered in `../docs/benchmarks.md`. They were evaluated with the 0.1.0 probe
-and have not been rerun with the current one yet. Budget for a full sweep: most models take
-~10–60 s per seed on an NVIDIA A2, but on PubMed GraphCL (O(N²) NT-Xent) and AFGRL (dense
-N×N kNN + per-step k-means) take ~7–9 min per seed, so ~75–85 min each for 10 seeds.
+**Current results:** all 7 SSL models and the two supervised references × Cora / CiteSeer /
+PubMed × 10 seeds, with the GIN and the GCN backbone, are committed under `results/` and
+rendered in `../docs/benchmarks.md` (runs of 2026-10-09 with the current probe: GIN at
+commit `49e92ee`, GCN at `acae6df`). The untrained encoders are in
+`ablations/untrained_encoder`. The older GIN files (0.1.0 probe) stay in `results/` as
+history. `ablations/gcn_bn_momentum_0.01` keeps the GCN runs made before the encoder's
+BatchNorm momentum went from 0.01 to 0.1: same training, but the statistics used at
+evaluation had not converged after 300 steps, so their kNN, effective-rank and
+supervised-head numbers are too low (the linear probe is within ±0.5). The two ablation
+directories `teacher_student` and `graphdino_stability` still hold 0.1.0-probe results.
 
-**Supervised references** (not part of `all`): both train the same encoder full-batch on the
-public split's `train_mask` only.
+Budget for a full sweep of one backbone: about 3.5 h on an NVIDIA A2. Most models take
+~10–60 s per seed, but on PubMed GraphCL (O(N²) NT-Xent) takes ~7–10 min per seed and AFGRL
+(dense N×N kNN + per-step k-means) ~4 min.
+
+**Supervised references** (not part of `all`; `--model all supervised supervised_reg` runs
+everything): both train the same encoder full-batch on the public split's `train_mask` only.
 - `--model supervised` keeps the shared SSL protocol unchanged (no dropout, AdamW, last
   checkpoint). With 120–140 labels and no regularization it overfits, so it understates what
   the labels are worth.
@@ -170,6 +190,8 @@ public split's `train_mask` only.
   0.01 with L2 5e-4, checkpoint with the best validation accuracy. Its recipe is recorded in
   the JSON's `hyperparameters`, the selected epoch per seed as `best_epoch`. With the GIN
   backbone it helps on Cora and CiteSeer and hurts on PubMed (see `../docs/benchmarks.md`).
+  With GCN it helps on all three, but look at `best_epoch` before reading much into it: on
+  CiteSeer the selected epoch is one of the first three for all ten seeds.
 
 Both get the same linear probe + kNN evaluation on their encoder embeddings; the accuracy of
 the trained head itself is saved as `test_acc_head`.
@@ -177,5 +199,7 @@ the trained head itself is saved as `test_acc_head`.
 **Known gaps:**
 - `afgrl` is skipped automatically when `faiss-cpu` isn't installed (same
   behavior as `tests/test_afgrl.py`).
-- Only Planetoid (Cora/CiteSeer/PubMed) is wired up so far — ogbn-arxiv/ZINC
-  support is the next extension (add an entry next to `PLANETOID_DATASETS`).
+- `run_benchmark.py` covers the Planetoid datasets (Cora/CiteSeer/PubMed) only. ZINC has its
+  own runner (`run_zinc.py`), ogbn-arxiv a stress test and a reproduction script (below).
+  OGB graph-level datasets (ogbg-molhiv, ogbg-molpcba) are not wired up.
+- The sensitivity ablations have not been rerun with the current linear probe.

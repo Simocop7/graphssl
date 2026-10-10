@@ -1,0 +1,164 @@
+{
+  "dataset": "ZINC-12k",
+  "model": "barlow_twins",
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 128,
+      "num_layers": 4,
+      "norm_type": "batch",
+      "pool": true,
+      "readout": "mean",
+      "drop": 0.0,
+      "node_emb_num_classes": 29,
+      "edge_dim": 128,
+      "edge_emb_num_classes": 4
+    },
+    "augment": [
+      {
+        "name": "attr_mask",
+        "p": 0.2,
+        "mask_value": 28
+      },
+      {
+        "name": "edge_drop",
+        "p": 0.2
+      }
+    ]
+  },
+  "hyperparameters": {
+    "model": [
+      "dgi",
+      "graphcl",
+      "vicreg",
+      "barlow_twins",
+      "bgrl",
+      "afgrl",
+      "graphdino",
+      "supervised"
+    ],
+    "encoder": "gin",
+    "hidden": 128,
+    "layers": 4,
+    "readout": "mean",
+    "epochs": 100,
+    "finetune_epochs": 100,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "seeds": 3,
+    "workers": 4,
+    "data_dir": "data/ZINC",
+    "out_dir": "benchmarks/zinc",
+    "device": "cuda",
+    "ridge_probe": {
+      "standardize": true,
+      "weight_decays": [
+        1000.0,
+        100.0,
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "untrained": {
+        "val_mae": 0.5722823992637325,
+        "test_mae": 0.5984005590842865,
+        "probe_weight_decay": 0.0001,
+        "eff_rank": 25.881572723388672
+      },
+      "train_time_s": 352.27041125297546,
+      "first_loss": 34.49647769927979,
+      "last_loss": 10.18339911699295,
+      "val_mae": 0.5249870132541241,
+      "test_mae": 0.5715276652360665,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 16.04416275024414,
+      "val_mae_finetune": 0.3459314880371094,
+      "test_mae_finetune": 0.3601934661865234,
+      "finetune_best_epoch": 97
+    },
+    {
+      "seed": 1,
+      "untrained": {
+        "val_mae": 0.5683873287339603,
+        "test_mae": 0.5987840855736399,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.088228225708008
+      },
+      "train_time_s": 395.06707096099854,
+      "first_loss": 35.230431938171385,
+      "last_loss": 9.621364402770997,
+      "val_mae": 0.53370477551195,
+      "test_mae": 0.5793533023274295,
+      "probe_weight_decay": 1e-05,
+      "eff_rank": 15.58348274230957,
+      "val_mae_finetune": 0.3354025726318359,
+      "test_mae_finetune": 0.34057723999023437,
+      "finetune_best_epoch": 96
+    },
+    {
+      "seed": 2,
+      "untrained": {
+        "val_mae": 0.5559895247155542,
+        "test_mae": 0.5808968167651886,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.352554321289062
+      },
+      "train_time_s": 401.7042348384857,
+      "first_loss": 36.901208353042605,
+      "last_loss": 10.677652597427368,
+      "val_mae": 0.5434660663714711,
+      "test_mae": 0.5708406706579047,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 15.497478485107422,
+      "val_mae_finetune": 0.33865435791015625,
+      "test_mae_finetune": 0.3621753845214844,
+      "finetune_best_epoch": 99
+    }
+  ],
+  "aggregate": {
+    "test_mae": {
+      "mean": 0.5739072127404669,
+      "std": 0.004728943775255018
+    },
+    "untrained_test_mae": {
+      "mean": 0.5926938204743717,
+      "std": 0.010218304435074769
+    },
+    "eff_rank": {
+      "mean": 15.708374659220377,
+      "std": 0.2939632878766676
+    },
+    "test_mae_finetune": {
+      "mean": 0.35431536356608073,
+      "std": 0.011938761644765877
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261009T115514Z",
+    "git": {
+      "commit": "49e92ee2c93e4facf47b597a4e585311d3cecc89",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}

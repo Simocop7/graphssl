@@ -83,13 +83,19 @@ No access to the trainer, logger, or datamodule from inside a model.
   all nine; up to `49e92ee` `all` replaced the whole list and the supervised models were
   dropped without a word:
   - `--model supervised`: shared SSL protocol unchanged (no dropout, AdamW, last checkpoint) —
-    overfits the 60–140 labels (head: Cora 73.2, CiteSeer 51.7, PubMed 74.4)
+    overfits the 60–140 labels (head, Cora / CiteSeer / PubMed: 73.2 / 51.8 / 74.5 with GIN,
+    72.3 / 57.2 / 73.8 with GCN)
   - `--model supervised_reg`: recipe adapted from Kipf & Welling (dropout 0.5, Adam lr 0.01 +
     L2 5e-4, best-validation checkpoint; recorded in the JSON hyperparameters, selected epoch
-    per seed as `best_epoch`) — helps on Cora/CiteSeer (76.8 / 62.4), hurts on PubMed (71.4)
-  - Both stay below the best SSL linear probe with the GIN backbone. Kipf & Welling's GCN
-    reports 81.5 / 70.3 / 79.0, so the backbone is the likely factor — not isolated yet, don't
-    state it as a conclusion
+    per seed as `best_epoch`) — head 76.5 / 61.8 / 72.7 with GIN (helps on Cora and
+    CiteSeer, hurts on PubMed), 78.0 / 65.4 / 74.6 with GCN
+  - Both stay below the best SSL linear probe of their table (GCN 82.5 / 69.6 / 81.6, GIN
+    81.3 / 65.6 / 80.4). The backbone is **not** what separates them from Kipf & Welling's
+    GCN (81.5 / 70.3 / 79.0): with GCN the std. recipe is still 3.5 / 4.9 / 4.4 below. Its
+    `best_epoch` is 0–2 on CiteSeer for all ten seeds and for 7 of 10 on Cora (15–100 with
+    GIN): validation accuracy peaks after one to three Adam steps and never recovers. Not
+    investigated — these are untuned references, don't present them as what supervision
+    can reach
 
 ### DGI (Deep Graph Infomax)
 - Discriminates real vs. corrupted embeddings via a discriminator with a learnable matrix W
@@ -288,6 +294,12 @@ accepted by the specific encoder — unsupported fields are silently ignored.
   rendering them. The untrained encoder (`--epochs 0`) is unchanged: at initialization
   BatchNorm in eval mode is the identity, with any momentum.
   `tests/test_new_features.py::test_eval_statistics_follow_a_short_training` fails with 0.01.
+  The benchmark confirms it on 10 seeds (same seeds and training, `49e92ee` with 0.01 →
+  `acae6df` with 0.1; the old JSONs are in `benchmarks/ablations/gcn_bn_momentum_0.01`):
+  supervised head 66.9 → 72.3 / 49.8 → 57.1 / 49.7 → 73.8 on Cora / CiteSeer / PubMed (std.
+  recipe 77.8 → 78.0 / 63.6 → 65.4 / 68.0 → 74.6); kNN of DGI 64.9 → 73.5 / 54.0 → 59.3 /
+  69.8 → 72.6 and of AFGRL on Cora 68.9 → 72.9; every two-view method within ±0.8 kNN and
+  every linear probe within ±0.5 (supervised up to 0.9).
 - Backward compatible: still accepts `batchnorm=True/False` and `layernorm=True/False`
 - `reset_parameters()` exposed (used by BGRL for the target encoder)
 
@@ -515,50 +527,79 @@ on_epoch_start → batches → on_epoch_end
   `--encoder gcn` in `benchmarks/results/` is rendered as its own table ("Cora (GCN
   encoder)"), it does not replace the GIN rows.
 - BGRL-only demo: `examples/benchmark_planetoid.py`; smoke test: `examples/cora_bgrl.py` (`configs/cora_bgrl.yaml`)
-- Shared protocol (all 7 methods): GIN-2L, `hidden_dim=256`, no dropout, full-batch 300 steps,
-  AdamW lr 5e-4 / wd 1e-5, `edge_drop` 0.5 + `feat_mask` 0.2 (augmentation-based methods),
-  public Planetoid split, 10 seeds. Run 2026-09-28 on the NECSTLab VM (NVIDIA A2 16 GB).
-- **Every linear-probe number in this file, the docs, the README and the paper was produced
-  with the 0.1.0 probe** (see LogRegEvaluator): none has been rerun with the current one.
-  kNN and effective rank are unaffected. Spot check on the benchmark's encoders (BGRL, Barlow
-  Twins, 2 seeds per dataset): −2.6 to +2.4 points; the untrained GIN on PubMed 44.1 → 57.0,
-  so the untrained-encoder references move the most. Rerun cost from the recorded wall times:
-  benchmark ≈ 5 h, the two ablation directories ≈ 10 h more.
+- Shared protocol (all 7 methods), run with **two backbones**: GCN-2L or GIN-2L,
+  `hidden_dim=256`, batch norm, no dropout, full-batch 300 steps, AdamW lr 5e-4 / wd 1e-5,
+  `edge_drop` 0.5 + `feat_mask` 0.2 (augmentation-based methods), public Planetoid split,
+  10 seeds, current probe. Run 2026-10-09 on the NECSTLab VM (NVIDIA A2 16 GB), clean tree:
+  GIN and the untrained encoders at `49e92ee`, GCN at `acae6df` (after the BatchNorm-momentum
+  fix, see GCN). About 3.5 h per backbone.
+- `render_tables.py --summary [--latex]` prints the tables below (methods × datasets per
+  encoder, linear and kNN, best SSL method in bold, supervised heads, and the untrained
+  encoder from `benchmarks/ablations/untrained_encoder`). README, `docs/benchmarks.md` and
+  `paper.tex` were regenerated from it on 2026-10-10.
+- **What is still from the 0.1.0 probe**: the two ablation directories (`teacher_student`,
+  `graphdino_stability`, 5 seeds) and everything quoted from them — the GraphDINO
+  "Stability" numbers above, the "Sensitivity" sections of the docs and the paper — plus
+  the ogbn-arxiv stress test's linear column. They are consistent with each other, not with
+  the tables below. Rerun cost: ≈ 10 h.
 - Results saved since record the probe's settings (`hyperparameters.linear_probe`) and, per
   seed, `probe_weight_decay` / `probe_converged`. `render_tables.py` and `render_ablation.py`
   print the probe protocol under each table, and say so when its rows mix protocols — a JSON
   without `linear_probe` is a 0.1.0-probe result.
-- Linear-probe test accuracy (%), mean ± std over 10 seeds (kNN table in `docs/benchmarks.md`):
+- Linear-probe test accuracy (%), mean ± std over 10 seeds (kNN and the supervised heads in
+  `docs/benchmarks.md`). **GCN:**
 
 | Method | Cora | CiteSeer | PubMed |
 |---|---|---|---|
-| DGI | 68.62 ± 2.77 | 51.10 ± 2.26 | 66.16 ± 2.83 |
-| GraphCL | 78.06 ± 1.48 | 59.22 ± 2.50 | 80.11 ± 1.24 |
-| BGRL | 64.18 ± 3.04 | 47.59 ± 2.22 | 68.67 ± 2.07 |
-| AFGRL | 70.06 ± 2.64 | 47.50 ± 2.56 | 73.48 ± 1.27 |
-| VICReg | 77.45 ± 1.78 | 61.44 ± 2.10 | 79.07 ± 1.62 |
-| Barlow Twins | 78.13 ± 1.00 | 63.00 ± 1.31 | 77.82 ± 1.03 |
-| GraphDINO | 62.12 ± 1.98 | 42.12 ± 2.58 | 70.97 ± 2.85 |
-| *Supervised* † | 73.10 ± 1.54 | 51.81 ± 2.71 | 74.16 ± 1.72 |
-| *Supervised, std. recipe* † | 76.10 ± 1.65 | 60.97 ± 3.42 | 71.36 ± 1.27 |
+| *Untrained encoder* | 73.17 ± 0.99 | 57.69 ± 1.47 | 74.07 ± 1.60 |
+| DGI | 78.12 ± 1.22 | 65.07 ± 1.44 | 78.60 ± 1.35 |
+| GraphCL | **82.46 ± 1.08** | **69.59 ± 1.00** | 81.28 ± 0.77 |
+| BGRL | 80.82 ± 1.23 | 67.05 ± 0.89 | 79.85 ± 1.10 |
+| AFGRL | 79.18 ± 1.26 | 62.63 ± 2.01 | 78.43 ± 1.00 |
+| VICReg | 81.06 ± 1.10 | 66.78 ± 1.45 | **81.59 ± 0.70** |
+| Barlow Twins | 81.65 ± 0.93 | 68.95 ± 1.33 | 81.24 ± 0.72 |
+| GraphDINO | 77.53 ± 1.22 | 60.16 ± 1.40 | 76.97 ± 2.08 |
+| *Supervised* † | 72.67 ± 0.85 | 56.35 ± 1.52 | 74.12 ± 1.01 |
+| *Supervised, std. recipe* † | 78.89 ± 1.42 | 64.84 ± 3.84 | 75.45 ± 1.12 |
 
-- † Supervised references (`--model supervised supervised_reg`, see the Supervised section):
-  trained on labels, not ranked against the SSL methods.
+  **GIN:**
+
+| Method | Cora | CiteSeer | PubMed |
+|---|---|---|---|
+| *Untrained encoder* | 41.70 ± 2.44 | 36.06 ± 1.57 | 56.60 ± 1.50 |
+| DGI | 65.43 ± 3.03 | 49.18 ± 2.86 | 66.90 ± 3.87 |
+| GraphCL | **81.31 ± 1.14** | 65.17 ± 1.44 | **80.36 ± 0.82** |
+| BGRL | 63.77 ± 1.60 | 47.68 ± 2.30 | 68.52 ± 2.57 |
+| AFGRL | 70.75 ± 1.75 | 49.32 ± 3.02 | 74.51 ± 1.11 |
+| VICReg | 77.36 ± 1.88 | 63.52 ± 2.10 | 79.08 ± 1.27 |
+| Barlow Twins | 79.33 ± 0.75 | **65.60 ± 1.62** | 77.67 ± 1.49 |
+| GraphDINO | 62.53 ± 1.91 | 43.34 ± 3.27 | 70.38 ± 3.23 |
+| *Supervised* † | 71.46 ± 1.83 | 51.21 ± 3.73 | 71.49 ± 1.70 |
+| *Supervised, std. recipe* † | 75.83 ± 2.33 | 59.32 ± 4.51 | 71.96 ± 1.90 |
+
+- † Supervised references (see the Supervised section): trained on labels, not ranked.
 - Deliberately untuned (no per-method/per-dataset search): it compares objectives at equal
-  budget, it doesn't compete with each paper's best number. Teacher-student methods (BGRL,
-  AFGRL, GraphDINO) trail the top group. What the ablations (5 seeds, linear probe) show:
-  - The short budget alone is not it: from 300 to 3000 steps Barlow Twins is flat, BGRL with
-    GIN gains (Cora 64.5 → 71.2 → 73.5) but stays below, GraphDINO declines (see GraphDINO).
-  - With GCN at 300 steps the gap mostly closes on Cora: BGRL 78.2, AFGRL 76.8, GraphDINO 73.3
-    vs Barlow Twins 79.6 (CiteSeer: BGRL 57.8, GraphDINO 53.0 vs 61.3). BGRL/AFGRL's effective
-    rank goes from 9–48 with GIN to 170–190.
-  - **But an untrained GCN is already strong.** Zero-step encoders (`--epochs 0`, rows in
-    `graphdino_stability`) score 71.7 / 57.0 / 72.2 with GCN vs 40.4 / 36.1 / 44.4 with GIN on
-    Cora / CiteSeer / PubMed. Over that reference BGRL + GCN adds +6.5 on Cora and +0.9 on
-    CiteSeer, Barlow Twins + GCN +7.9 / +4.3; GraphDINO + GCN is below it on CiteSeer. Always
-    read GCN rows against it, and don't state "the backbone explains the gap" as a
-    conclusion: what GCN recovers is largely the backbone itself. With GIN every method is
-    far above the untrained encoder, so the benchmark table is not affected.
+  budget, it doesn't compete with each paper's best number. What the two tables say:
+  - **With GCN every objective learns and they are close**: all seven are above the
+    untrained GCN on all three datasets (+2.5 to +11.9); GraphCL, Barlow Twins, VICReg and
+    BGRL are within 1.6 / 2.8 / 1.7 points of each other; AFGRL, DGI and GraphDINO are 3 to
+    9 below the best of each column.
+  - **With GIN they separate**: GraphCL, Barlow Twins and VICReg lose 1 to 4 points against
+    their GCN numbers; BGRL, AFGRL, GraphDINO and DGI are 6 to 22 points below the best.
+    BGRL's effective rank is 8–9 of 256 with GIN, 148–190 with GCN. **BGRL trailing is a
+    property of the GIN backbone, not of the method** — don't write "teacher-student methods
+    trail" without naming the backbone.
+  - **Always read a row against the untrained encoder of its table**: the untrained GCN is
+    at 73.2 / 57.7 / 74.1, the untrained GIN at 41.7 / 36.1 / 56.6. Most of the GCN table is
+    the backbone.
+  - Against the BGRL paper's Table 7 (GRACE 83.0 / 71.6 / 86.1, BGRL 83.8 / 72.3 / 86.0 —
+    20 random splits and a tuned configuration, not the public split): untuned BGRL + GCN
+    is 3.0 / 5.3 / 6.2 points below; with GIN it was 20 / 25 / 18.
+  - The 0.1.0 probe had hidden part of this: BGRL + GCN on CiteSeer was 57.8 with it (a
+    5-seed ablation) and is 67.1 now, while the untrained GCN barely moved (57.0 → 57.7).
+  - From the 0.1.0-probe ablations (5 seeds, GIN), still to be rerun: from 300 to 3000 steps
+    Barlow Twins is flat, BGRL gains (Cora 64.5 → 71.2 → 73.5) but stays below, GraphDINO
+    with the reference values declines (see GraphDINO).
 
   Ruled out: GraphDINO's center bug (rerun after the fix at `20cce09`: every number moved
   < 1 std).
@@ -587,45 +628,12 @@ on_epoch_start → batches → on_epoch_end
     holds the teacher-student methods back. Keep the library's.
   - With the current probe the top of the table is close to the literature: GraphCL 82.0 ±
     1.0 on Cora (0.1.0 probe: 78.1).
-- **The shared protocol with the GCN backbone and the current probe** (diagnostic,
-  2026-10-08, uncommitted tree: `--encoder gcn --model all`, 3 seeds, 300 steps, linear
-  accuracy — rerun from committed code before quoting; the GIN column collects the
-  same-protocol diagnostics above):
-
-  | Method | Cora GCN | Cora GIN | CiteSeer GCN | CiteSeer GIN |
-  |---|---|---|---|---|
-  | *Untrained encoder* | 72.4 ± 0.9 | 40.7 ± 1.3 | 58.4 ± 0.8 | 36.6 ± 2.5 |
-  | DGI | 77.6 ± 2.0 | 66.9 ± 0.9 | 65.4 ± 1.2 | 46.2 ± 5.2 |
-  | GraphCL | 82.6 ± 0.9 | 82.0 ± 1.0 | 69.3 ± 0.7 | 65.0 |
-  | BGRL | 81.4 ± 1.3 | 65.4 ± 2.6 | 67.7 ± 0.7 | 48.9 ± 1.1 |
-  | AFGRL | 79.4 ± 1.7 | 71.5 ± 2.7 | 62.7 ± 1.5 | 49.9 ± 2.4 |
-  | VICReg | 81.6 ± 0.8 | 78.3 ± 0.6 | 67.4 ± 0.8 | 63.3 ± 3.8 |
-  | Barlow Twins | 81.7 ± 0.9 | 79.4 | 69.5 ± 1.5 | 64.1 |
-  | GraphDINO (benchmark values) | 76.6 ± 0.9 | 63.2 | 61.2 ± 1.0 | 43.7 |
-  | GraphDINO (library defaults) | 78.9 ± 1.7 | 72.3 | 59.5 ± 3.8 | 47.5 |
-
-  - With GCN, GraphCL, Barlow Twins, VICReg and BGRL are within 1.2 points on Cora and 2.1
-    on CiteSeer: **BGRL trailing is a property of the GIN backbone** (effective rank 9 of
-    256 with GIN, 171 with GCN), not of the method. AFGRL (−3 / −7 from the best) and
-    GraphDINO (−4 to −10) still trail with GCN; DGI is last of the non-teacher-student
-    methods on both.
-  - Every method is above the untrained GCN: +4 to +10 on Cora, +1 to +11 on CiteSeer
-    (BGRL +9.0 / +9.3, Barlow Twins +9.2 / +11.1). **This replaces the 0.1.0-probe reading
-    above** (BGRL + GCN +6.5 / +0.9): the old probe had BGRL + GCN on CiteSeer at 57.8, the
-    current one at 67.7, while the untrained GCN barely moves (57.0 → 58.4). The exception is
-    GraphDINO on CiteSeer (+1.2 with the library defaults, std 3.8; +2.8 with the benchmark
-    values).
-  - Against the BGRL paper's Table 7 (GRACE 83.0 / 71.6, BGRL 83.8 / 72.3 — 20 random
-    splits and a tuned encoder, not the public split): untuned BGRL + GCN is 2.4 / 4.6
-    points below. With GIN it was 18 / 23.
-  - Consequence for the benchmark: GCN is the backbone the node-level SSL literature uses,
-    and the GIN table mostly measures which objectives survive GIN. Report both
-    (`render_tables.py` renders one table per encoder).
 - The 20 JSONs at commit `e295451` say `"dirty": true` — false positive (untracked files were
   counted, fixed in `dae32cb`); the code that ran is exactly `e295451`. GraphDINO and
   Supervised were rerun at `20cce09`, Supervised std. recipe at `558af8e` (all clean).
-- Cost: on PubMed GraphCL (~440 s/run, O(N²) NT-Xent) and AFGRL (~500 s/run, dense N×N kNN +
-  per-step k-means) are ~10× slower than the other methods (35–60 s).
+- Cost: on PubMed GraphCL (~440 s/run with GIN, O(N²) NT-Xent) and AFGRL (~250 s/run, dense
+  N×N kNN + per-step k-means; ~500 s before the FAISS thread cap) are 5–10× slower than the
+  other methods (35–55 s).
 - `paper.tex` compares our BGRL against the original BGRL paper's numbers (Appendix C, Table 7)
   and spells out the protocol differences.
 - Every result JSON also has `model_config` (the exact `build_model()` dict), per-seed
@@ -666,13 +674,30 @@ encoder:
 - `--finetune-epochs N` adds the usual protocol for molecules: after pre-training, the
   encoder and a new linear head are trained on the labels (L1, best-validation epoch).
   Its reference is the supervised row — the same training from a random initialisation.
-- **First numbers** (diagnostic, one seed, 100 epochs, test MAE; untrained encoder 0.598):
-  frozen encoder — VICReg 0.589, GraphDINO 0.590, Barlow Twins 0.595, GraphCL 0.603, BGRL
-  0.697, AFGRL 0.704, DGI 0.792; supervised head 0.360. **No method beats the untrained
-  encoder with a frozen ridge probe**, BGRL and AFGRL collapse (effective rank ≈ 2.5) and
-  DGI is worse still. Fine-tuned (100 epochs): GraphCL 0.328, VICReg 0.355 against 0.360
-  from scratch — pre-training may help there, to be confirmed on several seeds. Sum readout
-  moves little (untrained 0.559, supervised head 0.341, VICReg frozen 0.577).
+- **Results** (2026-10-09, `49e92ee`, 3 seeds, 100 pre-training + 100 fine-tuning epochs,
+  test MAE; `benchmarks/zinc/summary.md` — regenerate from the JSONs, don't retype;
+  untrained encoder 0.593 ± 0.010), frozen ridge probe | fine-tuned:
+
+  | Method | Frozen encoder | Fine-tuned | Rank |
+  |---|---|---|---|
+  | VICReg | 0.591 ± 0.010 | 0.335 ± 0.009 | 18.5 |
+  | GraphCL | 0.571 ± 0.006 | 0.341 ± 0.007 | 18.0 |
+  | Barlow Twins | 0.574 ± 0.005 | 0.354 ± 0.012 | 15.7 |
+  | DGI | 0.932 ± 0.071 | 0.359 ± 0.018 | 9.2 |
+  | GraphDINO | 0.578 ± 0.009 | 0.361 ± 0.009 | 15.6 |
+  | *Supervised from scratch* † | 0.396 ± 0.028 | 0.364 ± 0.007 | 7.5 |
+  | BGRL | 0.700 ± 0.082 | 0.377 ± 0.007 | 5.6 |
+  | AFGRL | 0.671 ± 0.046 | 0.379 ± 0.007 | 5.0 |
+
+  - **Frozen**: GraphCL, Barlow Twins and GraphDINO are 0.015–0.02 below the untrained
+    encoder, VICReg equals it; BGRL and AFGRL collapse (rank ≈ 5) and DGI is far worse than
+    no training. None comes near the supervised encoder (0.396): with a frozen probe SSL
+    buys almost nothing here.
+  - **Fine-tuned**: VICReg (−0.029) and GraphCL (−0.023) beat the same training from a
+    random initialisation by about three of its stds; Barlow Twins, DGI and GraphDINO are
+    within one; BGRL and AFGRL are worse than no pre-training. Three seeds, untuned.
+  - Sum readout moved little in a one-seed diagnostic (untrained 0.559, supervised head
+    0.341, VICReg frozen 0.577).
 - Bond types only count since `encode()` (see Key utilities): before, every ZINC run ignored
   them. The example's `feat_mask` hides the single atom-type column for every atom or for
   none — use `attr_mask` on molecules.
@@ -766,8 +791,19 @@ encoder:
     a collapse towards one direction that the effective rank, computed on centered
     embeddings, does not show. The runs that gain settle at a loss of ≈ 0.2 with pair cos
     0.1–0.2. Either change alone (reference predictor, or batch norm in the encoder) is
-    enough. The paper gains +2.63 / +2.70 at 10,000 steps: the full run with the reference
-    predictor is not measured yet.
+    enough.
+
+    **Full 10,000 steps with the reference predictor** (seed 0, 2026-10-09, a copy of
+    `7aa5499` that was not a git checkout, 7.6 h on the shared A2): **72.45 / 71.15**
+    against 70.21 / 69.50 untrained, i.e. **+2.24 / +1.65** (paper: 72.53 ± 0.09 / 71.64 ±
+    0.12, +2.63 / +2.70). Validation is within the paper's std, test is 0.5 below; the gain
+    is smaller also because our probe gives the untrained encoder 0.3 / 0.6 more than the
+    paper's. kNN 66.7 → 67.6 at step 1,000, 68.1–68.2 from step 2,000 on (68.05 at the
+    end); loss 0.21 throughout; rank 116 → 166; probe L2 1e-3. One seed: the three-seed run
+    from committed code (`acae6df`, log `reproduce_bgrl_20261010.log` on the VM, JSON in
+    `benchmarks/reproductions/bgrl_ogbn_arxiv/` when the third seed ends) is the one to
+    quote. Its seed 0 repeats the result: 72.43 / 71.22, +2.22 / +1.72, in 3.9 h on the
+    idle A2.
 
     The same at Cora scale (BGRL + GCN-3L, layer norm + WS, `edge_drop` 0.6, lr 1e-2, 300
     steps, 3 seeds, laptop CPU, Cora | CiteSeer; untrained 71.9 | 58.4, rank 186 | 199),
@@ -798,8 +834,8 @@ encoder:
     It is the normalization, not the activation. In the shared protocol (batch-norm
     encoders, lr 5e-4) the same swap changes little — see "Reference BGRL predictor" in the
     Planetoid section — so the library default (`pred_norm="batch"`) is unchanged for now.
-    Whether it should become `"none"` is open: it needs the full arxiv run and the BGRL /
-    AFGRL benchmark rows with `--set pred_norm=none` (10 seeds, both encoders).
+    Whether it should become `"none"` is open: it needs the BGRL / AFGRL benchmark rows
+    with `--set pred_norm=none` (10 seeds, both encoders).
   - The paper's linear evaluation (L2-normalized rows, 100 AdamW steps at lr 0.01, weight
     decay searched), implemented literally, is far from fitted: 44.1 on the untrained
     encoder, 66.5 after 1,000 steps, 68.8 after 5,000. The script therefore uses the library

@@ -1,0 +1,168 @@
+{
+  "dataset": "ZINC-12k",
+  "model": "bgrl",
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 128,
+      "num_layers": 4,
+      "norm_type": "batch",
+      "pool": true,
+      "readout": "mean",
+      "drop": 0.0,
+      "node_emb_num_classes": 29,
+      "edge_dim": 128,
+      "edge_emb_num_classes": 4
+    },
+    "augment": [
+      {
+        "name": "attr_mask",
+        "p": 0.2,
+        "mask_value": 28
+      },
+      {
+        "name": "edge_drop",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 128,
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 1
+  },
+  "hyperparameters": {
+    "model": [
+      "dgi",
+      "graphcl",
+      "vicreg",
+      "barlow_twins",
+      "bgrl",
+      "afgrl",
+      "graphdino",
+      "supervised"
+    ],
+    "encoder": "gin",
+    "hidden": 128,
+    "layers": 4,
+    "readout": "mean",
+    "epochs": 100,
+    "finetune_epochs": 100,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "seeds": 3,
+    "workers": 4,
+    "data_dir": "data/ZINC",
+    "out_dir": "benchmarks/zinc",
+    "device": "cuda",
+    "ridge_probe": {
+      "standardize": true,
+      "weight_decays": [
+        1000.0,
+        100.0,
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "untrained": {
+        "val_mae": 0.5722826524927691,
+        "test_mae": 0.5984005303412882,
+        "probe_weight_decay": 0.0001,
+        "eff_rank": 25.881572723388672
+      },
+      "train_time_s": 399.8153784275055,
+      "first_loss": 0.3969273671507835,
+      "last_loss": 0.03213586211204529,
+      "val_mae": 0.70947451324821,
+      "test_mae": 0.7679003444254745,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 2.3209707736968994,
+      "val_mae_finetune": 0.3534530487060547,
+      "test_mae_finetune": 0.38518309020996094,
+      "finetune_best_epoch": 78
+    },
+    {
+      "seed": 1,
+      "untrained": {
+        "val_mae": 0.5683867657667879,
+        "test_mae": 0.5987854973969411,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.088233947753906
+      },
+      "train_time_s": 401.63249468803406,
+      "first_loss": 0.35929513424634935,
+      "last_loss": 0.0321870282292366,
+      "val_mae": 0.5705459697145923,
+      "test_mae": 0.6092127104439259,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 11.209949493408203,
+      "val_mae_finetune": 0.34746311950683595,
+      "test_mae_finetune": 0.3706643371582031,
+      "finetune_best_epoch": 97
+    },
+    {
+      "seed": 2,
+      "untrained": {
+        "val_mae": 0.5559923135073938,
+        "test_mae": 0.5808969985526948,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.35256004333496
+      },
+      "train_time_s": 403.1024570465088,
+      "first_loss": 0.37518362104892733,
+      "last_loss": 0.03206222802400589,
+      "val_mae": 0.682501424937118,
+      "test_mae": 0.7233305234685414,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 3.349846124649048,
+      "val_mae_finetune": 0.34623199462890625,
+      "test_mae_finetune": 0.37555661010742186,
+      "finetune_best_epoch": 97
+    }
+  ],
+  "aggregate": {
+    "test_mae": {
+      "mean": 0.7001478594459806,
+      "std": 0.08184447585544603
+    },
+    "untrained_test_mae": {
+      "mean": 0.5926943420969747,
+      "std": 0.01021861223135538
+    },
+    "eff_rank": {
+      "mean": 5.626922130584717,
+      "std": 4.86233400976075
+    },
+    "test_mae_finetune": {
+      "mean": 0.37713467915852866,
+      "std": 0.007386898807485285
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261009T122849Z",
+    "git": {
+      "commit": "49e92ee2c93e4facf47b597a4e585311d3cecc89",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}

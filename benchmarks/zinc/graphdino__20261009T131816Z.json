@@ -1,0 +1,182 @@
+{
+  "dataset": "ZINC-12k",
+  "model": "graphdino",
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 128,
+      "num_layers": 4,
+      "norm_type": "batch",
+      "pool": true,
+      "readout": "mean",
+      "drop": 0.0,
+      "node_emb_num_classes": 29,
+      "edge_dim": 128,
+      "edge_emb_num_classes": 4
+    },
+    "augment_teacher": [
+      {
+        "name": "attr_mask",
+        "p": 0.2,
+        "mask_value": 28
+      },
+      {
+        "name": "edge_drop",
+        "p": 0.2
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "attr_mask",
+        "p": 0.2,
+        "mask_value": 28
+      },
+      {
+        "name": "edge_drop",
+        "p": 0.2
+      }
+    ],
+    "total_steps": 1,
+    "head": {
+      "name": "dino",
+      "proj_hidden": 128,
+      "bottleneck_dim": 32,
+      "n_prototypes": 128
+    }
+  },
+  "hyperparameters": {
+    "model": [
+      "dgi",
+      "graphcl",
+      "vicreg",
+      "barlow_twins",
+      "bgrl",
+      "afgrl",
+      "graphdino",
+      "supervised"
+    ],
+    "encoder": "gin",
+    "hidden": 128,
+    "layers": 4,
+    "readout": "mean",
+    "epochs": 100,
+    "finetune_epochs": 100,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "seeds": 3,
+    "workers": 4,
+    "data_dir": "data/ZINC",
+    "out_dir": "benchmarks/zinc",
+    "device": "cuda",
+    "ridge_probe": {
+      "standardize": true,
+      "weight_decays": [
+        1000.0,
+        100.0,
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "untrained": {
+        "val_mae": 0.5722825419545365,
+        "test_mae": 0.5984003955647643,
+        "probe_weight_decay": 0.0001,
+        "eff_rank": 25.88156509399414
+      },
+      "train_time_s": 283.867130279541,
+      "first_loss": 2.581588846445084,
+      "last_loss": 1.6534341245889663,
+      "val_mae": 0.550239930998274,
+      "test_mae": 0.5877306835774425,
+      "probe_weight_decay": 1e-05,
+      "eff_rank": 15.907195091247559,
+      "val_mae_finetune": 0.3407586975097656,
+      "test_mae_finetune": 0.36174395751953126,
+      "finetune_best_epoch": 82
+    },
+    {
+      "seed": 1,
+      "untrained": {
+        "val_mae": 0.5683855491318867,
+        "test_mae": 0.5987816758483285,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.08821678161621
+      },
+      "train_time_s": 282.87660002708435,
+      "first_loss": 3.1544328570365905,
+      "last_loss": 1.594576469063759,
+      "val_mae": 0.5426084367144139,
+      "test_mae": 0.5703394753923827,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 15.40776538848877,
+      "val_mae_finetune": 0.33227389526367185,
+      "test_mae_finetune": 0.36979766845703127,
+      "finetune_best_epoch": 89
+    },
+    {
+      "seed": 2,
+      "untrained": {
+        "val_mae": 0.5559908982473659,
+        "test_mae": 0.5808999359192769,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.35256576538086
+      },
+      "train_time_s": 284.1222035884857,
+      "first_loss": 2.9364010274410246,
+      "last_loss": 1.611983874440193,
+      "val_mae": 0.540465088300744,
+      "test_mae": 0.5765412160712715,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 15.584425926208496,
+      "val_mae_finetune": 0.3323841323852539,
+      "test_mae_finetune": 0.3511240158081055,
+      "finetune_best_epoch": 87
+    }
+  ],
+  "aggregate": {
+    "test_mae": {
+      "mean": 0.5782037916803656,
+      "std": 0.008814002993872225
+    },
+    "untrained_test_mae": {
+      "mean": 0.5926940024441233,
+      "std": 0.010215740186498212
+    },
+    "eff_rank": {
+      "mean": 15.633128801981607,
+      "std": 0.25325182048874095
+    },
+    "test_mae_finetune": {
+      "mean": 0.360888547261556,
+      "std": 0.009366168952419674
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261009T131816Z",
+    "git": {
+      "commit": "49e92ee2c93e4facf47b597a4e585311d3cecc89",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}

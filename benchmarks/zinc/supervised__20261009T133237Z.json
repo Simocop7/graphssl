@@ -1,0 +1,154 @@
+{
+  "dataset": "ZINC-12k",
+  "model": "supervised",
+  "model_config": {
+    "name": "supervised",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 128,
+      "num_layers": 4,
+      "norm_type": "batch",
+      "pool": true,
+      "readout": "mean",
+      "drop": 0.0,
+      "node_emb_num_classes": 29,
+      "edge_dim": 128,
+      "edge_emb_num_classes": 4
+    },
+    "task": "regression"
+  },
+  "hyperparameters": {
+    "model": [
+      "dgi",
+      "graphcl",
+      "vicreg",
+      "barlow_twins",
+      "bgrl",
+      "afgrl",
+      "graphdino",
+      "supervised"
+    ],
+    "encoder": "gin",
+    "hidden": 128,
+    "layers": 4,
+    "readout": "mean",
+    "epochs": 100,
+    "finetune_epochs": 100,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "seeds": 3,
+    "workers": 4,
+    "data_dir": "data/ZINC",
+    "out_dir": "benchmarks/zinc",
+    "device": "cuda",
+    "ridge_probe": {
+      "standardize": true,
+      "weight_decays": [
+        1000.0,
+        100.0,
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "untrained": {
+        "val_mae": 0.572282580377346,
+        "test_mae": 0.5984005160031889,
+        "probe_weight_decay": 0.0001,
+        "eff_rank": 25.881572723388672
+      },
+      "train_time_s": 279.8797650337219,
+      "first_loss": 0.7852770328521729,
+      "last_loss": 0.31009890213608743,
+      "val_mae": 0.3700057078503047,
+      "test_mae": 0.38098972370834233,
+      "probe_weight_decay": 1.0,
+      "eff_rank": 7.671647548675537,
+      "val_mae_head": 0.34271217346191407,
+      "test_mae_head": 0.3637841796875,
+      "best_epoch": 96
+    },
+    {
+      "seed": 1,
+      "untrained": {
+        "val_mae": 0.5683857538014708,
+        "test_mae": 0.5987849112646838,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.088228225708008
+      },
+      "train_time_s": 279.1175355911255,
+      "first_loss": 0.8186254873871803,
+      "last_loss": 0.31147185862064364,
+      "val_mae": 0.373877358525525,
+      "test_mae": 0.3784905186368601,
+      "probe_weight_decay": 1.0,
+      "eff_rank": 6.69536018371582,
+      "val_mae_head": 0.34876978302001954,
+      "test_mae_head": 0.35664661407470705,
+      "best_epoch": 96
+    },
+    {
+      "seed": 2,
+      "untrained": {
+        "val_mae": 0.5559912492965807,
+        "test_mae": 0.5808962485552872,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.35256004333496
+      },
+      "train_time_s": 279.64016032218933,
+      "first_loss": 0.8889334231615067,
+      "last_loss": 0.2975176952779293,
+      "val_mae": 0.39350469314102143,
+      "test_mae": 0.4287792039426562,
+      "probe_weight_decay": 1.0,
+      "eff_rank": 8.158774375915527,
+      "val_mae_head": 0.34693161010742185,
+      "test_mae_head": 0.37072516632080077,
+      "best_epoch": 94
+    }
+  ],
+  "aggregate": {
+    "test_mae": {
+      "mean": 0.3960864820959529,
+      "std": 0.02834029027386212
+    },
+    "untrained_test_mae": {
+      "mean": 0.5926938919410533,
+      "std": 0.010218866474445575
+    },
+    "eff_rank": {
+      "mean": 7.508594036102295,
+      "std": 0.7452080987581486
+    },
+    "test_mae_head": {
+      "mean": 0.3637186533610026,
+      "std": 0.007039504855534644
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261009T133237Z",
+    "git": {
+      "commit": "49e92ee2c93e4facf47b597a4e585311d3cecc89",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}

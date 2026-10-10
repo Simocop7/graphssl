@@ -12,6 +12,12 @@ Usage::
     python benchmarks/render_tables.py                  # Markdown, all datasets found
     python benchmarks/render_tables.py --latex           # also print LaTeX
     python benchmarks/render_tables.py --dataset Cora    # filter to one dataset
+    python benchmarks/render_tables.py --summary         # methods x datasets, per encoder
+    python benchmarks/render_tables.py --summary --latex
+
+``--summary`` is the layout of the README, the docs and the paper: one row per method, one
+column per dataset, the best SSL method of each column in bold, and the same encoder left
+untrained as the first row when ``--untrained-dir`` has it (``--epochs 0`` runs).
 """
 
 from __future__ import annotations
@@ -46,6 +52,15 @@ MODEL_ORDER = [
     "supervised",
     "supervised_reg",
 ]
+SUPERVISED = ("supervised", "supervised_reg")
+DATASET_ORDER = ["Cora", "CiteSeer", "PubMed"]
+# Row labels of the summary tables: the supervised references are set apart, not ranked.
+SUMMARY_NAMES = {
+    **MODEL_DISPLAY_NAMES,
+    "supervised": "*Supervised* †",
+    "supervised_reg": "*Supervised, std. recipe* †",
+}
+UNTRAINED_LABEL = "*Untrained encoder*"
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,6 +70,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--results-dir", default="benchmarks/results")
     p.add_argument("--dataset", nargs="+", default=None, help="filter to specific datasets")
     p.add_argument("--latex", action="store_true", help="also print a LaTeX booktabs table")
+    p.add_argument(
+        "--summary",
+        action="store_true",
+        help="methods x datasets tables per encoder (linear probe, kNN, supervised heads) "
+        "instead of one table per dataset",
+    )
+    p.add_argument(
+        "--untrained-dir",
+        default="benchmarks/ablations/untrained_encoder",
+        help="--epochs 0 runs to show as the untrained-encoder row of the summary tables",
+    )
     return p.parse_args()
 
 
@@ -186,6 +212,139 @@ def render_latex(dataset: str, models: dict) -> str:
     return "\n".join(lines)
 
 
+def load_untrained(results_dir: Path, datasets: list[str] | None) -> dict:
+    """{(dataset, encoder): result} of the latest ``--epochs 0`` run, whatever its model."""
+    latest: dict[tuple[str, str], dict] = {}
+    for path in sorted(results_dir.glob("*/*.json")):
+        data = json.loads(path.read_text())
+        if data["hyperparameters"]["epochs"] != 0:
+            continue
+        if datasets and data["dataset"] not in datasets:
+            continue
+        key = (data["dataset"], data["hyperparameters"]["encoder"])
+        prev = latest.get(key)
+        if prev is None or data["provenance"]["timestamp_utc"] > _timestamp(prev):
+            latest[key] = data
+    return latest
+
+
+def _timestamp(result: dict) -> str:
+    return result["provenance"]["timestamp_utc"]
+
+
+def _summary_rows(tables: dict, untrained: dict, encoder: str, datasets: list[str]) -> dict:
+    """{row key: {dataset: result}} for one encoder; the untrained encoder under ``None``."""
+    rows: dict[str | None, dict[str, dict]] = {}
+    reference = {ds: untrained[(ds, encoder)] for ds in datasets if (ds, encoder) in untrained}
+    if reference:
+        rows[None] = reference
+    for model in MODEL_ORDER:
+        found = {
+            ds: tables[(ds, encoder)][model]
+            for ds in datasets
+            if model in tables.get((ds, encoder), {})
+        }
+        if found:
+            rows[model] = found
+    return rows
+
+
+def _best_ssl(rows: dict, metric: str, datasets: list[str]) -> dict:
+    """{dataset: SSL model with the highest mean of ``metric``}."""
+    best = {}
+    for ds in datasets:
+        means = {
+            model: cells[ds]["aggregate"][metric]["mean"]
+            for model, cells in rows.items()
+            if model is not None and model not in SUPERVISED and ds in cells
+        }
+        if means:
+            best[ds] = max(means, key=lambda m: means[m])
+    return best
+
+
+def _summary_note(rows: dict) -> str:
+    labels = {}
+    for model, cells in rows.items():
+        name = UNTRAINED_LABEL if model is None else SUMMARY_NAMES[model]
+        for ds, result in cells.items():
+            labels[f"{name} ({ds})"] = result
+    protocols = {describe_probe(d["hyperparameters"].get("linear_probe")) for d in labels.values()}
+    if len(protocols) == 1:  # one protocol: no need to list every cell
+        return probe_note({"all rows": next(iter(labels.values()))})
+    return probe_note(labels)
+
+
+def render_summary_markdown(
+    tables: dict, untrained: dict, encoder: str, datasets: list[str]
+) -> str:
+    rows = _summary_rows(tables, untrained, encoder, datasets)
+    knn_k = next(iter(next(iter(rows.values())).values()))["hyperparameters"]["knn_k"]
+    out = [f"## {encoder.upper()} encoder", ""]
+    for metric, title in (
+        ("test_acc_linear", "Linear probe"),
+        ("test_acc_knn", f"kNN (k={knn_k})"),
+    ):
+        best = _best_ssl(rows, metric, datasets)
+        out += [f"### {title}", "", "| Method | " + " | ".join(datasets) + " |"]
+        out.append("|---|" + "---|" * len(datasets))
+        for model, cells in rows.items():
+            name = UNTRAINED_LABEL if model is None else SUMMARY_NAMES[model]
+            values = []
+            for ds in datasets:
+                if ds not in cells:
+                    values.append("—")
+                    continue
+                text = fmt_pct(cells[ds]["aggregate"][metric])
+                values.append(f"**{text}**" if best.get(ds) == model else text)
+            out.append(f"| {name} | " + " | ".join(values) + " |")
+        out.append("")
+    heads = {m: c for m, c in rows.items() if m in SUPERVISED}
+    if heads:
+        out += ["### Supervised references: accuracy of their own head", ""]
+        out += ["| Method | " + " | ".join(datasets) + " |", "|---|" + "---|" * len(datasets)]
+        for model, cells in heads.items():
+            values = [
+                fmt_pct(cells[ds]["aggregate"]["test_acc_head"])
+                if ds in cells and "test_acc_head" in cells[ds]["aggregate"]
+                else "—"
+                for ds in datasets
+            ]
+            out.append(f"| {SUMMARY_NAMES[model]} | " + " | ".join(values) + " |")
+        out.append("")
+    out.append(_summary_note(rows))
+    return "\n".join(out)
+
+
+def render_summary_latex(tables: dict, untrained: dict, encoder: str, datasets: list[str]) -> str:
+    """Rows of a booktabs table: Linear and kNN for every dataset, one line per method."""
+    rows = _summary_rows(tables, untrained, encoder, datasets)
+    metrics = ("test_acc_linear", "test_acc_knn")
+    best = {metric: _best_ssl(rows, metric, datasets) for metric in metrics}
+    lines = [f"% {encoder.upper()} encoder: " + ", ".join(datasets) + " (Linear & kNN each)"]
+    previous: str | None = "start"
+    for model, cells in rows.items():
+        group = "untrained" if model is None else "ref" if model in SUPERVISED else "ssl"
+        if previous not in ("start", group):
+            lines.append(r"\midrule")
+        previous = group
+        name = "Untrained encoder" if model is None else MODEL_DISPLAY_NAMES[model].rstrip("*")
+        if group != "ssl":
+            name = rf"\textit{{{name}}}".replace("std. recipe", r"std.\ recipe")
+        values = []
+        for ds in datasets:
+            for metric in metrics:
+                if ds not in cells:
+                    values.append("--")
+                    continue
+                agg = cells[ds]["aggregate"][metric]
+                text = rf"{agg['mean'] * 100:.2f} $\pm$ {agg['std'] * 100:.2f}"
+                values.append(rf"\textbf{{{text}}}" if best[metric].get(ds) == model else text)
+        lines.append(f"{name} & " + " & ".join(values) + r" \\")
+    lines.append("% " + _summary_note(rows).replace("*", ""))
+    return "\n".join(lines)
+
+
 def main() -> None:
     args = parse_args()
     results_dir = REPO_ROOT / args.results_dir
@@ -196,6 +355,19 @@ def main() -> None:
     tables = load_latest_results(results_dir, args.dataset)
     if not tables:
         print(f"No result JSON files found under {results_dir}.")
+        return
+
+    if args.summary:
+        untrained_dir = REPO_ROOT / args.untrained_dir
+        untrained = load_untrained(untrained_dir, args.dataset) if untrained_dir.exists() else {}
+        found = {dataset for dataset, _ in tables}
+        datasets = [d for d in DATASET_ORDER if d in found] + sorted(found - set(DATASET_ORDER))
+        for encoder in sorted({encoder for _, encoder in tables}):
+            print(render_summary_markdown(tables, untrained, encoder, datasets))
+            print()
+            if args.latex:
+                print(render_summary_latex(tables, untrained, encoder, datasets))
+                print()
         return
 
     encoders_per_dataset = defaultdict(set)
