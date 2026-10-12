@@ -1,0 +1,395 @@
+{
+  "dataset": "ogbn-arxiv",
+  "model": "bgrl",
+  "protocol": "Thakoor et al., ICLR 2022, Appendix F and Table 8",
+  "paper": {
+    "bgrl": {
+      "val": [
+        72.53,
+        0.09
+      ],
+      "test": [
+        71.64,
+        0.12
+      ]
+    },
+    "random_init": {
+      "val": [
+        69.9,
+        0.11
+      ],
+      "test": [
+        68.94,
+        0.15
+      ]
+    }
+  },
+  "summary": {
+    "random_init": {
+      "val": {
+        "mean": 70.23613651593526,
+        "std": 0.19959026660148044
+      },
+      "test": {
+        "mean": 69.52314575513203,
+        "std": 0.02778214394521376
+      }
+    },
+    "bgrl": {
+      "val": {
+        "mean": 68.97434790929158,
+        "std": 0.8684116829456003
+      },
+      "test": {
+        "mean": 67.90870229403178,
+        "std": 0.7846471159845193
+      }
+    },
+    "gain": {
+      "val": {
+        "mean": -1.2617886066436768,
+        "std": 0.7468544328272612
+      },
+      "test": {
+        "mean": -1.6144434611002605,
+        "std": 0.7838388205761886
+      }
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 3,
+      "norm_type": "layer",
+      "weight_standardization": true,
+      "pool": false
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.6
+      }
+    ],
+    "pred_hidden": 256,
+    "pred_norm": "batch",
+    "pred_activation": "relu",
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 10000
+  },
+  "hyperparameters": {
+    "seeds": 3,
+    "steps": 10000,
+    "warmup_steps": 1000,
+    "eval_every": 1000,
+    "skip_linear_probe": false,
+    "predictor": "library",
+    "knn_k": 5,
+    "data_dir": "data/ogbn-arxiv",
+    "out_dir": "benchmarks/reproductions/bgrl_ogbn_arxiv_library_predictor",
+    "device": "cuda",
+    "lr": 0.01,
+    "weight_decay": 1e-05,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "differences_from_paper": [
+    "evaluation: LogRegEvaluator, fitted to convergence (paper: 100 AdamW steps with a weight-decay search, on L2-normalized embeddings)",
+    "predictor: Linear - BatchNorm - ReLU - Linear (paper: MLP with one hidden layer)",
+    "3 seed(s) (paper: 20)"
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "random_init": {
+        "val_acc_knn": 0.6899224519729614,
+        "test_acc_knn": 0.6669753193855286,
+        "eff_rank": 116.07020568847656,
+        "val_acc_linear": 0.7020705342292786,
+        "test_acc_linear": 0.6949571371078491,
+        "probe_weight_decay": 0.0001,
+        "probe_converged": true
+      },
+      "train_time_s": 22704.193267822266,
+      "final_loss": 0.004209697246551514,
+      "curve": [
+        {
+          "step": 1000,
+          "loss": 0.008489847183227539,
+          "val_acc_knn": 0.6502902507781982,
+          "test_acc_knn": 0.6331913471221924,
+          "eff_rank": 96.54251861572266
+        },
+        {
+          "step": 2000,
+          "loss": 0.006254374980926514,
+          "val_acc_knn": 0.6621027588844299,
+          "test_acc_knn": 0.644713282585144,
+          "eff_rank": 116.31697845458984
+        },
+        {
+          "step": 3000,
+          "loss": 0.005473911762237549,
+          "val_acc_knn": 0.6680089831352234,
+          "test_acc_knn": 0.6454334259033203,
+          "eff_rank": 129.1428985595703
+        },
+        {
+          "step": 4000,
+          "loss": 0.0047470927238464355,
+          "val_acc_knn": 0.6701231598854065,
+          "test_acc_knn": 0.6480464339256287,
+          "eff_rank": 140.07623291015625
+        },
+        {
+          "step": 5000,
+          "loss": 0.0045351386070251465,
+          "val_acc_knn": 0.6694855690002441,
+          "test_acc_knn": 0.6481081247329712,
+          "eff_rank": 147.11663818359375
+        },
+        {
+          "step": 6000,
+          "loss": 0.0043503642082214355,
+          "val_acc_knn": 0.6690828800201416,
+          "test_acc_knn": 0.6457831859588623,
+          "eff_rank": 151.8958740234375
+        },
+        {
+          "step": 7000,
+          "loss": 0.004162013530731201,
+          "val_acc_knn": 0.6718346476554871,
+          "test_acc_knn": 0.6457420587539673,
+          "eff_rank": 155.2018280029297
+        },
+        {
+          "step": 8000,
+          "loss": 0.00419992208480835,
+          "val_acc_knn": 0.6729084849357605,
+          "test_acc_knn": 0.6465650200843811,
+          "eff_rank": 157.1226043701172
+        },
+        {
+          "step": 9000,
+          "loss": 0.004216313362121582,
+          "val_acc_knn": 0.6718010902404785,
+          "test_acc_knn": 0.6458654999732971,
+          "eff_rank": 157.78578186035156
+        }
+      ],
+      "bgrl": {
+        "val_acc_knn": 0.6722708940505981,
+        "test_acc_knn": 0.6454334259033203,
+        "eff_rank": 157.93685913085938,
+        "val_acc_linear": 0.681600034236908,
+        "test_acc_linear": 0.67403244972229,
+        "probe_weight_decay": 1e-06,
+        "probe_converged": true
+      },
+      "checkpoint": "bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "random_init": {
+        "val_acc_knn": 0.6886472702026367,
+        "test_acc_knn": 0.6682303547859192,
+        "eff_rank": 123.13726043701172,
+        "val_acc_linear": 0.7005268335342407,
+        "test_acc_linear": 0.6955126523971558,
+        "probe_weight_decay": 1e-05,
+        "probe_converged": true
+      },
+      "train_time_s": 23966.541390180588,
+      "final_loss": 0.00017410516738891602,
+      "curve": [
+        {
+          "step": 1000,
+          "loss": 0.0013694167137145996,
+          "val_acc_knn": 0.6387462615966797,
+          "test_acc_knn": 0.6144270896911621,
+          "eff_rank": 48.253318786621094
+        },
+        {
+          "step": 2000,
+          "loss": 0.0003795027732849121,
+          "val_acc_knn": 0.6341152191162109,
+          "test_acc_knn": 0.6067938208580017,
+          "eff_rank": 31.365909576416016
+        },
+        {
+          "step": 3000,
+          "loss": 0.0002524852752685547,
+          "val_acc_knn": 0.6392831802368164,
+          "test_acc_knn": 0.6101680994033813,
+          "eff_rank": 31.44727325439453
+        },
+        {
+          "step": 4000,
+          "loss": 0.00033277273178100586,
+          "val_acc_knn": 0.6416658163070679,
+          "test_acc_knn": 0.6207846999168396,
+          "eff_rank": 32.58364486694336
+        },
+        {
+          "step": 5000,
+          "loss": 0.00022655725479125977,
+          "val_acc_knn": 0.6492835283279419,
+          "test_acc_knn": 0.62199866771698,
+          "eff_rank": 35.27499008178711
+        },
+        {
+          "step": 6000,
+          "loss": 0.00021833181381225586,
+          "val_acc_knn": 0.6497533321380615,
+          "test_acc_knn": 0.6212579607963562,
+          "eff_rank": 35.59495544433594
+        },
+        {
+          "step": 7000,
+          "loss": 0.00019538402557373047,
+          "val_acc_knn": 0.6491157412528992,
+          "test_acc_knn": 0.6222043633460999,
+          "eff_rank": 37.42268371582031
+        },
+        {
+          "step": 8000,
+          "loss": 0.00022369623184204102,
+          "val_acc_knn": 0.6537803411483765,
+          "test_acc_knn": 0.6253935098648071,
+          "eff_rank": 39.88645553588867
+        },
+        {
+          "step": 9000,
+          "loss": 0.0002231597900390625,
+          "val_acc_knn": 0.6536796689033508,
+          "test_acc_knn": 0.6267514228820801,
+          "eff_rank": 39.336299896240234
+        }
+      ],
+      "bgrl": {
+        "val_acc_knn": 0.6541159152984619,
+        "test_acc_knn": 0.6253523230552673,
+        "eff_rank": 39.15110778808594,
+        "val_acc_linear": 0.6887479424476624,
+        "test_acc_linear": 0.6751023530960083,
+        "probe_weight_decay": 1e-06,
+        "probe_converged": true
+      },
+      "checkpoint": "bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "random_init": {
+        "val_acc_knn": 0.6876741051673889,
+        "test_acc_knn": 0.6674279570579529,
+        "eff_rank": 119.88350677490234,
+        "val_acc_linear": 0.7044867277145386,
+        "test_acc_linear": 0.6952245831489563,
+        "probe_weight_decay": 0.0001,
+        "probe_converged": true
+      },
+      "train_time_s": 14231.465445518494,
+      "final_loss": 0.00654226541519165,
+      "curve": [
+        {
+          "step": 1000,
+          "loss": 0.012432515621185303,
+          "val_acc_knn": 0.6754924654960632,
+          "test_acc_knn": 0.6549184322357178,
+          "eff_rank": 82.81002807617188
+        },
+        {
+          "step": 2000,
+          "loss": 0.00831460952758789,
+          "val_acc_knn": 0.6818684935569763,
+          "test_acc_knn": 0.6602267622947693,
+          "eff_rank": 105.3979263305664
+        },
+        {
+          "step": 3000,
+          "loss": 0.0066939592361450195,
+          "val_acc_knn": 0.6845867037773132,
+          "test_acc_knn": 0.6624282598495483,
+          "eff_rank": 120.96251678466797
+        },
+        {
+          "step": 4000,
+          "loss": 0.00613856315612793,
+          "val_acc_knn": 0.6881774663925171,
+          "test_acc_knn": 0.6630660891532898,
+          "eff_rank": 131.00389099121094
+        },
+        {
+          "step": 5000,
+          "loss": 0.005883336067199707,
+          "val_acc_knn": 0.6896539926528931,
+          "test_acc_knn": 0.6648972034454346,
+          "eff_rank": 137.6421661376953
+        },
+        {
+          "step": 6000,
+          "loss": 0.005986154079437256,
+          "val_acc_knn": 0.6910634636878967,
+          "test_acc_knn": 0.6666872501373291,
+          "eff_rank": 141.15029907226562
+        },
+        {
+          "step": 7000,
+          "loss": 0.006232738494873047,
+          "val_acc_knn": 0.6903923153877258,
+          "test_acc_knn": 0.6670987606048584,
+          "eff_rank": 143.32046508789062
+        },
+        {
+          "step": 8000,
+          "loss": 0.006453573703765869,
+          "val_acc_knn": 0.6899896264076233,
+          "test_acc_knn": 0.667654275894165,
+          "eff_rank": 143.74314880371094
+        },
+        {
+          "step": 9000,
+          "loss": 0.006524503231048584,
+          "val_acc_knn": 0.6898217797279358,
+          "test_acc_knn": 0.6678600311279297,
+          "eff_rank": 143.99464416503906
+        }
+      ],
+      "bgrl": {
+        "val_acc_knn": 0.69052654504776,
+        "test_acc_knn": 0.6680657863616943,
+        "eff_rank": 144.0872344970703,
+        "val_acc_linear": 0.6988824605941772,
+        "test_acc_linear": 0.688126266002655,
+        "probe_weight_decay": 1e-05,
+        "probe_converged": true
+      },
+      "checkpoint": "bgrl_seed2.pt"
+    }
+  ],
+  "provenance": {
+    "timestamp_utc": "20261011T080032Z",
+    "git": {
+      "commit": "acae6df186f09c645a18de78aa535120b2ca23d2",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}

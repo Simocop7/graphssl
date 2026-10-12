@@ -47,15 +47,17 @@ student.
 !!! note "Why the defaults differ from reference DINO"
     With reference DINO's values (EMA momentum `0.996` from the first step, teacher
     temperature `0.04`) GraphDINO's accuracy *drops* as full-batch training continues: in the
-    citation-network ablations (GIN, 5 seeds, linear probe) Cora goes 63.3 → 50.0 → 38.9 at
-    300 → 1000 → 3000 steps, ending below the untrained encoder. Diagnostics tie it to the
+    citation-network ablations (GIN, 5 seeds, linear probe) Cora goes 63.5 → 50.7 → 39.6 at
+    300 → 1000 → 3000 steps, ending below the untrained encoder (41.5). Diagnostics tie it to the
     teacher's output sharpening until every node gets a hard prototype assignment that no
     longer tracks the classes.
 
     The defaults are the setting that held up best there: a faster teacher
     (`ema_tau_base=0.9`, annealed to `ema_tau=0.996`) with a softer one (`teacher_temp=0.07`,
-    warmed up from `0.04`). Cora: 73.5 → 68.1 → 67.0. `norm_last_layer=True`, gradient
-    clipping and more prototypes did not help. Tables and caveats:
+    warmed up from `0.04`). Cora: 72.9 → 68.0 → 67.8. `norm_last_layer=True`, gradient
+    clipping and more prototypes did not help. With a GCN encoder the defaults help in long
+    runs (Cora 77.3 against 71.9 at 3000 steps) and make little difference at 300 steps. Tables
+    and caveats:
     [Benchmarks → Sensitivity](../benchmarks.md#sensitivity-budget-teacher-and-backbone).
 
     - The ablations always set `total_steps` to the length of the run. Without it the

@@ -147,65 +147,158 @@ their frozen embeddings. This is the accuracy of the head they were trained with
 
 ## Sensitivity: budget, teacher and backbone
 
-The benchmark fixes one protocol for every method. These ablations vary it for the
-teacher-student methods: 5 seeds, linear-probe test accuracy (%), same optimizer and
-augmentations as above. They are separate from the benchmark, whose rows are unchanged.
-The settings were compared on test accuracy, so the best row of a table is an optimistic
-estimate for that setting.
+The benchmark fixes one protocol for every method. These ablations vary it: 5 seeds (10 for
+the predictor), linear-probe test accuracy (%) unless stated, same optimizer, augmentations
+and probe as above. They are separate from the benchmark, whose rows are unchanged. The
+settings were compared on test accuracy, so the best row of a table is an optimistic
+estimate for that setting. The untrained encoders over the same 5 seeds, as the reference:
+GIN 41.52 ± 2.83 on Cora, 35.98 ± 1.93 on CiteSeer and 56.62 ± 1.78 on PubMed; GCN 73.02 ±
+1.33, 57.42 ± 1.42 and 73.86 ± 2.04.
 
-!!! warning "These ablations still use the 0.1.0 linear probe"
-    The numbers in this section were measured before the benchmark above was rerun: 5 seeds,
-    the 0.1.0 probe (100 Adam steps on raw features). Compare them with each other, not
-    with the tables above, whose linear column comes from the current probe. They have not
-    been rerun yet.
+!!! note "Rerun with the current probe"
+    Every number of this section was measured again on 2026-10-10/11 (commit `acae6df`,
+    clean tree) with the probe of the benchmark. The first version of the section used the
+    0.1.0 probe; those files are still in the ablation directories as history, and
+    `render_ablation.py` reports the latest run of each configuration. For a trained GIN
+    the linear column moved by at most 3 points, for a GCN by up to 9.6. What that changed
+    in the reading is said where it applies.
 
 ### GraphDINO: reference DINO values degrade with training
 
-GIN backbone, 300 / 1000 / 3000 full-batch steps:
+GIN backbone, 300 / 1000 / 3000 full-batch steps, best value of each column in bold:
 
 | GraphDINO setting | Cora 300 | Cora 1000 | Cora 3000 | CiteSeer 300 | CiteSeer 1000 | CiteSeer 3000 |
 |---|---|---|---|---|---|---|
-| Reference DINO values (benchmark row) | 63.34 ± 1.25 | 49.96 ± 1.13 | 38.88 ± 2.33 | 42.24 ± 2.39 | 33.32 ± 1.68 | 28.80 ± 1.25 |
-| `norm_last_layer=True` | — | — | 37.44 ± 1.76 | — | — | 27.90 ± 1.49 |
-| `teacher_temp=0.07` | — | — | 54.24 ± 2.31 | — | — | 36.94 ± 2.09 |
-| `teacher_temp=0.07` + `norm_last_layer=True` | 64.92 ± 2.34 | 65.08 ± 2.27 | 46.04 ± 2.23 | 44.54 ± 2.14 | 42.80 ± 1.86 | 32.44 ± 2.45 |
-| `ema_tau_base=0.9` | 66.52 ± 2.61 | 62.94 ± 3.00 | 62.86 ± 3.05 | 43.70 ± 3.36 | 43.98 ± 4.78 | 42.74 ± 4.27 |
-| **`ema_tau_base=0.9` + `teacher_temp=0.07` (library defaults)** | 73.50 ± 2.92 | 68.06 ± 2.74 | 66.98 ± 2.99 | 47.76 ± 4.56 | 45.64 ± 4.68 | 44.96 ± 3.80 |
+| Reference DINO values (benchmark row) | 63.52 ± 1.81 | 50.74 ± 1.53 | 39.60 ± 2.97 | 43.70 ± 2.53 | 34.06 ± 1.16 | 29.22 ± 1.04 |
+| `norm_last_layer=True` | — | — | 38.10 ± 1.15 | — | — | 28.12 ± 1.30 |
+| `teacher_temp=0.07` | — | — | 54.66 ± 2.68 | — | — | 37.94 ± 1.44 |
+| `teacher_temp=0.07` + `norm_last_layer=True` | 64.34 ± 1.76 | 66.20 ± 3.09 | 46.60 ± 3.46 | 44.76 ± 3.69 | **45.72 ± 2.21** | 32.02 ± 1.61 |
+| `ema_tau_base=0.9` | 65.78 ± 2.97 | 63.28 ± 4.17 | 61.56 ± 3.81 | 43.88 ± 2.75 | 43.82 ± 2.88 | 43.42 ± 2.60 |
+| `ema_tau_base=0.9` + `teacher_temp=0.07` (library defaults) | **72.94 ± 3.77** | **68.02 ± 2.06** | **67.82 ± 2.46** | **48.02 ± 4.56** | 45.06 ± 4.81 | **46.10 ± 4.21** |
 
 - With the reference values (EMA momentum 0.996 from the first step, teacher temperature
   0.04) accuracy drops as training continues. At 3000 steps it is at or below the untrained
-  encoder (40.40 on Cora, 36.14 on CiteSeer).
+  encoder (41.52 on Cora, 35.98 on CiteSeer).
 - A faster teacher (`ema_tau_base=0.9`, annealed to 0.996 over the run) removes most of the
   decline. A softer teacher (`teacher_temp=0.07`, warmed up from 0.04) only slows it on its
-  own. Together they are the best setting in every cell, including PubMed at 300 steps
-  (75.56 ± 0.92, against 70.68 ± 2.02 with the reference values and 73.76 ± 1.62 with the
-  faster teacher alone). `norm_last_layer` has no measurable effect.
+  own. `norm_last_layer` alone has no measurable effect.
+- Together, the faster and the softer teacher are the best setting in five of the six
+  columns and tied in the sixth (CiteSeer at 1000 steps: 45.06 ± 4.81 against 45.72 ±
+  2.21). The same on PubMed at 300 steps: 75.08 ± 0.94, against 70.50 ± 2.20 with the
+  reference values and 72.88 ± 2.16 with the faster teacher alone.
 - These two values are the **library defaults** (`GraphDINOConfig.ema_tau_base`,
   `HeadConfig.teacher_temp`). The benchmark row keeps the reference values, like every other
   untuned row of the table.
-- What remains: a milder decline from 300 to 3000 steps (Cora 73.50 → 66.98) and a larger
-  spread across seeds (std up to 4.7 on CiteSeer).
+
+The same settings with the GCN backbone, at 300 and 3000 steps:
+
+| GraphDINO setting | Cora 300 | Cora 3000 | CiteSeer 300 | CiteSeer 3000 |
+|---|---|---|---|---|
+| Reference DINO values (benchmark row) | 77.18 ± 1.14 | 71.86 ± 3.31 | 60.54 ± 1.21 | 47.84 ± 1.43 |
+| `teacher_temp=0.07` + `norm_last_layer=True` | 77.52 ± 0.74 | 73.12 ± 1.99 | **62.36 ± 0.80** | 53.04 ± 1.76 |
+| `ema_tau_base=0.9` | 75.80 ± 2.63 | 74.08 ± 1.53 | 55.66 ± 2.94 | 51.40 ± 2.76 |
+| `ema_tau_base=0.9` + `teacher_temp=0.07` (library defaults) | **79.48 ± 1.69** | **77.28 ± 1.49** | 59.28 ± 2.90 | **55.04 ± 4.00** |
+
+- **With GCN the defaults pay off in long runs, not in short ones.** At 3000 steps they are
+  the best setting on both datasets, 5.4 and 7.2 points above the reference values. At 300
+  steps they gain 2.3 points on Cora and nothing on CiteSeer, where the reference values
+  (60.54 ± 1.21) do as well as the defaults (59.28 ± 2.90) and the softer teacher with
+  `norm_last_layer` does better (62.36 ± 0.80).
+- **Against the untrained GCN, GraphDINO adds little.** On CiteSeer three of the four
+  settings are 1.9 to 4.9 points above it at 300 steps and all four are below it at 3000.
+  On Cora the defaults are still 4.3 points above it at 3000 steps; the reference values
+  are 1.2 below.
+- What remains with the defaults: accuracy still declines from 300 to 3000 steps (Cora 72.94
+  → 67.82 with GIN and 79.48 → 77.28 with GCN, CiteSeer 59.28 → 55.04 with GCN), and the
+  spread across seeds is large (std up to 4.8 on CiteSeer).
 
 ### Training budget
 
-A longer budget alone doesn't change the picture with GIN. From 300 to 1000 to 3000 steps
-Barlow Twins is flat on Cora (78.04 / 78.44 / 77.62) and BGRL improves but stays below
-(64.50 / 71.24 / 73.48). GraphDINO with the reference values declines, as shown above.
+From 300 to 1000 to 3000 steps, with the same constant learning rate:
+
+| Method, encoder | Cora 300 | Cora 1000 | Cora 3000 | CiteSeer 300 | CiteSeer 1000 | CiteSeer 3000 |
+|---|---|---|---|---|---|---|
+| Barlow Twins, GIN | 79.20 ± 0.98 | 80.06 ± 1.53 | 78.12 ± 1.53 | 65.30 ± 1.40 | 65.10 ± 2.02 | 64.72 ± 2.05 |
+| BGRL, GIN | 65.42 ± 2.06 | 70.70 ± 2.00 | 72.86 ± 0.83 | 46.38 ± 2.65 | 50.80 ± 3.19 | 49.26 ± 1.88 |
+| BGRL, GIN, EMA from 0.9 | 64.78 ± 4.44 | 74.88 ± 1.01 | 67.70 ± 3.50 | 49.76 ± 3.11 | 55.28 ± 2.06 | 50.58 ± 3.01 |
+| Barlow Twins, GCN | 81.86 ± 1.23 | — | 79.30 ± 0.65 | 68.92 ± 1.43 | — | 66.92 ± 1.19 |
+| BGRL, GCN | 81.02 ± 1.41 | — | 76.98 ± 1.01 | 67.44 ± 0.63 | — | 60.00 ± 1.59 |
+
+- **A longer budget helps only BGRL with GIN**, the row that starts lowest: +7.4 points on
+  Cora at 3000 steps, +4.4 on CiteSeer at 1000 and +2.9 at 3000. It stays below Barlow
+  Twins (72.86 against 78.12 on Cora, 49.26 against 64.72 on CiteSeer). Its effective rank
+  grows from 9 to 36 of 256 dimensions on Cora.
+- **Barlow Twins gains nothing from it.** With GIN its linear probe stays within 2 points,
+  with no trend, while its kNN accuracy on Cora falls from 76.02 to 73.30 to 69.82. With GCN
+  it loses 2.6 points on Cora and 2.0 on CiteSeer between 300 and 3000 steps.
+- **With GCN, BGRL loses more**: 4.0 points on Cora and 7.4 on CiteSeer, where it ends 2.6
+  points above the untrained GCN. Its effective rank does not fall (172 → 186 on Cora, 190 →
+  181 on CiteSeer), so this is not a dimensional collapse.
+- **A faster teacher** (EMA from 0.9 instead of 0.99) makes BGRL better at 1000 steps and
+  worse at 3000. For AFGRL on Cora it gives 73.78 ± 1.30 against 71.50 ± 1.78 with GIN at
+  300 steps, and no difference with GCN (79.10 against 79.24).
+- GraphDINO with the reference values declines, as shown above.
+
+Among the methods tested here (Barlow Twins, BGRL, GraphDINO, and AFGRL up to 1000 steps on
+Cora), more steps improve only BGRL with GIN. Why accuracy falls with GCN is not identified.
+
+### Predictor of BGRL and AFGRL
+
+The default predictor of BGRL and AFGRL is Linear → BatchNorm → ReLU → Linear. The public
+implementation of BGRL uses Linear → PReLU → Linear (`pred_norm: none`,
+`pred_activation: prelu`). The benchmark rows (*default*) against the same runs with that
+predictor (*reference*), 10 seeds each:
+
+| Encoder | Method | Predictor | Cora linear | Cora kNN | CiteSeer linear | CiteSeer kNN | PubMed linear | PubMed kNN |
+|---|---|---|---|---|---|---|---|---|
+| GCN | BGRL | default | 80.82 ± 1.23 | 74.71 ± 1.19 | 67.05 ± 0.89 | 60.89 ± 1.58 | 79.85 ± 1.10 | 71.93 ± 1.31 |
+| GCN | BGRL | reference | 81.30 ± 1.42 | 74.21 ± 1.29 | 66.57 ± 0.93 | 60.08 ± 2.22 | 79.71 ± 0.88 | 72.94 ± 1.42 |
+| GCN | AFGRL | default | 79.18 ± 1.26 | 72.90 ± 1.73 | 62.63 ± 2.01 | 55.29 ± 1.89 | 78.43 ± 1.00 | 71.02 ± 1.15 |
+| GCN | AFGRL | reference | 78.91 ± 0.94 | 70.98 ± 1.29 | 61.28 ± 1.60 | 53.98 ± 2.33 | 78.76 ± 1.00 | 72.94 ± 1.55 |
+| GIN | BGRL | default | 63.77 ± 1.60 | 59.48 ± 3.75 | 47.68 ± 2.30 | 42.90 ± 2.21 | 68.52 ± 2.57 | 66.85 ± 2.75 |
+| GIN | BGRL | reference | 63.28 ± 2.92 | 49.58 ± 2.85 | 53.32 ± 1.80 | 36.97 ± 3.73 | 64.92 ± 2.68 | 56.00 ± 4.15 |
+| GIN | AFGRL | default | 70.75 ± 1.75 | 64.80 ± 2.13 | 49.32 ± 3.02 | 44.20 ± 3.61 | 74.51 ± 1.11 | 70.63 ± 2.11 |
+| GIN | AFGRL | reference | 70.36 ± 3.03 | 67.83 ± 3.13 | 53.61 ± 2.63 | 48.24 ± 2.93 | 74.41 ± 1.38 | 68.48 ± 2.94 |
+
+- **With GCN the predictor makes no difference**: the linear probe changes by at most 1.4
+  points, less than one standard deviation.
+- **With GIN the two metrics disagree.** The linear probe gains on CiteSeer (BGRL +5.6,
+  AFGRL +4.3), loses on PubMed for BGRL (−3.6) and is unchanged elsewhere. BGRL's kNN
+  accuracy falls on all three datasets, by 5.9 to 10.9 points and in every one of the 30
+  seeds; AFGRL's goes up on Cora and CiteSeer (+3.0, +4.0) and down on PubMed (−2.2). The
+  effective rank is lower with the reference predictor in every GIN cell: AFGRL 48 / 42 /
+  41 → 21 / 19 / 12, BGRL 9 / 8 / 8 → 4 / 6 / 6 (Cora / CiteSeer / PubMed).
+- **The default stays as it is.** With these batch-normalized encoders the reference
+  predictor is no better with GCN, and with GIN it lowers the effective rank and, for BGRL,
+  kNN accuracy. With a layer-normalized encoder it is the other way round: on ogbn-arxiv,
+  with the protocol of the BGRL paper, the default predictor leaves BGRL below the
+  untrained encoder (see
+  [the ogbn-arxiv section](#the-predictor-decides-the-outcome)). Set `pred_norm: none`
+  there.
+
+The GIN benchmark rows are from commit `49e92ee` and the reference-predictor runs from
+`acae6df`; between the two, the GIN encoder and the default predictor did not change.
 
 ### Backbone
 
 The effect of the backbone used to be an ablation of this section. It is now part of the
-benchmark: see the GCN and GIN tables above, each with its untrained encoder, on 10 seeds
-and with the current probe. The earlier 5-seed table is superseded: with the 0.1.0 probe it
-had BGRL + GCN at 57.8 on CiteSeer, barely above the untrained GCN, where the current probe
-gives 67.1 against 57.7.
+benchmark: see the GCN and GIN tables above, each with its untrained encoder, on 10 seeds.
+The first version of that ablation, with the 0.1.0 probe, had BGRL + GCN at 57.8 on
+CiteSeer, barely above the untrained GCN; with the current probe the same five seeds give
+67.44 ± 0.63 against 57.42 ± 1.42.
 
 ```bash
 bash benchmarks/ablation_teacher_student.sh    # budget, EMA momentum, GCN for BGRL / Barlow Twins
 bash benchmarks/ablation_graphdino.sh          # GraphDINO: teacher temperature, norm_last_layer
 bash benchmarks/ablation_graphdino_ema.sh      # GraphDINO: faster teacher, PubMed, untrained encoders
+for E in gcn gin; do                           # BGRL / AFGRL with the reference predictor
+  python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --seeds 10 \
+      --model bgrl afgrl --encoder $E --set pred_norm=none --set pred_activation=prelu \
+      --out-dir benchmarks/ablations/predictor
+done
 python benchmarks/render_ablation.py benchmarks/ablations/teacher_student
 python benchmarks/render_ablation.py benchmarks/ablations/graphdino_stability
+python benchmarks/render_ablation.py benchmarks/ablations/predictor
 ```
 
 ## Reproduce
@@ -253,6 +346,99 @@ shared untuned protocol at 300 steps
 differences). With GIN the same protocol gives 63.77 / 47.68 / 68.52: most of the distance
 from the paper in the first version of this page was the backbone.
 
+Because the protocols differ, this comparison cannot tell a difference of configuration from
+a defect of the implementation. The next section can.
+
+## ogbn-arxiv: BGRL with the protocol of its paper
+
+The tables above compare the objectives under one shared protocol. This section asks a
+different question: given the configuration of its own paper, does the library's BGRL reach
+the number published there? `benchmarks/reproduce_bgrl_arxiv.py` follows Thakoor et al.
+(ICLR 2022, Table 8 and Appendix F) on ogbn-arxiv (169,343 nodes, 40 classes, standard
+split):
+
+| Setting | Value |
+|---|---|
+| Graph, training | symmetrized, full-graph, 10,000 steps |
+| Encoder | GCN, 3 layers of 256 units, layer norm, weight standardization, PReLU |
+| Predictor | Linear → PReLU → Linear, 256 hidden units (`pred_norm: none`, `pred_activation: prelu`) |
+| Augmentation | `edge_drop` p=0.6 in both views, no feature masking |
+| Optimizer | AdamW, weight decay `1e-5`, lr `1e-2` with 1,000 warm-up steps, then cosine decay to 0 |
+| EMA | cosine schedule 0.99 → 1.0 |
+| Evaluation | frozen embeddings → the same linear probe as above (`LogRegEvaluator`) and kNN (k=5, cosine) |
+| Seeds | 3 (20 in the paper); mean ± sample std |
+| Hardware | NVIDIA A2 (16 GB), 3.9 to 8.1 h per seed depending on how the GPU was shared |
+
+Linear-probe accuracy (%). *Untrained encoder* is the same encoder at initialization
+("Random-Init" in the paper); the last row is the difference between the two, per seed:
+
+| | Validation | Test | Paper validation | Paper test |
+|---|---|---|---|---|
+| Untrained encoder | 70.23 ± 0.18 | 69.53 ± 0.03 | 69.90 ± 0.11 | 68.94 ± 0.15 |
+| BGRL | 72.31 ± 0.14 | 71.32 ± 0.10 | 72.53 ± 0.09 | 71.64 ± 0.12 |
+| BGRL − untrained | +2.08 ± 0.30 | +1.79 ± 0.08 | +2.63 | +2.70 |
+
+- **The untrained encoder is within 0.33 / 0.59 points of the paper's** (validation / test).
+  This checks the GCN encoder and the evaluation independently of any training.
+- **Trained BGRL is 0.22 / 0.32 below the paper.** The three seeds agree (test 71.22 / 71.42
+  / 71.33), so both differences are small but larger than the seed-to-seed standard
+  deviation: close to the paper, not an exact match.
+- **The gain over the untrained encoder is +2.08 / +1.79, against +2.63 / +2.70 in the
+  paper**: smaller because our untrained encoder scores higher than the paper's and our
+  trained one lower.
+- **kNN agrees with the probe.** With no fitted classifier, test accuracy goes from 66.76 ±
+  0.06 to 68.38 ± 0.18. Most of it comes early: for seed 0, 66.70 untrained, 67.76 after
+  1,000 steps, 68.17 after 2,000, then between 68.1 and 68.3 to the end. The effective rank
+  of the embeddings grows from 120 to 168 of 256 dimensions.
+- **What differs from the paper.** The evaluation: the paper trains a linear classifier for
+  100 AdamW steps on L2-normalized embeddings, here the library probe is fitted to
+  convergence (hence the untrained-encoder row and the gain, which depend less on the
+  classifier). The number of seeds. And the layer normalization, applied per node here and
+  over the whole graph in the public PyTorch implementation of BGRL (`nerdslab/bgrl`), from
+  which the predictor's layout is taken.
+- **One method, one dataset.** The other six objectives have not been run with the
+  protocols of their papers yet.
+
+### The predictor decides the outcome
+
+The run above uses the predictor of the public BGRL implementation. The default predictor
+of BGRL and AFGRL in this library is Linear → BatchNorm → ReLU → Linear. The same protocol,
+seeds and code with it (`--predictor library`), linear-probe accuracy and gain over the
+untrained encoder (%), then kNN test accuracy, and the effective rank and final training
+loss of each seed:
+
+| Predictor | Validation | Test | Gain, validation | Gain, test | kNN test | Rank | Final loss |
+|---|---|---|---|---|---|---|---|
+| Linear → PReLU → Linear (reference implementation) | 72.31 ± 0.14 | 71.32 ± 0.10 | +2.08 ± 0.30 | +1.79 ± 0.08 | 68.38 ± 0.18 | 167 / 169 / 167 | 0.2103 / 0.2080 / 0.2084 |
+| Linear → BatchNorm → ReLU → Linear (library default) | 68.97 ± 0.87 | 67.91 ± 0.78 | −1.26 ± 0.75 | −1.61 ± 0.78 | 64.63 ± 2.14 | 158 / 39 / 144 | 0.0042 / 0.0002 / 0.0065 |
+
+- **With the default predictor BGRL ends below the untrained encoder in all three seeds**:
+  test accuracy 67.40 / 67.51 / 68.81 against 69.5 untrained, and 3.4 points below the
+  reference predictor on average. kNN agrees: 64.63 against 66.75 untrained.
+- **The runs also differ from each other.** The training loss falls to almost zero, where
+  it settles at 0.21 with the reference predictor. One seed loses most of its effective
+  rank (39 of 256) and 4.3 points of kNN accuracy; another keeps the kNN accuracy of the
+  untrained encoder and loses 0.7 points of linear accuracy. The standard deviation over
+  seeds is 0.78, against 0.10.
+- **The mechanism is not identified.** What is measured is an interaction: the failure
+  appears with the layer-normalized encoder of this protocol, while with the
+  batch-normalized encoders of the citation benchmark the reference predictor brings no
+  overall gain (see [Predictor of BGRL and AFGRL](#predictor-of-bgrl-and-afgrl)). The
+  library default is therefore unchanged. With a layer-normalized encoder, set
+  `pred_norm: none`.
+
+```bash
+python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 3
+python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 3 --predictor library \
+    --out-dir benchmarks/reproductions/bgrl_ogbn_arxiv_library_predictor
+```
+
+The results are in `benchmarks/reproductions/bgrl_ogbn_arxiv/` (reference predictor) and
+`benchmarks/reproductions/bgrl_ogbn_arxiv_library_predictor/` (default predictor): one JSON
+each with the per-seed metrics and the kNN / effective-rank curve, both from commit
+`acae6df` on a clean tree. The script also saves the trained model of every seed next to
+the JSON (`bgrl_seed<N>.pt`, not committed).
+
 ## Molecules: ZINC (graph-level regression)
 
 `benchmarks/run_zinc.py` runs the same seven objectives on ZINC-12k (10k / 1k / 1k
@@ -296,8 +482,6 @@ Results are in `benchmarks/zinc/` (one JSON per model and `summary.md`, commit `
 
 ## In progress
 
-- **ogbn-arxiv**: `benchmarks/reproduce_bgrl_arxiv.py` runs BGRL with the protocol of its
-  paper (full-graph, 10,000 steps). Results will be added here once the three-seed run from
-  committed code is complete.
-- The sensitivity ablations above have to be rerun with the current probe.
+- ZINC over 10 seeds instead of 3, and GraphDINO with the library defaults over 10 seeds in
+  the benchmark protocol (both backbones, three datasets).
 - OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are not wired up yet.

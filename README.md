@@ -164,7 +164,15 @@ python benchmarks/run_benchmark.py $D --model all supervised supervised_reg --en
 python benchmarks/render_tables.py --summary   # rebuilds these tables from benchmarks/results/*.json
 ```
 
-This is a deliberately untuned configuration — no per-method or per-dataset hyperparameter search — so it compares objectives at equal budget rather than reproducing each paper's best reported number. kNN results, the graph-level benchmark on ZINC (frozen probe and fine-tuning), per-seed metrics and full provenance (git commit, package versions) are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`. A reproduction of BGRL on ogbn-arxiv with its paper's protocol is running; OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are next.
+This is a deliberately untuned configuration — no per-method or per-dataset hyperparameter search — so it compares objectives at equal budget rather than reproducing each paper's best reported number. kNN results, the graph-level benchmark on ZINC (frozen probe and fine-tuning), per-seed metrics and full provenance (git commit, package versions) are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`. OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are next.
+
+### Reproduction: BGRL on ogbn-arxiv
+
+Run with the protocol of its own paper (Thakoor et al., ICLR 2022: full-graph training for 10,000 steps, 3-layer GCN with layer normalization and weight standardization) instead of the shared one, BGRL reaches 72.31 ± 0.14 validation / 71.32 ± 0.10 test accuracy over 3 seeds, against 72.53 ± 0.09 / 71.64 ± 0.12 in the paper (20 seeds). The same encoder left untrained gives 70.23 ± 0.18 / 69.53 ± 0.03 (paper: 69.90 ± 0.11 / 68.94 ± 0.15). Close to the paper, not an exact match. This is with the predictor of the public BGRL implementation (`pred_norm: none`, `pred_activation: prelu`); with the library's default predictor, which has a batch normalization, the same training ends 1.6 points *below* the untrained encoder (67.91 ± 0.78 test), so disable it when the encoder uses layer normalization. The protocol, the differences that remain and the predictor comparison are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/#ogbn-arxiv-bgrl-with-the-protocol-of-its-paper).
+
+```bash
+python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 3   # about 4 h per seed on an NVIDIA A2
+```
 
 ---
 

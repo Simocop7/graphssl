@@ -37,6 +37,20 @@ The default predictor is Linear → BatchNorm → ReLU → Linear. `pred_norm: "
 `pred_activation: "prelu"` gives Linear → PReLU → Linear, the predictor of the authors'
 reference implementation.
 
+!!! warning "With a layer-normalized encoder, turn the predictor's normalization off"
+    Which predictor works depends on the normalization of the encoder.
+
+    - **Layer-normalized encoder** (the ogbn-arxiv configuration of the BGRL paper): with
+      the default predictor BGRL ends *below* the untrained encoder, 67.9 against 69.5 test
+      accuracy over 3 seeds; with `pred_norm: "none"` it reaches 71.3 (paper: 71.6).
+    - **Batch-normalized encoder** (the citation benchmark): the two predictors are
+      equivalent with GCN. With GIN, removing the normalization lowers the effective rank
+      and BGRL's kNN accuracy by 6 to 11 points.
+
+    The cause is not identified. Numbers:
+    [Benchmarks → Predictor](../benchmarks.md#predictor-of-bgrl-and-afgrl) and
+    [ogbn-arxiv](../benchmarks.md#the-predictor-decides-the-outcome).
+
 ## Config example
 
 ```python

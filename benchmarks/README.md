@@ -39,7 +39,8 @@ teacher-student models it also evaluates the **other encoder** of the same train
 
 Ablations must not land in `results/`, or `render_tables.py` would report them as the
 benchmark. Point `--out-dir` elsewhere and render them with `render_ablation.py`, which keeps
-one row per (model, encoder, steps, starting EMA momentum):
+one row per (model, encoder, steps, starting EMA momentum, `--set` overrides) and, when a
+configuration was run more than once, shows its latest run:
 
 ```bash
 python benchmarks/run_benchmark.py --dataset Cora --model bgrl --epochs 1000 --ema-tau 0.9 \
@@ -67,7 +68,8 @@ python benchmarks/run_benchmark.py --dataset Cora --model graphdino \
 Keys are checked against the model's config dataclasses, so a typo stops the run instead of
 being silently ignored; the overrides are saved under `hyperparameters.overrides` and shown
 as a column by `render_ablation.py`. `ablation_graphdino.sh` uses them to test GraphDINO's
-stability levers (~3.5 h on an A2). `ablation_graphdino_ema.sh` is its follow-up (~2 h 45 min):
+stability levers (2.5 to 3.5 h on an A2, depending on how the GPU is shared).
+`ablation_graphdino_ema.sh` is its follow-up (1.5 to 2 h 45 min):
 the faster EMA teacher (`--ema-tau 0.9`) with GCN, on PubMed and combined with the softer
 teacher. Both write to `ablations/graphdino_stability`.
 
@@ -78,11 +80,26 @@ learned more.
 
 `ablation_teacher_student.sh` is the grid behind the teacher-student question (why BGRL,
 AFGRL and GraphDINO trail the top group): budget 300/1000/3000 steps × default vs faster
-EMA teacher, a Barlow Twins control, BGRL with GCN, and AFGRL on Cora. About 4 h on an A2:
+EMA teacher, a Barlow Twins control, BGRL with GCN, and AFGRL on Cora. Between 4 and 7 h on
+an A2, depending on how the GPU is shared:
 
 ```bash
 bash benchmarks/ablation_teacher_student.sh 2>&1 | tee -a ablation.log
 python benchmarks/render_ablation.py benchmarks/ablations/teacher_student
+```
+
+`ablations/predictor` holds BGRL and AFGRL with the predictor of the public BGRL
+implementation (Linear → PReLU → Linear) instead of the library's default (Linear →
+BatchNorm → ReLU → Linear): the benchmark protocol, 10 seeds, both backbones. Its baseline is
+the benchmark itself, i.e. the BGRL and AFGRL rows of `results/`, same seeds:
+
+```bash
+for E in gcn gin; do
+  python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --seeds 10 \
+      --model bgrl afgrl --encoder $E --set pred_norm=none --set pred_activation=prelu \
+      --out-dir benchmarks/ablations/predictor
+done
+python benchmarks/render_ablation.py benchmarks/ablations/predictor
 ```
 
 ## Molecules (ZINC)
@@ -121,6 +138,20 @@ implementation's (Linear → PReLU → Linear); `--predictor library` uses the l
 ```bash
 python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 5 2>&1 | tee -a reproduce_bgrl.log
 ```
+
+The committed run (2026-10-10, commit `acae6df`, 3 seeds, reference predictor) gives 72.31 ±
+0.14 validation / 71.32 ± 0.10 test accuracy against 72.53 ± 0.09 / 71.64 ± 0.12 in the
+paper, and 70.23 ± 0.18 / 69.53 ± 0.03 for the untrained encoder (paper: 69.90 ± 0.11 /
+68.94 ± 0.15). The table and its reading are in
+[`docs/benchmarks.md`](../docs/benchmarks.md). The script prints that table at the end of a
+run; the trained model of every seed is saved next to the JSON (`bgrl_seed<N>.pt`,
+git-ignored).
+
+The same run with the library's default predictor (`--predictor library --out-dir
+benchmarks/reproductions/bgrl_ogbn_arxiv_library_predictor`, same commit and seeds) ends
+below the untrained encoder: 68.97 ± 0.87 / 67.91 ± 0.78, against 70.24 ± 0.20 / 69.52 ±
+0.03 untrained. With the layer-normalized encoder of this protocol the predictor must not
+have a batch normalization.
 
 ## Stress test (ogbn-arxiv)
 
@@ -174,8 +205,11 @@ commit `49e92ee`, GCN at `acae6df`). The untrained encoders are in
 history. `ablations/gcn_bn_momentum_0.01` keeps the GCN runs made before the encoder's
 BatchNorm momentum went from 0.01 to 0.1: same training, but the statistics used at
 evaluation had not converged after 300 steps, so their kNN, effective-rank and
-supervised-head numbers are too low (the linear probe is within ±0.5). The two ablation
-directories `teacher_student` and `graphdino_stability` still hold 0.1.0-probe results.
+supervised-head numbers are too low (the linear probe is within ±0.5). The ablation
+directories `teacher_student` and `graphdino_stability` hold two runs of every
+configuration: the first with the 0.1.0 probe, and the rerun of 2026-10-10/11 with the
+current one (commit `acae6df`), which is the one `render_ablation.py` shows.
+`ablations/predictor` is from the same commit.
 
 Budget for a full sweep of one backbone: about 3.5 h on an NVIDIA A2. Most models take
 ~10–60 s per seed, but on PubMed GraphCL (O(N²) NT-Xent) takes ~7–10 min per seed and AFGRL
@@ -184,7 +218,7 @@ Budget for a full sweep of one backbone: about 3.5 h on an NVIDIA A2. Most model
 **Supervised references** (not part of `all`; `--model all supervised supervised_reg` runs
 everything): both train the same encoder full-batch on the public split's `train_mask` only.
 - `--model supervised` keeps the shared SSL protocol unchanged (no dropout, AdamW, last
-  checkpoint). With 120–140 labels and no regularization it overfits, so it understates what
+  checkpoint). With 60–140 labels and no regularization it overfits, so it understates what
   the labels are worth.
 - `--model supervised_reg` uses a recipe adapted from Kipf & Welling: dropout 0.5, Adam lr
   0.01 with L2 5e-4, checkpoint with the best validation accuracy. Its recipe is recorded in
@@ -200,6 +234,6 @@ the trained head itself is saved as `test_acc_head`.
 - `afgrl` is skipped automatically when `faiss-cpu` isn't installed (same
   behavior as `tests/test_afgrl.py`).
 - `run_benchmark.py` covers the Planetoid datasets (Cora/CiteSeer/PubMed) only. ZINC has its
-  own runner (`run_zinc.py`), ogbn-arxiv a stress test and a reproduction script (below).
+  own runner (`run_zinc.py`), ogbn-arxiv a stress test and a reproduction script (above).
   OGB graph-level datasets (ogbg-molhiv, ogbg-molpcba) are not wired up.
-- The sensitivity ablations have not been rerun with the current linear probe.
+- The committed ogbn-arxiv stress test still has the 0.1.0 probe in its linear column.

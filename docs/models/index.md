@@ -17,9 +17,9 @@ for why that boundary is enforced.
 | Situation | Model | Why |
 |---|---|---|
 | Want a simple baseline, minimal code | [DGI](dgi.md) | One discriminator, no augmentation to tune |
-| Need explicit negatives / large batches | [GraphCL](graphcl.md) | Classic contrastive, NT-Xent |
+| Want the most robust default on node classification | [GraphCL](graphcl.md) | Classic contrastive, NT-Xent. Within 0.5 points of the best linear-probe accuracy in all six columns of the [citation benchmark](../benchmarks.md) (GCN and GIN); cost quadratic in the number of nodes or graphs per batch |
 | Want to avoid choosing/tuning structural augmentations | [AFGRL](afgrl.md) | Mines positives from topology (kNN ∩ adjacency + k-means), no augmentation |
-| Want the most stable/robust default | [BGRL](bgrl.md) | Teacher-student, no negatives, generally less sensitive to hyperparameters than GraphCL |
+| Need cost linear in the batch, no negatives | [BGRL](bgrl.md) | Teacher-student. Close to its paper on ogbn-arxiv and to the best methods with a GCN encoder; sensitive to the backbone (far behind with GIN) and to the predictor's normalization |
 | Need embeddings that are decorrelated/non-collapsing by construction | [VICReg](vicreg.md) / [Barlow Twins](barlow-twins.md) | Loss terms explicitly penalize redundancy across dimensions |
 | Exploring something closer to ViT-style self-distillation | [GraphDINO](graphdino.md) | Prototypes + teacher temperature warmup |
 | Have labels and want a supervised reference point | [Supervised](supervised.md) | Same API, direct CrossEntropyLoss |
