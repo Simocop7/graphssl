@@ -112,8 +112,8 @@ supervised` trains the encoder end to end on the labels as a reference.
 
 ```bash
 python benchmarks/run_zinc.py --model bgrl --epochs 2 --seeds 1 --out-dir benchmarks/zinc/smoke
-python -u benchmarks/run_zinc.py --model all supervised --seeds 3 --finetune-epochs 100 \
-    2>&1 | tee -a zinc.log
+python -u benchmarks/run_zinc.py --model all supervised --seeds 10 --finetune-epochs 100 \
+    --out-dir benchmarks/zinc_seeds10 2>&1 | tee -a zinc.log
 ```
 
 `--finetune-epochs N` adds the second evaluation: after pre-training, the encoder and a new
@@ -122,7 +122,11 @@ the supervised row, the same training from a random initialisation.
 
 One shared, untuned protocol (GINE with 4 layers of 128 units, 100 epochs, 20% of the atoms
 masked and 20% of the bonds dropped): like the citation benchmark it compares the objectives
-at equal budget. Results go to `benchmarks/zinc/` (one JSON per model and `summary.md`).
+at equal budget. Results go to `--out-dir` (one JSON per model and `summary.md`). The
+committed results are the 10-seed run in `benchmarks/zinc_seeds10/` (commit `acae6df`, about
+13 hours on an NVIDIA A2); `benchmarks/zinc/` keeps the first run, with 3 seeds. Use 10: with
+3 the standard deviations of the fine-tuned column came out two to three and a half times
+smaller, and the same seed does not give the same number twice (see `../docs/benchmarks.md`).
 
 ## Reproductions
 
@@ -177,11 +181,41 @@ the linear probe before and after it, the untrained encoder as reference), next 
 `summary.md` table. The linear probe is fitted only twice per model because one fit takes
 minutes on 91k training nodes; `--skip-linear-probe` drops it for smoke tests.
 
-The committed run (2026-10-06, commit `aaa280f`) predates the current linear probe: its
-`Linear` columns come from the 0.1.0 probe, which on that graph gives 45–54% on the same
-embeddings depending on its random seed. Read its kNN column; the linear numbers cannot rank
-the methods. Its `ok` status means that a model ran to the end, not that it learned: DGI is
-`ok` with embeddings worse than the untrained encoder's.
+The committed run (2026-10-12, commit `acae6df`, 100 epochs, one seed) is in
+`benchmarks/stress/ogbn_arxiv_20261012/`. Test accuracy (%); the untrained GIN-2L encoder
+scores 55.2 with the linear probe and 53.3 with kNN:
+
+| Model | Status | Epochs | s/epoch | Peak GPU (GiB) | Untrained linear | Linear | kNN | Rank |
+|---|---|---|---|---|---|---|---|---|
+| dgi | ok | 100 | 26.8 | 0.93 | 55.22 | 44.15 | 52.87 | 1.5 |
+| graphcl | ok | 100 | 27.4 | 0.90 | 55.20 | 63.64 | 54.33 | 38.3 |
+| vicreg | ok | 100 | 27.4 | 0.89 | 55.17 | 62.03 | 54.17 | 36.8 |
+| barlow_twins | ok | 100 | 27.4 | 0.89 | 55.20 | 62.72 | 54.38 | 68.6 |
+| bgrl | ok | 100 | 34.8 | 1.10 | 55.19 | 63.40 | 59.87 | 49.2 |
+| afgrl | ok | 100 | 138.1 | 2.07 | 55.17 | 58.37 | 58.71 | 23.1 |
+| graphdino | ok | 100 | 18.1 | 1.08 | 55.22 | 62.44 | 56.18 | 19.0 |
+
+- **Every model runs to the end.** Mini-batch extraction matches the full-graph pass
+  (relative difference at most 1.2e-06), every probe converges, and no model needs more
+  than 2.1 GiB of GPU memory. A model takes 0.6 to 1.4 hours on an NVIDIA A2, AFGRL 4.1:
+  it mines its positives over every node of each batch.
+- **`ok` means that a model ran, not that it learned.** DGI is `ok` and ends 11 points
+  below the untrained encoder with the linear probe. Its kNN accuracy peaks at epoch 20
+  (58.0) and declines to 52.9, with the effective rank down to 1.5. The cause is not
+  identified; in mini-batch training stop DGI early.
+- **The two metrics disagree.** With the linear probe GraphCL, BGRL, Barlow Twins, GraphDINO
+  and VICReg are within 1.6 points of each other (62.0–63.6), 7 to 8 above the untrained
+  encoder. With kNN only BGRL (59.9) and AFGRL (58.7) gain much; GraphCL, VICReg and Barlow
+  Twins end at 54.2–54.4, one point above the untrained encoder, and Barlow Twins was at
+  58.1 after 10 epochs.
+- One seed and no tuning: this is a robustness test. An untrained 3-layer GCN reaches 69.5%
+  on the same graph (see Reproductions), above every row here: the backbone sets the level.
+
+Each trained model is saved next to its JSON (`<model>.pt`, not committed; `load_model()`
+reads it). The first run (2026-10-06, commit `aaa280f`) stays in
+`benchmarks/stress/ogbn_arxiv/` as history: its `Linear` columns come from the 0.1.0 probe,
+which on that graph gives 45–54% on the same embeddings depending on its random seed, and
+its DGI still encoded the real and the corrupted graph in two passes (kNN 33.7).
 
 This intentionally does not replace `examples/*.py`, which stay as minimal
 single-file demos for learning the API — this is for producing citable,
@@ -209,7 +243,9 @@ supervised-head numbers are too low (the linear probe is within ±0.5). The abla
 directories `teacher_student` and `graphdino_stability` hold two runs of every
 configuration: the first with the 0.1.0 probe, and the rerun of 2026-10-10/11 with the
 current one (commit `acae6df`), which is the one `render_ablation.py` shows.
-`ablations/predictor` is from the same commit.
+`ablations/predictor` is from the same commit, and so is `ablations/graphdino_defaults`:
+GraphDINO with the library defaults in the benchmark protocol (10 seeds, three datasets,
+both backbones), next to which the benchmark row keeps reference DINO's values.
 
 Budget for a full sweep of one backbone: about 3.5 h on an NVIDIA A2. Most models take
 ~10–60 s per seed, but on PubMed GraphCL (O(N²) NT-Xent) takes ~7–10 min per seed and AFGRL
@@ -221,11 +257,19 @@ everything): both train the same encoder full-batch on the public split's `train
   checkpoint). With 60–140 labels and no regularization it overfits, so it understates what
   the labels are worth.
 - `--model supervised_reg` uses a recipe adapted from Kipf & Welling: dropout 0.5, Adam lr
-  0.01 with L2 5e-4, checkpoint with the best validation accuracy. Its recipe is recorded in
-  the JSON's `hyperparameters`, the selected epoch per seed as `best_epoch`. With the GIN
-  backbone it helps on Cora and CiteSeer and hurts on PubMed (see `../docs/benchmarks.md`).
-  With GCN it helps on all three, but look at `best_epoch` before reading much into it: on
-  CiteSeer the selected epoch is one of the first three for all ten seeds.
+  0.01 with L2 5e-4, checkpoint with the best validation accuracy. With the GCN backbone the
+  encoder also has no normalization layer, as in their model (`SUPERVISED_REG_NORM` in
+  `run_benchmark.py`; `--set encoder.norm_type=batch` puts it back). The recipe is recorded
+  in the JSON's `hyperparameters` (`norm_type` included), the selected epoch per seed as
+  `best_epoch`.
+  - GCN: the head reaches 81.2 / 68.6 / 78.4, 0.3 / 1.7 / 0.6 below Kipf & Welling. With batch norm
+    the same recipe gives 77.9 / 65.0 / 75.8 (`ablations/supervised_norm`).
+  - GIN keeps batch norm: without a normalization layer its head falls to 57.2 / 49.2 / 71.6
+    (same directory). With batch norm the recipe helps on Cora and CiteSeer and hurts on
+    PubMed against the plain supervised row.
+  - With GCN `best_epoch` is among the first six for most seeds on Cora and CiteSeer:
+    validation accuracy peaks after a few Adam steps. The accuracy at that epoch is the one
+    reported, so this is not a sign of a broken run.
 
 Both get the same linear probe + kNN evaluation on their encoder embeddings; the accuracy of
 the trained head itself is saved as `test_acc_head`.
@@ -236,4 +280,3 @@ the trained head itself is saved as `test_acc_head`.
 - `run_benchmark.py` covers the Planetoid datasets (Cora/CiteSeer/PubMed) only. ZINC has its
   own runner (`run_zinc.py`), ogbn-arxiv a stress test and a reproduction script (above).
   OGB graph-level datasets (ogbg-molhiv, ogbg-molpcba) are not wired up.
-- The committed ogbn-arxiv stress test still has the 0.1.0 probe in its linear column.

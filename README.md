@@ -123,7 +123,7 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 
 ### Benchmark results (citation networks)
 
-All 7 SSL methods under one shared protocol, run with two backbones: a 2-layer GCN or GIN encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%) on the frozen embeddings (regularised logistic regression fitted to convergence, L2 strength selected on validation), mean ± std over 10 seeds; best SSL method per dataset in bold. *Untrained encoder* is the same encoder at initialization. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint), not ranked.
+All 7 SSL methods under one shared protocol, run with two backbones: a 2-layer GCN or GIN encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%) on the frozen embeddings (regularised logistic regression fitted to convergence, L2 strength selected on validation), mean ± std over 10 seeds; best SSL method per dataset in bold. *Untrained encoder* is the same encoder at initialization. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint and, with GCN, no normalization layer, as in Kipf & Welling's model), not ranked.
 
 **GCN encoder**
 
@@ -138,7 +138,7 @@ All 7 SSL methods under one shared protocol, run with two backbones: a 2-layer G
 | Barlow Twins | 81.65 ± 0.93 | 68.95 ± 1.33 | 81.24 ± 0.72 |
 | GraphDINO | 77.53 ± 1.22 | 60.16 ± 1.40 | 76.97 ± 2.08 |
 | *Supervised* † | 72.67 ± 0.85 | 56.35 ± 1.52 | 74.12 ± 1.01 |
-| *Supervised, std. recipe* † | 78.89 ± 1.42 | 64.84 ± 3.84 | 75.45 ± 1.12 |
+| *Supervised, std. recipe* † | 80.90 ± 0.76 | 67.72 ± 1.67 | 78.48 ± 0.92 |
 
 **GIN encoder**
 

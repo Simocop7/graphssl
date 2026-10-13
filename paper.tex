@@ -12,7 +12,6 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{cleveref}
-\usepackage{multirow}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -20,18 +19,22 @@
 \begin{document}
 
 \title{A Unified and Framework-Agnostic Library for Self-Supervised Graph Learning
+\thanks{Code available at: \url{https://github.com/Simocop7/graphssl}}
 }
 
-\author{\IEEEauthorblockN{Simone Copetti\thanks{Code available at: \url{https://github.com/Simocop7/graphssl}}}
-\IEEEauthorblockA{\textit{NECSTLab, Politecnico di Milano (DEIB)} \\
+% One block for the three authors: they share the affiliation, so it is given once (the IEEEtran
+% layout for a common affiliation; reference marks are only needed when affiliations differ).
+\author{\IEEEauthorblockN{Simone Copetti, Leonardo De Grandis, Marco D. Santambrogio}
+\IEEEauthorblockA{\textit{NECSTLab, Dipartimento di Elettronica, Informazione e Bioingegneria (DEIB)} \\
+\textit{Politecnico di Milano}\\
 Milan, Italy \\
-simone.copetti@mail.polimi.it}
+simone.copetti@mail.polimi.it, \{leonardo.degrandis, marco.santambrogio\}@polimi.it}
 }
 
 \maketitle
 
 \begin{abstract}
-Self-supervised learning (SSL) on graphs now spans contrastive, bootstrapping, redundancy-reduction, and self-distillation objectives, but their published results come from different encoders, training budgets, and evaluation procedures, and existing libraries each cover only part of these families, which makes a controlled comparison difficult. We present GraphSSL, an open-source library built on PyTorch and PyTorch Geometric (PyG) that implements seven objectives from five methodological families behind a single validated configuration interface, with interchangeable encoders, a composable augmentation system with ``protected-node'' semantics for mini-batch training, a hook-driven training loop that needs no external orchestration framework, and deterministic evaluation probes. We then use the library for a controlled empirical study. Under one shared, untuned protocol on citation networks, run with two backbones, the backbone changes the picture more than the objective: with a GCN all seven objectives improve on the untrained encoder and the best four are within three points of each other, whereas with GIN four of them fall 6 to 22 points behind. Under the protocol of its own paper, our BGRL reaches 71.3\% test accuracy on ogbn-arxiv against the published 71.6\%. On molecular regression (ZINC), frozen pre-trained encoders are barely better than untrained ones, and two objectives improve on training from scratch after fine-tuning. We state the limits of this evidence alongside it.
+Self-supervised learning (SSL) on graphs now spans contrastive, bootstrapping, redundancy-reduction, and self-distillation objectives, but their published results come from different encoders, training budgets, and evaluation procedures, and existing libraries each cover only part of these families, which makes a controlled comparison difficult. We present GraphSSL, an open-source library built on PyTorch and PyTorch Geometric (PyG) that implements seven objectives from five methodological families behind a single validated configuration interface, with interchangeable encoders, a composable augmentation system with ``protected-node'' semantics for mini-batch training, a hook-driven training loop that needs no external orchestration framework, and deterministic evaluation probes. We then use the library for a controlled empirical study. Under one shared, untuned protocol on citation networks, run with two backbones, the backbone changes the picture more than the objective: with a GCN all seven objectives improve on the untrained encoder and the best four are within three points of each other, whereas with GIN four of them fall 6 to 22 points behind. Under the protocol of its own paper, our BGRL reaches 71.3\% test accuracy on ogbn-arxiv against the published 71.6\%. On molecular regression (ZINC), frozen pre-trained encoders are at best indistinguishable from untrained ones, and three objectives improve on training from scratch after fine-tuning. We state the limits of this evidence alongside it.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -154,7 +157,7 @@ To maximize expressive power up to the Weisfeiler-Lehman (WL) test limit \cite{w
 The infrastructure utilizes multi-layer GIN architectures augmented by spatial residual connections and \textit{pre-norm} strategies to stabilize deep gradients. This backbone serves as the standard baseline for the repository's test suite.
 
 \subsubsection{Graph Transformer}
-The framework natively supports \texttt{TransformerConv} blocks. Through multi-head attention, the encoder dynamically weights graph edges, allowing the aggregation process to focus on neighbors with the highest semantic relevance, thereby naturally mitigating over-smoothing during deep SSL training.
+The third backbone stacks pre-norm blocks built on PyG's \texttt{TransformerConv}: multi-head attention over the neighbors of each node, which can take edge features, followed by a feed-forward layer, both with residual connections. Every objective is tested with it, but the experiments of \Cref{sec:results} use GCN and GIN only, so we report no result for it.
 
 \subsubsection{Graph-Level Readout}
 For graph-level representation learning (e.g., molecular property prediction), GraphSSL avoids redundantly duplicating readout logic within each registered encoder. Instead, it applies a readout to the node embeddings strictly downstream of the encoder (mean pooling by default; sum and max pooling are selected from the configuration). With the default readout, the embeddings are condensed into a single latent vector $\bm{z}_g$ for each isolated graph in the batch:
@@ -274,7 +277,7 @@ We evaluate all seven SSL objectives on the three standard citation networks ---
 \begin{table*}[htbp]
 \centering
 \small
-\caption{Test accuracy (\%) of all seven SSL objectives under a shared protocol with two backbones (GCN-2L and GIN-2L, $d{=}256$, 300 full-batch steps, public split, 10 seeds; mean $\pm$ sample std). Best SSL result per column and backbone in bold. \textit{Untrained encoder} is the same encoder at initialization. The last two rows of each block are supervised references trained on the labeled training nodes, not ranked: the shared protocol unchanged, and a standard recipe adapted from \cite{gcn} (dropout 0.5, Adam with $\text{lr}{=}0.01$ and $\ell_2$ $5{\times}10^{-4}$, best-validation checkpoint).}
+\caption{Test accuracy (\%) of all seven SSL objectives under a shared protocol with two backbones (GCN-2L and GIN-2L, $d{=}256$, 300 full-batch steps, public split, 10 seeds; mean $\pm$ sample std). Best SSL result per column and backbone in bold. ``Untrained encoder'' is the same encoder at initialization. The last two rows of each block are supervised references trained on the labeled training nodes, not ranked: the shared protocol unchanged, and a standard recipe adapted from \cite{gcn} (dropout 0.5, Adam with $\text{lr}{=}0.01$ and $\ell_2$ $5{\times}10^{-4}$, best-validation checkpoint; with GCN the encoder has, as in \cite{gcn}, no normalization layer).}
 \label{tab:accuracy}
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
@@ -293,7 +296,7 @@ Barlow Twins & 81.65 $\pm$ 0.93 & \textbf{75.56 $\pm$ 1.35} & 68.95 $\pm$ 1.33 &
 GraphDINO & 77.53 $\pm$ 1.22 & 68.98 $\pm$ 1.40 & 60.16 $\pm$ 1.40 & 51.39 $\pm$ 2.30 & 76.97 $\pm$ 2.08 & 70.20 $\pm$ 1.39 \\
 \midrule
 \textit{Supervised} & 72.67 $\pm$ 0.85 & 71.59 $\pm$ 1.02 & 56.35 $\pm$ 1.52 & 56.53 $\pm$ 0.91 & 74.12 $\pm$ 1.01 & 73.56 $\pm$ 1.25 \\
-\textit{Supervised, std.\ recipe} & 78.89 $\pm$ 1.42 & 77.04 $\pm$ 1.24 & 64.84 $\pm$ 3.84 & 65.36 $\pm$ 2.88 & 75.45 $\pm$ 1.12 & 75.43 $\pm$ 1.54 \\
+\textit{Supervised, std.\ recipe} & 80.90 $\pm$ 0.76 & 79.55 $\pm$ 0.83 & 67.72 $\pm$ 1.67 & 67.68 $\pm$ 1.48 & 78.48 $\pm$ 0.92 & 78.41 $\pm$ 1.10 \\
 \midrule
 \multicolumn{7}{@{}l}{\textbf{GIN-2L}} \\
 \textit{Untrained encoder} & 41.70 $\pm$ 2.44 & 27.13 $\pm$ 1.79 & 36.06 $\pm$ 1.57 & 27.00 $\pm$ 1.85 & 56.60 $\pm$ 1.50 & 32.65 $\pm$ 2.86 \\
@@ -312,7 +315,7 @@ GraphDINO & 62.53 $\pm$ 1.91 & 55.35 $\pm$ 1.80 & 43.34 $\pm$ 3.27 & 37.03 $\pm$
 \end{tabular}
 \end{table*}
 
-Every objective yields representations well above the random-guess baseline (14.3\%, 16.7\%, and 33.3\% for Cora, CiteSeer, and PubMed, given their class counts), which confirms that the complete pipeline --- augmentation, EMA teacher-student optimization, positive mining, and both evaluation heads --- executes correctly end-to-end for all seven methods. Beyond that, five observations emerge. First, with the GCN backbone every objective improves on the untrained encoder on all three datasets, by 2.5 to 11.9 points, and the objectives are close: GraphCL, Barlow Twins, VICReg, and BGRL are within 1.6, 2.8, and 1.7 points of each other on Cora, CiteSeer, and PubMed, while AFGRL, DGI, and GraphDINO are 3 to 9 points below the best method of each column. Second, with GIN the objectives separate: GraphCL, Barlow Twins, and VICReg lose 1 to 4 points relative to their GCN numbers, whereas BGRL, AFGRL, GraphDINO, and DGI fall 6 to 22 points below the best method of each column. BGRL is the clearest case: 63.8 / 47.7 / 68.5 with GIN against 80.8 / 67.1 / 79.9 with GCN, with the effective rank of its embeddings at 8--9 out of 256 dimensions with GIN and 148--190 with GCN. That the teacher-student family trails is therefore a property of the GIN block, not of the objectives. Third, the untrained encoder is the reference against which both blocks must be read: an untrained GCN already reaches 73.2 / 57.7 / 74.1 and an untrained GIN 41.7 / 36.1 / 56.6, so much of the absolute level of the GCN block is the backbone itself, and what an objective contributes is its difference from that row. Fourth, the supervised references stay below the best SSL linear probe on every dataset with both backbones: the accuracy of their own trained head with the standard recipe is 78.0 / 65.4 / 74.6 with GCN and 76.5 / 61.8 / 72.7 with GIN, against a best SSL linear probe of 82.5 / 69.6 / 81.6 and 81.3 / 65.6 / 80.4. These references are as untuned as the SSL rows and should not be read as an upper bound for supervision: the 2-layer GCN of \cite{gcn} reports 81.5 / 70.3 / 79.0 with a similar recipe, and with our GCN the best-validation epoch of the standard recipe is among the first three on CiteSeer for all ten seeds. Fifth, the quadratic costs of \Cref{tab:complexity} are directly observable: on PubMed ($N \approx 19.7$k) a 300-step GIN run takes about 440\,s for GraphCL and 250\,s for AFGRL, versus 35--55\,s for the other methods. These wall times are indicative only, since some runs shared the GPU.
+Every objective yields representations well above the random-guess baseline (14.3\%, 16.7\%, and 33.3\% for Cora, CiteSeer, and PubMed, given their class counts), which confirms that the complete pipeline --- augmentation, EMA teacher-student optimization, positive mining, and both evaluation heads --- executes correctly end-to-end for all seven methods. Beyond that, five observations emerge. First, with the GCN backbone every objective improves on the untrained encoder on all three datasets, by 2.5 to 11.9 points, and the objectives are close: GraphCL, Barlow Twins, VICReg, and BGRL are within 1.6, 2.8, and 1.7 points of each other on Cora, CiteSeer, and PubMed, while AFGRL, DGI, and GraphDINO are 3 to 9 points below the best method of each column. Second, with GIN the objectives separate: GraphCL, Barlow Twins, and VICReg lose 1 to 4 points relative to their GCN numbers, whereas BGRL, AFGRL, GraphDINO, and DGI fall 6 to 22 points below the best method of each column. BGRL is the clearest case: 63.8 / 47.7 / 68.5 with GIN against 80.8 / 67.1 / 79.9 with GCN, with the effective rank of its embeddings at 8--9 out of 256 dimensions with GIN and 148--190 with GCN. That the teacher-student family trails is therefore a property of the GIN block, not of the objectives. Third, the untrained encoder is the reference against which both blocks must be read: an untrained GCN already reaches 73.2 / 57.7 / 74.1 and an untrained GIN 41.7 / 36.1 / 56.6, so much of the absolute level of the GCN block is the backbone itself, and what an objective contributes is its difference from that row. Fourth, the supervised references stay below the best SSL linear probe on every dataset with both backbones, with GCN by a small margin: the accuracy of their own trained head with the standard recipe is 81.2 / 68.6 / 78.4 with GCN and 76.5 / 61.8 / 72.7 with GIN, against a best SSL linear probe of 82.5 / 69.6 / 81.6 and 81.3 / 65.6 / 80.4. The best SSL probe is the best of seven methods on the test split, so this margin is an optimistic estimate. With GCN the standard recipe is the model of \cite{gcn}, with dropout and without a normalization layer, and it lands 0.3 / 1.7 / 0.6 below the 81.5 / 70.3 / 79.0 reported there. With the batch normalization of the shared encoder the same recipe gives 77.9 / 65.0 / 75.8, 2.5 to 3.6 points less, for a reason we have not identified, whereas the GIN encoder falls to 57.2 / 49.2 / 71.6 without its normalization layer and therefore keeps it. Fifth, the quadratic costs of \Cref{tab:complexity} are directly observable: on PubMed ($N \approx 19.7$k) a 300-step GIN run takes about 440\,s for GraphCL and 250\,s for AFGRL, versus 35--55\,s for the other methods. These wall times are indicative only, since some runs shared the GPU.
 
 \subsection{Fidelity to Published Results}
 \label{sec:results-fidelity}
@@ -325,14 +328,19 @@ An equal-budget comparison says nothing about whether an implementation is faith
 \centering
 \caption{Test Accuracy (\%): our BGRL runs (public split, shared untuned protocol, 300 steps) vs.\ the original BGRL paper's small-dataset evaluation (20 random splits, GRACE-style encoder)}
 \label{tab:bgrl-comparison}
-\begin{tabular}{@{}llccc@{}}
+\footnotesize
+\resizebox{\ifdim\width>\columnwidth\columnwidth\else\width\fi}{!}{%
+\begin{tabular}{@{}lccc@{}}
 \toprule
-& & \textbf{Cora} & \textbf{CiteSeer} & \textbf{PubMed} \\ \midrule
-\multirow{2}{*}{\cite{bgrl}, Table 7} & GRACE & 83.02 $\pm$ 0.89 & 71.63 $\pm$ 0.64 & 86.06 $\pm$ 0.26 \\
-& BGRL & 83.83 $\pm$ 1.61 & 72.32 $\pm$ 0.89 & 86.03 $\pm$ 0.33 \\
-\multirow{2}{*}{This work} & BGRL, GCN-2L & 80.82 $\pm$ 1.23 & 67.05 $\pm$ 0.89 & 79.85 $\pm$ 1.10 \\
-& BGRL, GIN-2L & 63.77 $\pm$ 1.60 & 47.68 $\pm$ 2.30 & 68.52 $\pm$ 2.57 \\ \bottomrule
-\end{tabular}
+& \textbf{Cora} & \textbf{CiteSeer} & \textbf{PubMed} \\ \midrule
+\multicolumn{4}{@{}l}{\textbf{\cite{bgrl}, Table 7}} \\
+GRACE & 83.02 $\pm$ 0.89 & 71.63 $\pm$ 0.64 & 86.06 $\pm$ 0.26 \\
+BGRL & 83.83 $\pm$ 1.61 & 72.32 $\pm$ 0.89 & 86.03 $\pm$ 0.33 \\ \midrule
+\multicolumn{4}{@{}l}{\textbf{This work}} \\
+BGRL, GCN-2L & 80.82 $\pm$ 1.23 & 67.05 $\pm$ 0.89 & 79.85 $\pm$ 1.10 \\
+BGRL, GIN-2L & 63.77 $\pm$ 1.60 & 47.68 $\pm$ 2.30 & 68.52 $\pm$ 2.57 \\ \bottomrule
+\end{tabular}%
+}
 \end{table}
 
 With the GCN backbone the remaining gap is 3.0 / 5.3 / 6.2 points, consistent with the configuration differences above rather than with a defect in the implementation: our run intentionally omits per-dataset hyperparameter search, uses symmetric rather than asymmetric augmentation strength across the two views, and trains for only 300 steps. With GIN the gap is 20 / 25 / 18 points, which is the backbone effect discussed above. On the citation networks, closing the gap under a matched protocol is left as future work; the present results are offered as an equal-budget comparison between objectives, not a state-of-the-art claim. Being consistent with the configuration differences is not evidence of them, however: as long as the two protocols differ, this comparison cannot rule out a defect of the implementation. The next experiment therefore runs BGRL under the protocol of \cite{bgrl} itself, on ogbn-arxiv.
@@ -345,15 +353,16 @@ Three differences from \cite{bgrl} remain. First, the evaluation: \cite{bgrl} tr
 
 \begin{table}[htbp]
 \centering
-\small
-\setlength{\tabcolsep}{4pt}
-\caption{BGRL on ogbn-arxiv under the protocol of \cite{bgrl}: linear-probe accuracy (\%), mean $\pm$ sample std. This work: 3 seeds, probe of \Cref{sec:callbacks}, with the predictor of the public BGRL implementation (\textit{Ref.}, Linear--PReLU--Linear) and with the library's default predictor (\textit{Default}, Linear--BatchNorm--ReLU--Linear). \cite{bgrl}: 20 seeds, its own linear evaluation (Table~5). \textit{Untrained encoder} is the same encoder at initialization; \textit{Gain} is BGRL minus the untrained encoder (computed per seed for this work).}
+\caption{BGRL on ogbn-arxiv under the protocol of \cite{bgrl}: linear-probe accuracy (\%), mean $\pm$ sample std. This work: 3 seeds, probe of \Cref{sec:callbacks}, with the predictor of the public BGRL implementation (``Ref.'', Linear--PReLU--Linear) and with the library's default predictor (``Default'', Linear--BatchNorm--ReLU--Linear). \cite{bgrl}: 20 seeds, its own linear evaluation (Table~5). ``Untrained encoder'' is the same encoder at initialization; ``Gain'' is BGRL minus the untrained encoder (computed per seed for this work).}
 \label{tab:arxiv-reproduction}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\ifdim\width>\columnwidth\columnwidth\else\width\fi}{!}{%
 \begin{tabular}{@{}lccc@{}}
 \toprule
 & \multicolumn{2}{c}{\textbf{This work}} & \\
 \cmidrule(lr){2-3}
-& Ref.\ predictor & Default predictor & \textbf{\cite{bgrl}} \\ \midrule
+& Ref. & Default & \textbf{\cite{bgrl}} \\ \midrule
 \multicolumn{4}{@{}l}{\textbf{Validation}} \\
 \textit{Untrained encoder} & 70.23 $\pm$ 0.18 & 70.24 $\pm$ 0.20 & 69.90 $\pm$ 0.11 \\
 BGRL & 72.31 $\pm$ 0.14 & 68.97 $\pm$ 0.87 & 72.53 $\pm$ 0.09 \\
@@ -362,7 +371,8 @@ Gain & $+$2.08 $\pm$ 0.30 & $-$1.26 $\pm$ 0.75 & $+$2.63 \\ \midrule
 \textit{Untrained encoder} & 69.53 $\pm$ 0.03 & 69.52 $\pm$ 0.03 & 68.94 $\pm$ 0.15 \\
 BGRL & 71.32 $\pm$ 0.10 & 67.91 $\pm$ 0.78 & 71.64 $\pm$ 0.12 \\
 Gain & $+$1.79 $\pm$ 0.08 & $-$1.61 $\pm$ 0.78 & $+$2.70 \\ \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \Cref{tab:arxiv-reproduction} reports the result; its first column is the reproduction, with the predictor of the reference implementation. The untrained encoder is within 0.33 (validation) and 0.59 (test) points of the paper's, which checks the GCN encoder and the evaluation independently of any training. Trained, BGRL reaches 72.31 $\pm$ 0.14 / 71.32 $\pm$ 0.10 against 72.53 $\pm$ 0.09 / 71.64 $\pm$ 0.12 in \cite{bgrl}: 0.22 and 0.32 points lower. The three seeds agree closely (test accuracy 71.22, 71.42, 71.33), so both differences, although small, are larger than the seed-to-seed standard deviation of either evaluation, and we do not claim an exact match. The gain over the untrained encoder is $+$2.08 / $+$1.79 where \cite{bgrl} reports $+$2.63 / $+$2.70: it is smaller because our untrained encoder scores higher than the paper's and our trained one lower. A cosine $k$NN classifier on the same embeddings, which involves no fitted parameters, improves from 66.76 to 68.38 on the test split, and the effective rank of the embeddings grows from 120 to 168 of 256 dimensions.
@@ -373,27 +383,27 @@ This is one method on one dataset: the other six objectives have not yet been ru
 
 \subsection{Graph-Level Comparison on Molecules}
 \label{sec:results-zinc}
-The same seven objectives are compared at the graph level on ZINC-12k (10{,}000 / 1{,}000 / 1{,}000 molecules), a regression task, again under one shared and untuned protocol: an edge-aware GIN with 4 layers of 128 units, batch normalization and mean readout, 100 epochs with batch size 256 and AdamW ($\text{lr}{=}10^{-3}$, weight decay $10^{-5}$); the two views mask 20\% of the atoms and drop 20\% of the bonds. Each pre-trained encoder is evaluated in two ways. \textit{Frozen}: a ridge regression is fitted on the graph embeddings, with its strength selected on validation. \textit{Fine-tuned}: the encoder and a new linear head are trained on the labels for 100 further epochs, keeping the best-validation epoch; its reference is the same training from a random initialization. \Cref{tab:zinc} reports the test mean absolute error over 3 seeds.
+The same seven objectives are compared at the graph level on ZINC-12k (10{,}000 / 1{,}000 / 1{,}000 molecules), a regression task, again under one shared and untuned protocol: an edge-aware GIN with 4 layers of 128 units, batch normalization and mean readout, 100 epochs with batch size 256 and AdamW ($\text{lr}{=}10^{-3}$, weight decay $10^{-5}$); the two views mask 20\% of the atoms and drop 20\% of the bonds. Each pre-trained encoder is evaluated in two ways. \textit{Frozen}: a ridge regression is fitted on the graph embeddings, with its strength selected on validation. \textit{Fine-tuned}: the encoder and a new linear head are trained on the labels for 100 further epochs, keeping the best-validation epoch; its reference is the same training from a random initialization. \Cref{tab:zinc} reports the test mean absolute error over 10 seeds.
 
 \begin{table}[htbp]
 \centering
-\caption{ZINC-12k test MAE (lower is better; 3 seeds, mean $\pm$ sample std). The untrained encoder gives 0.593 $\pm$ 0.010 with the frozen probe. The last row is trained on the labels from a random initialization: its \textit{Fine-tuned} column is the reference for the others. Rank is the effective rank of the frozen embeddings (128 dimensions).}
+\caption{ZINC-12k test MAE (lower is better; 10 seeds, mean $\pm$ sample std). The untrained encoder gives 0.589 $\pm$ 0.011 with the frozen probe. The last row is trained on the labels from a random initialization: its ``Fine-tuned'' column is the reference for the others. Rank is the effective rank of the frozen embeddings (128 dimensions).}
 \label{tab:zinc}
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Method} & \textbf{Frozen} & \textbf{Fine-tuned} & \textbf{Rank} \\ \midrule
-DGI & 0.932 $\pm$ 0.071 & 0.359 $\pm$ 0.018 & 9.2 \\
-GraphCL & 0.571 $\pm$ 0.006 & 0.341 $\pm$ 0.007 & 18.0 \\
-VICReg & 0.591 $\pm$ 0.010 & \textbf{0.335 $\pm$ 0.009} & 18.5 \\
-Barlow Twins & 0.574 $\pm$ 0.005 & 0.354 $\pm$ 0.012 & 15.7 \\
-BGRL & 0.700 $\pm$ 0.082 & 0.377 $\pm$ 0.007 & 5.6 \\
-AFGRL & 0.671 $\pm$ 0.046 & 0.379 $\pm$ 0.007 & 5.0 \\
-GraphDINO & 0.578 $\pm$ 0.009 & 0.361 $\pm$ 0.009 & 15.6 \\ \midrule
-\textit{Supervised} & 0.396 $\pm$ 0.028 & 0.364 $\pm$ 0.007 & 7.5 \\ \bottomrule
+DGI & 0.903 $\pm$ 0.182 & 0.363 $\pm$ 0.025 & 11.9 \\
+GraphCL & 0.578 $\pm$ 0.006 & 0.343 $\pm$ 0.024 & 18.0 \\
+VICReg & 0.585 $\pm$ 0.008 & \textbf{0.335 $\pm$ 0.027} & 18.9 \\
+Barlow Twins & 0.585 $\pm$ 0.010 & 0.363 $\pm$ 0.010 & 16.0 \\
+BGRL & 0.692 $\pm$ 0.060 & 0.369 $\pm$ 0.007 & 4.0 \\
+AFGRL & 0.641 $\pm$ 0.039 & 0.382 $\pm$ 0.013 & 8.9 \\
+GraphDINO & 0.579 $\pm$ 0.009 & 0.345 $\pm$ 0.017 & 16.0 \\ \midrule
+\textit{Supervised} & 0.402 $\pm$ 0.020 & 0.369 $\pm$ 0.005 & 8.1 \\ \bottomrule
 \end{tabular}
 \end{table}
 
-With a frozen encoder, self-supervision contributes almost nothing on this task: GraphCL, Barlow Twins, and GraphDINO are 0.015--0.02 below the untrained encoder and VICReg equals it, while BGRL and AFGRL collapse to an effective rank of about 5 and DGI is far worse than no training. None approaches the embeddings of the supervised encoder (0.396). After fine-tuning, pre-training with VICReg ($-0.029$) or GraphCL ($-0.023$) improves on training from scratch by about three of its standard deviations; Barlow Twins, DGI, and GraphDINO are within one, and BGRL and AFGRL end up worse than no pre-training. With three seeds and no tuning these differences are small, and we report them as a first equal-budget measurement rather than a ranking.
+With a frozen encoder, self-supervision contributes nothing measurable on this task: GraphCL, GraphDINO, VICReg, and Barlow Twins are 0.004--0.011 below the untrained encoder, within one of its standard deviations, while BGRL and AFGRL are worse than it, with an effective rank of 4.0 and 8.9, and DGI is far worse. None approaches the embeddings of the supervised encoder (0.402). After fine-tuning, pre-training with VICReg ($-0.034$), GraphCL ($-0.025$), or GraphDINO ($-0.024$) improves on training from scratch ($0.369 \pm 0.005$): VICReg is below the mean of the from-scratch runs in all ten seeds, GraphCL in nine, and GraphDINO in eight. Barlow Twins and DGI are within their own standard deviation of it, BGRL equals it, and AFGRL is worse ($+0.013$). Two limits apply to this gain. Pre-training and fine-tuning use the same 10{,}000 molecules, so the regime in which unlabeled data outnumber the labels is not tested; and neither training has converged (the best fine-tuning epoch is the 80th or later in 59 of the 70 runs), so the gain is measured at a fixed, short budget. An earlier run with three seeds gave standard deviations 1.8 to 3.6 times smaller for these three objectives and placed GraphDINO within one of them of training from scratch. The seeds shared by the two runs start from identical encoders and end 0.026 to 0.036 apart for VICReg, since the runs do not request deterministic GPU algorithms: a seed fixes the initialization, not the result. We therefore report ten seeds, and read the table as a first equal-budget measurement rather than a ranking.
 
 \subsection{Sensitivity to Budget, Teacher Schedule, Predictor, and Backbone}
 \label{sec:sensitivity}
@@ -427,7 +437,7 @@ EMA $0.9 \rightarrow 0.996$, $\tau_t{=}0.07$ (defaults) & \textbf{72.94 $\pm$ 3.
 \begin{table*}[htbp]
 \centering
 \small
-\caption{BGRL and AFGRL under the shared protocol with the library's default predictor (Linear--BatchNorm--ReLU--Linear; the rows of \Cref{tab:accuracy}) and with the predictor of the public BGRL implementation (\textit{reference}, Linear--PReLU--Linear). Test accuracy (\%), 10 seeds, mean $\pm$ sample std.}
+\caption{BGRL and AFGRL under the shared protocol with the library's default predictor (Linear--BatchNorm--ReLU--Linear; the rows of \Cref{tab:accuracy}) and with the predictor of the public BGRL implementation (``reference'', Linear--PReLU--Linear). Test accuracy (\%), 10 seeds, mean $\pm$ sample std.}
 \label{tab:predictor}
 \begin{tabular}{@{}lllcccccc@{}}
 \toprule
@@ -454,7 +464,7 @@ GraphSSL is at an alpha stage, and both the library and the evidence presented h
 
 \textbf{Library.} First, protected-node enforcement is active only for the node-destructive augmentation (\texttt{node\_drop}); \texttt{subgraph} cannot honor it and refuses to run on a mini-batch rather than pair the wrong nodes. The mechanism is covered by unit tests, but no experiment in \Cref{sec:results} exercises it, since the benchmark augmentations are edge dropout and feature masking. Second, although its memory is now chunked, AFGRL's positive mining still costs quadratic time per step (a top-$k$ search over all node pairs plus several $k$-means runs) and operates on the whole graph, with no mini-batch mode; an approximate (FAISS-index) neighbor search and mini-batch mining are required before AFGRL is practical on large graphs. Third, the readout is limited to mean, sum, and max pooling; learned aggregation operators are planned. Fourth, avoiding the overhead of external orchestration frameworks was a design motivation, but we have not measured memory or throughput against an equivalent wrapped implementation and make no quantitative claim about it.
 
-\textbf{Evidence.} The shared protocols use a single untuned configuration per benchmark, so the rankings hold for that budget and not for each method at its best; the settings of \Cref{sec:sensitivity} were, moreover, compared on test accuracy. The node-level comparison covers three small citation graphs on their public split, and the molecular and ogbn-arxiv results rest on three seeds. Only one method has been run under the protocol of its own paper, and a cross-method comparison in the mini-batch regime on large graphs is not reported. Finally, several observations are reported without an explanation: the decline of GraphDINO with training length, the collapse of BGRL and AFGRL on ZINC, the loss of accuracy of BGRL and Barlow Twins with GCN at longer budgets, the early best-validation epoch of the supervised GCN reference, and the effect of the predictor's normalization on ogbn-arxiv.
+\textbf{Evidence.} The shared protocols use a single untuned configuration per benchmark, so the rankings hold for that budget and not for each method at its best; the settings of \Cref{sec:sensitivity} were, moreover, compared on test accuracy. The node-level comparison covers three small citation graphs on their public split, the ogbn-arxiv results rest on three seeds, and the molecular benchmark pre-trains and fine-tunes on the same molecules for a short budget. Only one method has been run under the protocol of its own paper, and a cross-method comparison in the mini-batch regime on large graphs is not reported. Finally, several observations are reported without an explanation: the decline of GraphDINO with training length, the collapse of BGRL and AFGRL on ZINC, the loss of accuracy of BGRL and Barlow Twins with GCN at longer budgets, the accuracy that batch normalization costs the supervised GCN reference, and the effect of the predictor's normalization on ogbn-arxiv.
 
 \section{Future Work}
 Beyond closing the gaps listed in \Cref{sec:limitations}, several directions are planned.
@@ -466,7 +476,7 @@ Beyond closing the gaps listed in \Cref{sec:limitations}, several directions are
 \textbf{Command-Line Interface.} A planned \texttt{cli/} module will expose a user-facing entry point for launching training runs directly from YAML configurations, further lowering the barrier to entry for new users.
 
 \section{Conclusion}
-GraphSSL consolidates seven self-supervised objectives for graphs behind one validated configuration interface, in plain PyTorch and PyTorch Geometric, together with the evaluation tools needed to compare them. The experiments show what such a controlled setting is for. At equal budget on citation networks the backbone changed the picture more than the objective: with a GCN all seven objectives improve on the untrained encoder and the best four are within three points of each other, while with GIN four of them (BGRL, AFGRL, GraphDINO, and DGI) fall 6 to 22 points behind the best. Under the protocol of its own paper, BGRL lands 0.2 to 0.3 points below the published accuracy on ogbn-arxiv, but only with the predictor of the reference implementation: with a batch-normalized predictor, which is harmless under the shared protocol, the same training ends below the untrained encoder. On ZINC, a frozen pre-trained encoder is barely better than an untrained one, and after fine-tuning two of the seven objectives improve on training from scratch. The near-term priority is extending the cross-method comparison to medium- and large-scale benchmarks and running the remaining objectives under the protocols of their papers, with the long-term goal of serving as an incubator to export mature, tested implementations (such as BGRL and GraphDINO) as direct contributions to the upstream PyTorch Geometric ecosystem.
+GraphSSL consolidates seven self-supervised objectives for graphs behind one validated configuration interface, in plain PyTorch and PyTorch Geometric, together with the evaluation tools needed to compare them. The experiments show what such a controlled setting is for. At equal budget on citation networks the backbone changed the picture more than the objective: with a GCN all seven objectives improve on the untrained encoder and the best four are within three points of each other, while with GIN four of them (BGRL, AFGRL, GraphDINO, and DGI) fall 6 to 22 points behind the best. Under the protocol of its own paper, BGRL lands 0.2 to 0.3 points below the published accuracy on ogbn-arxiv, but only with the predictor of the reference implementation: with a batch-normalized predictor, which is harmless under the shared protocol, the same training ends below the untrained encoder. On ZINC, a frozen pre-trained encoder is at best indistinguishable from an untrained one, and after fine-tuning three of the seven objectives improve on training from scratch. The near-term priority is extending the cross-method comparison to medium- and large-scale benchmarks and running the remaining objectives under the protocols of their papers, with the long-term goal of serving as an incubator to export mature, tested implementations (such as BGRL and GraphDINO) as direct contributions to the upstream PyTorch Geometric ecosystem.
 
 \begin{thebibliography}{00}
 \bibitem{pyg} M. Fey and J. E. Lenssen, ``Fast graph representation learning with PyTorch Geometric,'' in \textit{ICLR Workshop}, 2019.

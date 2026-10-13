@@ -1,0 +1,297 @@
+{
+  "dataset": "ZINC-12k",
+  "model": "afgrl",
+  "model_config": {
+    "name": "afgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 128,
+      "num_layers": 4,
+      "norm_type": "batch",
+      "pool": true,
+      "readout": "mean",
+      "drop": 0.0,
+      "node_emb_num_classes": 29,
+      "edge_dim": 128,
+      "edge_emb_num_classes": 4
+    },
+    "pred_hidden": 128,
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 1
+  },
+  "hyperparameters": {
+    "model": [
+      "dgi",
+      "graphcl",
+      "vicreg",
+      "barlow_twins",
+      "bgrl",
+      "afgrl",
+      "graphdino",
+      "supervised"
+    ],
+    "encoder": "gin",
+    "hidden": 128,
+    "layers": 4,
+    "readout": "mean",
+    "epochs": 100,
+    "finetune_epochs": 100,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "seeds": 10,
+    "workers": 4,
+    "data_dir": "data/ZINC",
+    "out_dir": "benchmarks/zinc_seeds10",
+    "device": "cuda",
+    "ridge_probe": {
+      "standardize": true,
+      "weight_decays": [
+        1000.0,
+        100.0,
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "untrained": {
+        "val_mae": 0.5722825652308164,
+        "test_mae": 0.5984009123211567,
+        "probe_weight_decay": 0.0001,
+        "eff_rank": 25.881559371948242
+      },
+      "train_time_s": 300.9953672885895,
+      "first_loss": 0.16840394139289855,
+      "last_loss": 0.0006605818867683411,
+      "val_mae": 0.5813718403592518,
+      "test_mae": 0.6250430807355073,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 6.135782241821289,
+      "val_mae_finetune": 0.3540078201293945,
+      "test_mae_finetune": 0.3757743682861328,
+      "finetune_best_epoch": 98
+    },
+    {
+      "seed": 1,
+      "untrained": {
+        "val_mae": 0.5683883455083946,
+        "test_mae": 0.5987838693033691,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.08821678161621
+      },
+      "train_time_s": 299.4571170806885,
+      "first_loss": 0.16185523569583893,
+      "last_loss": 0.0012571409344673157,
+      "val_mae": 0.7302665232753166,
+      "test_mae": 0.7305194508327781,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 7.191863536834717,
+      "val_mae_finetune": 0.3597554626464844,
+      "test_mae_finetune": 0.37869159698486327,
+      "finetune_best_epoch": 84
+    },
+    {
+      "seed": 2,
+      "untrained": {
+        "val_mae": 0.555993898198423,
+        "test_mae": 0.5808988797820728,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.352554321289062
+      },
+      "train_time_s": 301.1666922569275,
+      "first_loss": 0.17578983008861543,
+      "last_loss": 0.0009342551231384278,
+      "val_mae": 0.5946735580563411,
+      "test_mae": 0.6272065869748777,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 6.395362854003906,
+      "val_mae_finetune": 0.3525985336303711,
+      "test_mae_finetune": 0.3732903823852539,
+      "finetune_best_epoch": 93
+    },
+    {
+      "seed": 3,
+      "untrained": {
+        "val_mae": 0.5467835580777658,
+        "test_mae": 0.5721693202421817,
+        "probe_weight_decay": 1e-05,
+        "eff_rank": 27.199129104614258
+      },
+      "train_time_s": 301.2076065540314,
+      "first_loss": 0.1766590178012848,
+      "last_loss": 0.001312132179737091,
+      "val_mae": 0.6589431977676582,
+      "test_mae": 0.688008837668227,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 8.661482810974121,
+      "val_mae_finetune": 0.35905071258544924,
+      "test_mae_finetune": 0.3834503936767578,
+      "finetune_best_epoch": 97
+    },
+    {
+      "seed": 4,
+      "untrained": {
+        "val_mae": 0.5741573082591349,
+        "test_mae": 0.6013418482370212,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 27.350841522216797
+      },
+      "train_time_s": 300.5945863723755,
+      "first_loss": 0.14999462366104127,
+      "last_loss": 0.0018759578466415404,
+      "val_mae": 0.578205783573786,
+      "test_mae": 0.6174876431886838,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 6.879119396209717,
+      "val_mae_finetune": 0.35181591796875,
+      "test_mae_finetune": 0.3748140869140625,
+      "finetune_best_epoch": 100
+    },
+    {
+      "seed": 5,
+      "untrained": {
+        "val_mae": 0.5763876985978844,
+        "test_mae": 0.5896620056458591,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 24.465534210205078
+      },
+      "train_time_s": 348.42907786369324,
+      "first_loss": 0.17528512179851533,
+      "last_loss": 0.0011896207928657533,
+      "val_mae": 0.6181743767791832,
+      "test_mae": 0.649353080947018,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 9.568523406982422,
+      "val_mae_finetune": 0.34566414642333987,
+      "test_mae_finetune": 0.36902838134765625,
+      "finetune_best_epoch": 93
+    },
+    {
+      "seed": 6,
+      "untrained": {
+        "val_mae": 0.5584454257965477,
+        "test_mae": 0.594238975555521,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.52052116394043
+      },
+      "train_time_s": 357.10846614837646,
+      "first_loss": 0.22007159441709517,
+      "last_loss": 0.001807752251625061,
+      "val_mae": 0.5795815394811482,
+      "test_mae": 0.6231942998324402,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 10.440295219421387,
+      "val_mae_finetune": 0.3480838623046875,
+      "test_mae_finetune": 0.3695473022460937,
+      "finetune_best_epoch": 95
+    },
+    {
+      "seed": 7,
+      "untrained": {
+        "val_mae": 0.5660430724666738,
+        "test_mae": 0.5981772818646914,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.46036148071289
+      },
+      "train_time_s": 300.7089228630066,
+      "first_loss": 0.17486945241689683,
+      "last_loss": 0.001584276556968689,
+      "val_mae": 0.5961979193345536,
+      "test_mae": 0.6252898104634367,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 10.482991218566895,
+      "val_mae_finetune": 0.3577426528930664,
+      "test_mae_finetune": 0.3811274719238281,
+      "finetune_best_epoch": 80
+    },
+    {
+      "seed": 8,
+      "untrained": {
+        "val_mae": 0.5529773615822791,
+        "test_mae": 0.5867628767830916,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 24.77863883972168
+      },
+      "train_time_s": 299.52850317955017,
+      "first_loss": 0.17538438737392426,
+      "last_loss": 0.0007347851991653442,
+      "val_mae": 0.5801426038735017,
+      "test_mae": 0.6042626418599519,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 8.894021034240723,
+      "val_mae_finetune": 0.364526252746582,
+      "test_mae_finetune": 0.40965603637695314,
+      "finetune_best_epoch": 98
+    },
+    {
+      "seed": 9,
+      "untrained": {
+        "val_mae": 0.5601794615193836,
+        "test_mae": 0.5700977604727047,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 24.10661506652832
+      },
+      "train_time_s": 299.86236810684204,
+      "first_loss": 0.1618604466319084,
+      "last_loss": 0.001155368983745575,
+      "val_mae": 0.5882856270929077,
+      "test_mae": 0.6162742470577427,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 14.105048179626465,
+      "val_mae_finetune": 0.35485962677001953,
+      "test_mae_finetune": 0.400491081237793,
+      "finetune_best_epoch": 84
+    }
+  ],
+  "aggregate": {
+    "test_mae": {
+      "mean": 0.6406639679560664,
+      "std": 0.039178749165846856
+    },
+    "untrained_test_mae": {
+      "mean": 0.5890533730207669,
+      "std": 0.011351460553253341
+    },
+    "eff_rank": {
+      "mean": 8.875448989868165,
+      "std": 2.435490253516401
+    },
+    "test_mae_finetune": {
+      "mean": 0.38158711013793944,
+      "std": 0.013368570016349588
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261012T130529Z",
+    "git": {
+      "commit": "acae6df186f09c645a18de78aa535120b2ca23d2",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}

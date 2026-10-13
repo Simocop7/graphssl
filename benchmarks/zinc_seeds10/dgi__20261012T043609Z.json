@@ -1,0 +1,293 @@
+{
+  "dataset": "ZINC-12k",
+  "model": "dgi",
+  "model_config": {
+    "name": "dgi",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 128,
+      "num_layers": 4,
+      "norm_type": "batch",
+      "pool": true,
+      "readout": "mean",
+      "drop": 0.0,
+      "node_emb_num_classes": 29,
+      "edge_dim": 128,
+      "edge_emb_num_classes": 4
+    }
+  },
+  "hyperparameters": {
+    "model": [
+      "dgi",
+      "graphcl",
+      "vicreg",
+      "barlow_twins",
+      "bgrl",
+      "afgrl",
+      "graphdino",
+      "supervised"
+    ],
+    "encoder": "gin",
+    "hidden": 128,
+    "layers": 4,
+    "readout": "mean",
+    "epochs": 100,
+    "finetune_epochs": 100,
+    "batch": 256,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "seeds": 10,
+    "workers": 4,
+    "data_dir": "data/ZINC",
+    "out_dir": "benchmarks/zinc_seeds10",
+    "device": "cuda",
+    "ridge_probe": {
+      "standardize": true,
+      "weight_decays": [
+        1000.0,
+        100.0,
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ]
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "untrained": {
+        "val_mae": 0.5722827489620996,
+        "test_mae": 0.59840051043283,
+        "probe_weight_decay": 0.0001,
+        "eff_rank": 25.881559371948242
+      },
+      "train_time_s": 205.29811239242554,
+      "first_loss": 0.7940578788518906,
+      "last_loss": 0.06325210249051452,
+      "val_mae": 0.9912483622605793,
+      "test_mae": 1.0601016546358413,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 5.941569805145264,
+      "val_mae_finetune": 0.346629035949707,
+      "test_mae_finetune": 0.3565834503173828,
+      "finetune_best_epoch": 93
+    },
+    {
+      "seed": 1,
+      "untrained": {
+        "val_mae": 0.5683864713265879,
+        "test_mae": 0.5987868092791886,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.08822250366211
+      },
+      "train_time_s": 203.99529194831848,
+      "first_loss": 0.8250361084938049,
+      "last_loss": 0.034102418227121234,
+      "val_mae": 0.817723116493912,
+      "test_mae": 0.820563941666318,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 12.407323837280273,
+      "val_mae_finetune": 0.34586042785644533,
+      "test_mae_finetune": 0.3542037887573242,
+      "finetune_best_epoch": 99
+    },
+    {
+      "seed": 2,
+      "untrained": {
+        "val_mae": 0.5559905819366372,
+        "test_mae": 0.5808976465763119,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.35256004333496
+      },
+      "train_time_s": 204.9867296218872,
+      "first_loss": 0.6837863601744175,
+      "last_loss": 0.04366554073058069,
+      "val_mae": 0.9269569163000291,
+      "test_mae": 0.9207020204373021,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 9.207168579101562,
+      "val_mae_finetune": 0.3489500274658203,
+      "test_mae_finetune": 0.37837541961669924,
+      "finetune_best_epoch": 66
+    },
+    {
+      "seed": 3,
+      "untrained": {
+        "val_mae": 0.5467839997909307,
+        "test_mae": 0.5721700788509673,
+        "probe_weight_decay": 1e-05,
+        "eff_rank": 27.199129104614258
+      },
+      "train_time_s": 206.7790343761444,
+      "first_loss": 0.8145929172635078,
+      "last_loss": 0.03336919418070465,
+      "val_mae": 0.7516880073214561,
+      "test_mae": 0.7744600037101372,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 11.837359428405762,
+      "val_mae_finetune": 0.36263639068603515,
+      "test_mae_finetune": 0.39607598876953126,
+      "finetune_best_epoch": 73
+    },
+    {
+      "seed": 4,
+      "untrained": {
+        "val_mae": 0.5741565365751264,
+        "test_mae": 0.6013427599848652,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 27.350860595703125
+      },
+      "train_time_s": 205.50335121154785,
+      "first_loss": 0.7721401765942574,
+      "last_loss": 0.03402276020497084,
+      "val_mae": 0.7773496183303944,
+      "test_mae": 0.7675489034995551,
+      "probe_weight_decay": 1e-05,
+      "eff_rank": 14.544264793395996,
+      "val_mae_finetune": 0.35287033081054686,
+      "test_mae_finetune": 0.3904014282226563,
+      "finetune_best_epoch": 86
+    },
+    {
+      "seed": 5,
+      "untrained": {
+        "val_mae": 0.5763872470709368,
+        "test_mae": 0.5896613105045002,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 24.465539932250977
+      },
+      "train_time_s": 206.63095903396606,
+      "first_loss": 0.6429517872631549,
+      "last_loss": 0.03397828456945717,
+      "val_mae": 0.8727607724969394,
+      "test_mae": 0.900715781961159,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 14.606415748596191,
+      "val_mae_finetune": 0.32102810668945314,
+      "test_mae_finetune": 0.31641895294189454,
+      "finetune_best_epoch": 91
+    },
+    {
+      "seed": 6,
+      "untrained": {
+        "val_mae": 0.5584481166051387,
+        "test_mae": 0.5942404164895211,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 26.52051544189453
+      },
+      "train_time_s": 206.35628819465637,
+      "first_loss": 0.7101065158843994,
+      "last_loss": 0.05825515841133892,
+      "val_mae": 1.3198897810917551,
+      "test_mae": 1.349857714874346,
+      "probe_weight_decay": 0.001,
+      "eff_rank": 5.170950889587402,
+      "val_mae_finetune": 0.35019677734375,
+      "test_mae_finetune": 0.3876436767578125,
+      "finetune_best_epoch": 99
+    },
+    {
+      "seed": 7,
+      "untrained": {
+        "val_mae": 0.5660441426279106,
+        "test_mae": 0.598177983740481,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 25.46036148071289
+      },
+      "train_time_s": 206.73485660552979,
+      "first_loss": 0.7888981409370899,
+      "last_loss": 0.036330053792335094,
+      "val_mae": 0.7121886027221401,
+      "test_mae": 0.7433284517104083,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 13.600353240966797,
+      "val_mae_finetune": 0.3455226974487305,
+      "test_mae_finetune": 0.3672713088989258,
+      "finetune_best_epoch": 75
+    },
+    {
+      "seed": 8,
+      "untrained": {
+        "val_mae": 0.5529795288628593,
+        "test_mae": 0.5867647517843873,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 24.77863311767578
+      },
+      "train_time_s": 206.45869159698486,
+      "first_loss": 0.759110052883625,
+      "last_loss": 0.03353208126500249,
+      "val_mae": 0.860463289360188,
+      "test_mae": 0.8724891295322889,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 14.853400230407715,
+      "val_mae_finetune": 0.32252994537353513,
+      "test_mae_finetune": 0.34775701904296874,
+      "finetune_best_epoch": 80
+    },
+    {
+      "seed": 9,
+      "untrained": {
+        "val_mae": 0.5601784470478283,
+        "test_mae": 0.5700976468107996,
+        "probe_weight_decay": 1e-06,
+        "eff_rank": 24.10661506652832
+      },
+      "train_time_s": 206.74800777435303,
+      "first_loss": 0.8269464358687401,
+      "last_loss": 0.033131043612957004,
+      "val_mae": 0.8244820379667092,
+      "test_mae": 0.8206166871999638,
+      "probe_weight_decay": 1e-06,
+      "eff_rank": 16.35861587524414,
+      "val_mae_finetune": 0.338757698059082,
+      "test_mae_finetune": 0.33936099243164064,
+      "finetune_best_epoch": 100
+    }
+  ],
+  "aggregate": {
+    "test_mae": {
+      "mean": 0.903038428922732,
+      "std": 0.18244008828611186
+    },
+    "untrained_test_mae": {
+      "mean": 0.5890539914453852,
+      "std": 0.011351897321664028
+    },
+    "eff_rank": {
+      "mean": 11.852742242813111,
+      "std": 3.859809348047574
+    },
+    "test_mae_finetune": {
+      "mean": 0.3634092025756836,
+      "std": 0.02535225999315627
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261012T043609Z",
+    "git": {
+      "commit": "acae6df186f09c645a18de78aa535120b2ca23d2",
+      "dirty": false
+    },
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "torch_geometric": "2.8.0.post1",
+    "gpu": "NVIDIA A2"
+  }
+}
