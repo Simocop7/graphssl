@@ -128,6 +128,38 @@ committed results are the 10-seed run in `benchmarks/zinc_seeds10/` (commit `aca
 3 the standard deviations of the fine-tuned column came out two to three and a half times
 smaller, and the same seed does not give the same number twice (see `../docs/benchmarks.md`).
 
+## Probe protocols (`compare_probes.py`)
+
+`compare_probes.py` scores the embeddings of saved models (checkpoints written by
+`save_model()`: the stress test and the reproduction script keep theirs) with the
+linear-evaluation protocols of other codebases, re-implemented from their sources:
+
+- `adam100`: the reference code of DGI and PyG-SSL's evaluator. 100 full-batch Adam steps on
+  the raw embeddings, test accuracy after the last step, averaged over `--repeats` random
+  initialisations.
+- `adam5000`: PyGCL. 5,000 Adam steps, test accuracy at the best validation accuracy.
+- `liblinear`: the BGRL reference implementation. One-vs-rest liblinear on L2-normalised
+  rows, C selected on validation. Needs scikit-learn; 21 × `num_classes` fits per model, so
+  it is not run unless named in `--protocols`.
+- `graphssl`: `LogRegEvaluator`, the probe of every other table here.
+
+```bash
+python -u benchmarks/compare_probes.py --dataset ogbn-arxiv --untrained \
+    --checkpoints benchmarks/stress/ogbn_arxiv_20261012/*.pt \
+                  benchmarks/reproductions/bgrl_ogbn_arxiv/*.pt \
+                  benchmarks/reproductions/bgrl_ogbn_arxiv_library_predictor/*.pt \
+    --out-dir benchmarks/probes/ogbn_arxiv
+```
+
+`--untrained` adds each distinct architecture at initialisation; `--dataset` also takes
+Cora, CiteSeer and PubMed. One JSON with every fit and a `summary.md` go to `--out-dir`.
+The committed run (2026-10-13, commit `7204b92`, about 40 minutes on an idle A2) is in
+`benchmarks/probes/ogbn_arxiv/`; its tables and what they say are in
+`../docs/benchmarks.md` ("Linear evaluation is not one protocol"). In short: the protocols
+agree on well-conditioned embeddings and disagree on weak ones, where the 100-step protocol
+is far from fitted, so it makes self-supervision look about three times more useful against
+an untrained encoder than a converged probe does.
+
 ## Reproductions
 
 `reproduce_bgrl_arxiv.py` runs BGRL on ogbn-arxiv with the protocol of the BGRL paper

@@ -851,6 +851,48 @@ encoder:
     11 points below the untrained encoder's.
   - The first run (2026-10-06, `aaa280f`, `benchmarks/stress/ogbn_arxiv/`) stays as
     history: 0.1.0 probe in its linear column, DGI with two passes (kNN 33.7).
+- **Probe protocols** (`benchmarks/compare_probes.py`, results in
+  `benchmarks/probes/ogbn_arxiv/`, 2026-10-13, `7204b92`, clean): the same embeddings scored
+  with the linear-evaluation protocols of other codebases, re-implemented from sources read
+  verbatim that day — `adam100` = PetarV-/DGI `execute.py` and PyG-SSL
+  `src/evaluation/logistic_regression.py` (defaults, and hard-coded in its
+  `examples/example_BGRL.py`): Xavier weight, zero bias, 100 Adam steps at lr 0.01, no weight
+  decay, raw embeddings, test at the last step; `adam5000` = PyGCL `LRTrainableEvaluator`:
+  5,000 steps, test at the best validation (every 20); `liblinear` = nerdslab/bgrl
+  `fit_logistic_regression_preset_splits`: L2-normalised rows, one-vs-rest liblinear, C ∈
+  2^-10 … 2^10 on validation (not run on arxiv: 21 × 40 fits per row); `graphssl` =
+  `LogRegEvaluator`. 15 sets of embeddings: the 7 stress-test models + the 6 BGRL
+  reproduction models + both encoders untrained. Tables and reading in `docs/benchmarks.md`
+  ("Linear evaluation is not one protocol") — regenerate from the JSON, don't retype. Test
+  accuracy, adam100 | adam5000 | graphssl:
+  untrained GIN-2L 33.8 ± 3.9 | 53.3 | 55.1; DGI 20.6 ± 7.7 (3.2–29.8 over 20 inits) | 48.2
+  | 44.1; AFGRL 52.3 | 58.9 | 58.3; VICReg 56.9 | 61.8 | 61.9; GraphDINO 54.8 | 62.5 | 62.4;
+  Barlow Twins 59.0 | 62.7 | 62.8; BGRL 58.7 | 63.8 | 63.4; GraphCL 59.2 | 63.8 | 63.6;
+  untrained GCN-3L 65.2 | 69.3 | 69.5; BGRL reproduction, reference predictor, 3 seeds
+  71.1–71.2 | 71.0–71.3 | 71.0–71.4; default predictor 27.3 / 24.9 / 58.9 | 65.6 / 54.0 /
+  68.5 | 67.4 / 67.5 / 68.8.
+  - **The protocols agree on well-conditioned embeddings** (within 0.3 on the reference
+    BGRL) **and disagree on weak ones**: adam100 is 21–24 below on the untrained GIN and DGI,
+    40 / 43 / 10 below on the collapsed BGRL, 3.8–7.6 below on the six mini-batch models
+    that learn.
+  - **What it changes is the size of the gain, not the ranking**: gain over the untrained
+    GIN 19–25 points with adam100, 3–8 with graphssl (6–11 with adam5000); BGRL reproduction
+    +5.9 vs +1.7; default-predictor BGRL −28 vs −1.6. GraphCL first and DGI last with every
+    protocol, same order with adam5000 and graphssl, two adjacent swaps with adam100.
+    **Never write that the 100-step probe "changes the ranking"** — Claude did, from the
+    0.1.0-probe notes, and the measurement does not support it.
+  - **GraphSSL's probe is not an upper bound**: adam5000 is within 0.5 of it on 10 of 15
+    rows, 4.0 above on DGI, 13.5 below on one collapsed BGRL seed. On a low-rank Cora
+    embedding (scratch test, one seed) liblinear gave 68.2 against 61.0. The feature map
+    (raw / L2-normalised / standardized) matters: say "protocols differ", not "ours is
+    right".
+  - adam100 on low-rank embeddings is not repeatable even with fixed seeds: an earlier run
+    of the same script (output only in `/tmp` on the VM) gave 36.3 for the untrained GIN and
+    23.1 for DGI, against 33.8 and 20.6 here. Between the two runs the GraphSSL probe moved
+    by at most 0.15 on any row, adam5000 by up to 0.8 (AFGRL, one collapsed BGRL seed),
+    adam100 by nothing on the GCN rows and by up to 2.6 on the GIN ones.
+  - Limits: one seed per mini-batch model, one dataset, GraphSSL's embeddings (the effect
+    inside those codebases' own pipelines is not measured).
 - **Reproduction of the BGRL paper** (`benchmarks/reproduce_bgrl_arxiv.py`, results in
   `benchmarks/reproductions/bgrl_ogbn_arxiv/`): the paper's own protocol, not the shared
   benchmark one. Thakoor et al., ICLR 2022, Table 5 / Table 8 / Appendix F (checked against

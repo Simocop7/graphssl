@@ -480,6 +480,89 @@ each with the per-seed metrics and the kNN / effective-rank curve, both from com
 `acae6df` on a clean tree. The script also saves the trained model of every seed next to
 the JSON (`bgrl_seed<N>.pt`, not committed).
 
+## Linear evaluation is not one protocol
+
+Public graph-SSL codebases fit the "linear probe" in different ways, and their numbers are
+read as if they did not. `benchmarks/compare_probes.py` scores the same frozen embeddings
+with three of those protocols, re-implemented from the sources:
+
+| Protocol | Where it comes from | What it does |
+|---|---|---|
+| 100 Adam steps | the reference code of DGI (`execute.py`) and the `LogisticRegression` evaluator of PyG-SSL (its defaults and its BGRL example) | a linear layer, Xavier-uniform weight, Adam at lr 0.01 without weight decay, 100 full-batch steps on the raw embeddings; test accuracy after the last step, averaged over random initialisations |
+| 5,000 Adam steps | `LRTrainableEvaluator` of PyGCL | the same layer and optimizer for 5,000 steps; validation every 20 steps, test accuracy at the best validation accuracy |
+| GraphSSL probe | `LogRegEvaluator` | standardized features, L-BFGS to convergence from a zero initialisation, L2 strength selected on validation |
+
+The embeddings are those of models already on this page, all on ogbn-arxiv: the seven
+models of the mini-batch stress test (GIN-2L, 100 epochs, one seed each) and the six models
+of the BGRL reproduction (GCN-3L, the paper's protocol, two predictors × three seeds), each
+group with its encoder untrained. Test accuracy (%), commit `7204b92`.
+
+GIN-2L, mini-batch training:
+
+| Embeddings | 100 Adam steps | its range over 20 initialisations | 5,000 Adam steps | GraphSSL probe | Rank |
+|---|---|---|---|---|---|
+| *Untrained encoder* | 33.8 ± 3.9 | 25.6–38.5 | 53.3 | 55.1 | 4 |
+| DGI | 20.6 ± 7.7 | 3.2–29.8 | 48.2 | 44.1 | 2 |
+| AFGRL | 52.3 ± 2.8 | 46.0–57.0 | 58.9 | 58.3 | 23 |
+| VICReg | 56.9 ± 0.4 | 56.2–57.8 | 61.8 | 61.9 | 37 |
+| GraphDINO | 54.8 ± 2.3 | 50.7–58.5 | 62.5 | 62.4 | 19 |
+| Barlow Twins | 59.0 ± 0.2 | 58.7–59.3 | 62.7 | 62.8 | 69 |
+| BGRL | 58.7 ± 1.1 | 55.6–60.2 | 63.8 | 63.4 | 49 |
+| GraphCL | 59.2 ± 0.3 | 58.6–59.7 | 63.8 | 63.6 | 38 |
+
+GCN-3L, full-graph training with the protocol of the BGRL paper:
+
+| Embeddings | 100 Adam steps | its range over 20 initialisations | 5,000 Adam steps | GraphSSL probe | Rank |
+|---|---|---|---|---|---|
+| *Untrained encoder* | 65.2 ± 0.2 | 64.7–65.6 | 69.3 | 69.5 | 116 |
+| BGRL, reference predictor, seed 0 | 71.1 ± 0.1 | 71.0–71.3 | 71.0 | 71.0 | 167 |
+| BGRL, reference predictor, seed 1 | 71.2 ± 0.1 | 71.0–71.3 | 71.3 | 71.4 | 169 |
+| BGRL, reference predictor, seed 2 | 71.2 ± 0.1 | 71.1–71.3 | 71.1 | 71.3 | 167 |
+| BGRL, default predictor, seed 0 | 27.3 ± 0.1 | 27.2–27.5 | 65.6 | 67.4 | 158 |
+| BGRL, default predictor, seed 1 | 24.9 ± 1.0 | 22.8–26.4 | 54.0 | 67.5 | 39 |
+| BGRL, default predictor, seed 2 | 58.9 ± 0.5 | 58.1–59.8 | 68.5 | 68.8 | 144 |
+
+- **On well-conditioned embeddings the three protocols agree.** For BGRL with the reference
+  predictor they are within 0.3 points of each other in every seed.
+- **On weak embeddings the 100-step protocol is far from fitted, and it depends on its
+  random initialisation.** It is 21 points below the GraphSSL probe on the untrained GIN and
+  24 below on DGI, where its 20 initialisations range from 3.2 to 29.8. On BGRL with
+  the default predictor, whose embeddings are almost parallel (see above), it is 40, 43
+  and 10 points below. On the six mini-batch models that learn it is 3.8 to 7.6 below.
+- **So it inflates what self-supervision appears to add.** It penalises an untrained
+  encoder more than a trained one. The six mini-batch models that learn gain 19 to 25
+  points over the untrained GIN with 100 Adam steps, and 3 to 8 with the GraphSSL probe
+  (6 to 11 with 5,000 steps). The BGRL reproduction gains 5.9 points over the untrained
+  GCN with 100 steps, 1.9 with 5,000 and 1.7 with the GraphSSL probe. The same holds for a
+  failure: with the default predictor BGRL looks 28 points worse than no training with 100
+  steps, and 1.6 with the GraphSSL probe.
+- **The ranking barely moves.** Among the seven mini-batch models GraphCL is first and DGI
+  last with every protocol; the 5,000-step protocol gives the same order as the GraphSSL
+  probe, and the 100-step one differs from it only in the middle
+  (GraphCL > Barlow Twins > BGRL > VICReg > GraphDINO > AFGRL > DGI against GraphCL > BGRL > Barlow Twins > GraphDINO > VICReg > AFGRL > DGI).
+  What changes is the size of the differences, not who leads.
+- **No protocol dominates.** The 5,000-step protocol is within 0.5 points of the GraphSSL
+  probe on 10 of the 15 rows. It is 4.0 points above it on DGI and 0.6 above on AFGRL, and
+  14 points below on one seed of BGRL with the default predictor.
+
+What this does not show: the mini-batch models have one seed each; there is one dataset;
+the embeddings are GraphSSL's, so the size of the effect inside those codebases' own
+pipelines, where the embeddings have another scale, is not measured; and the fourth
+protocol of the script, one-vs-rest liblinear on L2-normalised rows as in the BGRL
+reference implementation, was not run on this graph (21 values of C × 40 classes per row).
+
+```bash
+python -u benchmarks/compare_probes.py --dataset ogbn-arxiv --untrained \
+    --checkpoints benchmarks/stress/ogbn_arxiv_20261012/*.pt \
+                  benchmarks/reproductions/bgrl_ogbn_arxiv/*.pt \
+                  benchmarks/reproductions/bgrl_ogbn_arxiv_library_predictor/*.pt \
+    --out-dir benchmarks/probes/ogbn_arxiv
+```
+
+The checkpoints are written by the stress test and by the reproduction script (they are not
+committed). Results are in `benchmarks/probes/ogbn_arxiv/`: one JSON with every fit and a
+`summary.md`. About 40 minutes on an idle NVIDIA A2.
+
 ## Molecules: ZINC (graph-level regression)
 
 `benchmarks/run_zinc.py` runs the same seven objectives on ZINC-12k (10k / 1k / 1k
