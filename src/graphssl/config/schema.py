@@ -12,7 +12,7 @@ Usage (config-driven construction, uniform across all models)::
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Dict, List, Optional
 
 import torch.nn as nn
@@ -26,16 +26,18 @@ import torch.nn as nn
 class EncoderConfig:
     """Validated configuration for graph encoders.
 
-    All three encoder backbones (GCN, GIN, Transformer) share this config.
-    Fields that don't apply to a given encoder are silently ignored during
-    build() via introspection — no extra per-encoder config class needed.
+    All three encoder backbones (GCN, GIN, Transformer) share this config: build()
+    forwards to an encoder the fields its constructor takes. A field left at its default
+    is simply not forwarded to an encoder that has no use for it; a field that was *set*
+    and that the chosen encoder does not take makes build() raise (see there).
     """
 
     name: str
     hidden_dim: int
     num_layers: int
     mlp_ratio: float = 2.0
-    drop: float = 0.2
+    # Dropout rate. None: the encoder's own default (GIN 0.2, GCN 0, Transformer 0.1).
+    drop: Optional[float] = None
     pool: bool = True
     readout: str = "mean"  # graph-level pooling when pool=True: 'mean', 'sum' or 'max'
     norm_type: str = "batch"  # 'batch', 'layer', or 'none'
@@ -53,7 +55,7 @@ class EncoderConfig:
             raise ValueError(f"hidden_dim must be > 0, got {self.hidden_dim}")
         if self.num_layers <= 0:
             raise ValueError(f"num_layers must be > 0, got {self.num_layers}")
-        if not (0.0 <= self.drop < 1.0):
+        if self.drop is not None and not (0.0 <= self.drop < 1.0):
             raise ValueError(f"drop must be in [0, 1), got {self.drop}")
         if self.readout not in ("mean", "sum", "max"):
             raise ValueError(f"readout must be 'mean', 'sum' or 'max', got {self.readout!r}")
@@ -76,17 +78,42 @@ class EncoderConfig:
     def build(self, in_channels: int) -> nn.Module:
         """Instantiate the encoder via the ENCODERS registry.
 
-        Only the kwargs accepted by the encoder's __init__ are forwarded,
-        so EncoderConfig can carry universal fields (drop, mlp_ratio, …)
-        without breaking encoders that don't expose those parameters (e.g. GCN).
+        Only the kwargs accepted by the encoder's __init__ are forwarded, so the config
+        can carry fields that an encoder has no use for (``mlp_ratio`` with GCN, …).
+        A field that was set — a required one, or one whose value differs from its
+        default — and that the encoder does not take raises ``ValueError``: it would
+        otherwise be discarded without notice, as ``num_layers`` once was with the GCN
+        encoder, ``drop`` with the GCN and Transformer encoders, and as ``edge_dim``
+        would be with an encoder that cannot use edge features.
+        ``pool`` and ``readout`` are exempt: the models read them, not the encoder.
+        An encoder whose constructor has ``**kwargs`` receives every field.
         """
         import inspect
 
         from graphssl.registry import ENCODERS
 
         cls = ENCODERS.get_builder(self.name)
-        valid = set(inspect.signature(cls.__init__).parameters) - {"self"}
-        kwargs = {k: v for k, v in vars(self).items() if k != "name" and k in valid}
+        params = inspect.signature(cls.__init__).parameters
+        takes_any = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+        valid = set(params) - {"self"}
+        if not takes_any:
+            ignored = [
+                f.name
+                for f in fields(self)
+                if f.name not in valid
+                and f.name not in ("name", "pool", "readout")
+                # a required field has no default: it is always set
+                and (f.default is MISSING or getattr(self, f.name) != f.default)
+            ]
+            if ignored:
+                raise ValueError(
+                    f"encoder {self.name!r} does not take {', '.join(ignored)}: the value "
+                    "would be discarded. Remove it from the encoder config, choose an "
+                    "encoder that supports it, or make the encoder's constructor accept it"
+                )
+        kwargs = {k: v for k, v in vars(self).items() if k != "name" and (takes_any or k in valid)}
+        if kwargs.get("drop") is None:
+            kwargs.pop("drop", None)  # None: the encoder's own default
         return ENCODERS.build(self.name, in_channels=in_channels, **kwargs)
 
 

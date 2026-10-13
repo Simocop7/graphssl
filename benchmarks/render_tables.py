@@ -174,12 +174,15 @@ def render_markdown(dataset: str, models: dict) -> str:
         probe_note({MODEL_DISPLAY_NAMES[m]: models[m] for m in MODEL_ORDER if m in models})
     )
     if "supervised" in models or "supervised_reg" in models:
+        # Runs saved since the recipe drops the GCN's normalization layer record it.
+        reg_norm = models.get("supervised_reg", {}).get("hyperparameters", {}).get("norm_type")
+        no_norm = ", no normalization layer" if reg_norm == "none" else ""
         lines.append("")
         lines.append(
             "*Supervised uses train-split labels during pretraining (not an SSL method) — "
             "included as a reference point, not a like-for-like comparison. "
             "'Supervised' keeps the shared protocol (no dropout, last checkpoint); "
-            "'std. recipe' uses dropout 0.5, Adam lr 0.01 + L2 5e-4 and the "
+            f"'std. recipe' uses dropout 0.5, Adam lr 0.01 + L2 5e-4{no_norm} and the "
             "best-validation checkpoint (Kipf & Welling, 2017).*"
         )
     return "\n".join(lines)

@@ -28,7 +28,8 @@ Usage::
 Both supervised references train full-batch on the public split's ``train_mask``
 only. ``supervised`` keeps the shared SSL protocol unchanged; ``supervised_reg``
 uses the standard Kipf & Welling recipe (dropout 0.5, Adam lr 0.01 + L2 5e-4,
-best-validation checkpoint), recorded in the JSON's hyperparameters. Their encoder
+best-validation checkpoint, and with the GCN backbone no normalization layer, as in
+their model), recorded in the JSON's hyperparameters. Their encoder
 embeddings get the same linear probe + kNN evaluation; the accuracy of the trained
 head is saved alongside as ``test_acc_head``.
 
@@ -93,7 +94,8 @@ SSL_MODELS = ["dgi", "graphcl", "vicreg", "barlow_twins", "bgrl", "afgrl", "grap
 #   supervised      the shared SSL protocol unchanged (no dropout, AdamW, last checkpoint).
 #                   With 120-140 labels and no regularization it overfits, so it understates
 #                   what the labels are worth.
-#   supervised_reg  the standard semi-supervised recipe of Kipf & Welling (2017) below.
+#   supervised_reg  the standard semi-supervised recipe of Kipf & Welling (2017) below;
+#                   with GCN also their architecture (no normalization layer).
 SUPERVISED_MODELS = ["supervised", "supervised_reg"]
 SUPERVISED_REG_RECIPE = {
     "optimizer": "adam",  # L2 through Adam's coupled weight_decay, as in the GCN paper
@@ -102,6 +104,12 @@ SUPERVISED_REG_RECIPE = {
     "dropout": 0.5,
     "model_selection": "best_val_acc",  # checkpoint with the best validation accuracy
 }
+# Normalization of the supervised_reg encoder, per backbone. Kipf & Welling's GCN has no
+# normalization layer; with the shared protocol's BatchNorm this reference is about three
+# points lower on Cora and CiteSeer (see docs/benchmarks.md). Other backbones keep the
+# shared encoder's batch norm: without a normalization layer the GIN encoder loses more
+# than ten points.
+SUPERVISED_REG_NORM = {"gcn": "none"}
 ALL_MODEL_CHOICES = [*SSL_MODELS, *SUPERVISED_MODELS]
 
 # Teacher-student models: model.forward() evaluates one encoder (online for BGRL/AFGRL,
@@ -237,13 +245,14 @@ def apply_overrides(cfg: dict, overrides: dict) -> dict:
 
 def make_config(model_name: str, args: argparse.Namespace) -> dict:
     """Full model config for one (model, args) combination — identical for every seed."""
+    reg = model_name == "supervised_reg"
     encoder_cfg = {
         "name": args.encoder,
         "hidden_dim": args.hidden,
         "num_layers": args.layers,
-        "norm_type": "batch",
+        "norm_type": SUPERVISED_REG_NORM.get(args.encoder, "batch") if reg else "batch",
         "pool": False,  # node-level task: no graph pooling
-        "drop": SUPERVISED_REG_RECIPE["dropout"] if model_name == "supervised_reg" else 0.0,
+        "drop": SUPERVISED_REG_RECIPE["dropout"] if reg else 0.0,
     }
     cfg = build_model_config(model_name, encoder_cfg, args)
     return apply_overrides(cfg, getattr(args, "overrides", {}))
@@ -523,6 +532,7 @@ def save_result(
     if model_name == "supervised_reg":
         # Its recipe replaces the shared optimizer settings: record what actually ran.
         hyperparameters.update(SUPERVISED_REG_RECIPE)
+        hyperparameters["norm_type"] = config["encoder"]["norm_type"]
     if args.ema_tau is not None and model_name in ALT_ENCODER:
         hyperparameters["ema_tau"] = args.ema_tau
     if args.overrides:

@@ -119,6 +119,8 @@ class TransformerEncoder(nn.Module):
             nn.Embedding (for integer node labels, e.g. ZINC atom types).
         edge_emb_num_classes: If set, adds an nn.Embedding that maps integer edge
             labels to edge_dim vectors before attention. Requires edge_dim to be set.
+        drop: The single dropout rate of ``EncoderConfig``: when given, it replaces both
+            ``dropout`` and ``attn_dropout`` (``drop=0`` means no dropout anywhere).
     """
 
     def __init__(
@@ -137,9 +139,14 @@ class TransformerEncoder(nn.Module):
         edge_dim: int | None = None,
         node_emb_num_classes: int | None = None,
         edge_emb_num_classes: int | None = None,
+        drop: float | None = None,
     ):
         super().__init__()
         assert hidden_dim % heads == 0, "hidden_dim must be divisible by heads"
+        if drop is not None:
+            if not (0.0 <= drop < 1.0):
+                raise ValueError(f"drop must be in [0, 1), got {drop}")
+            dropout = attn_dropout = drop
         if edge_emb_num_classes is not None and edge_dim is None:
             raise ValueError("edge_emb_num_classes requires edge_dim to be set.")
 

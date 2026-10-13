@@ -95,7 +95,27 @@ No access to the trainer, logger, or datamodule from inside a model.
     `best_epoch` is 0–2 on CiteSeer for all ten seeds and for 7 of 10 on Cora (15–100 with
     GIN): validation accuracy peaks after one to three Adam steps and never recovers. Not
     investigated — these are untuned references, don't present them as what supervision
-    can reach
+    can reach. (Numbers of this bullet: BatchNorm encoder, before 2026-10-13 — see the next
+    one.)
+  - **Decided 2026-10-13 (the user delegated it): with GCN, `supervised_reg` drops the
+    encoder's normalization layer** — Kipf & Welling's GCN has none
+    (`SUPERVISED_REG_NORM = {"gcn": "none"}` in `run_benchmark.py`, recorded as
+    `hyperparameters.norm_type`; `--set encoder.norm_type=batch` gives the old encoder).
+    Other backbones keep batch norm. The diagnostic behind it (10 seeds, A2, uncommitted
+    tree with the GCN dropout fix, head accuracy, Cora / CiteSeer / PubMed — rerun from
+    committed code before quoting): GCN + BatchNorm 78.0 ± 1.5 / 65.3 ± 2.0 / 75.9 ± 1.3;
+    GCN without norm **81.2 ± 0.7 / 68.7 ± 1.7 / 78.3 ± 1.2**, i.e. 0.3 / 1.6 / 0.7 below
+    Kipf & Welling; GIN + BatchNorm 77.1 / 63.5 / 71.8; GIN without norm 56.3 / 50.3 / 71.6.
+    - The dropout that never reached the GCN was a real defect, but with BatchNorm it
+      changes nothing (78.0 / 65.4 / 74.6 without it: the committed rows).
+    - **The early `best_epoch` was never the problem, and BatchNorm does not explain it**:
+      without norm it is still 3–5 for 9 of 10 seeds on Cora and 2–3 for 8 of 10 on
+      CiteSeer, at 81 / 69% accuracy. Why BatchNorm costs about three points: not
+      identified — don't state a cause.
+    - **The committed GCN `supervised_reg` rows predate this** (BatchNorm, and no dropout
+      although the JSON says 0.5): rerun them from the commit that carries the change, then
+      regenerate the tables and rewrite the "3.5 / 4.9 / 4.4 below" sentences in docs,
+      README and paper. The GIN rows are unaffected (same code path as before).
 
 ### DGI (Deep Graph Infomax)
 - Discriminates real vs. corrupted embeddings via a discriminator with a learnable matrix W
@@ -284,14 +304,24 @@ All are registered via `@ENCODERS.register("name")`.
 | `weight_standardization` | bool | False | GCN only: standardize the conv weights of every layer after the first |
 | `pool` | bool | True | graph-level task: models pool the node embeddings per graph |
 | `readout` | str | "mean" | 'mean', 'sum', 'max' — the pooling used when `pool=True` (read by the models, not by the encoder) |
-| `drop` | float | 0.2 | dropout rate |
+| `drop` | float\|None | None | dropout rate; `None` = the encoder's own default (GIN 0.2, GCN 0, Transformer 0.1) |
 | `mlp_ratio` | float | 2.0 | hidden-dim multiplier for the internal MLP |
 | `edge_dim` | int\|None | None | enables edge-feature-aware convolution (GINEConv / TransformerConv) |
 | `node_emb_num_classes` | int\|None | None | replaces Linear with nn.Embedding for categorical features (ZINC: 28) |
 | `edge_emb_num_classes` | int\|None | None | nn.Embedding for categorical edge features (ZINC: 4). Requires `edge_dim`. |
 
 `EncoderConfig.build(in_channels)` uses `inspect.signature` to forward only the kwargs
-accepted by the specific encoder — unsupported fields are silently ignored.
+accepted by the specific encoder. A field left at its default is not forwarded to an encoder
+that has no use for it; a field that was **set** (a required one, or a value different from
+the default) and that the encoder's constructor does not take **raises `ValueError`** —
+`edge_dim` / `mlp_ratio` with `gcn`, `weight_standardization` with `gin`, `num_layers` with a
+custom fixed-depth encoder. `pool` and `readout` are exempt (the models read them); an
+encoder with `**kwargs` receives everything. Decided 2026-10-13 (the user delegated it):
+until then such fields were dropped in silence, which is how three defects went unnoticed —
+GCN ignoring `num_layers`, `weight_standardization` doing nothing, and `drop` never reaching
+the GCN and Transformer encoders (the benchmark's supervised reference "with dropout 0.5"
+trained its GCN without any). **Never go back to silent ignoring, and not to a warning
+either**: the test suite alone prints thousands of warnings, nobody reads them.
 
 ### GCN
 - `num_layers` × (GCNConv → norm → PReLU), 2 by default. Until this was fixed the encoder
@@ -300,6 +330,8 @@ accepted by the specific encoder — unsupported fields are silently ignored.
   weights of every layer after the first before each forward, as BGRL does on ogbn-arxiv.
   It used to do nothing — the helper looked for a direct `weight` parameter, GCNConv keeps
   its weight in `lin.weight` — and could not be set from a config.
+- `drop` (0 by default): dropout on the **input** of every layer, as in Kipf & Welling. The
+  encoder had no dropout at all before 2026-10-13; with `drop=0` it is bit-identical to that.
 - State-dict keys are `convs.N` / `norms.N` / `acts.N` (0.1.0: `conv1`, `norm1`, …).
 - **BatchNorm momentum 0.1** (`batchnorm_mm`, constructor only; PyTorch's default, as GIN
   and Transformer). It was 0.01 until 2026-10-09: after n forward passes the running
@@ -340,6 +372,10 @@ accepted by the specific encoder — unsupported fields are silently ignored.
 - Supports `edge_attr` via `TransformerConv(edge_dim=...)`
 - Same `norm_type` API as GINEncoder (batch/layer/none)
 - `node_emb_num_classes` and `edge_emb_num_classes` both supported
+- `drop` (the config's single rate) replaces both `dropout` and `attn_dropout`; unset, both
+  stay at 0.1. The benchmark runner passes `drop: 0.0`, so `--encoder transformer` now runs
+  without dropout, as its protocol says (it kept 0.1 while `drop` was discarded; no
+  Transformer result is committed).
 
 ---
 
@@ -947,7 +983,7 @@ pytest tests/ -v
 | `test_supervised.py` | Supervised | head dim, mini-batch crop, full-batch loss on `train_mask` only (raises without it), graph-level pooling, regression task (L1) |
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
 | `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; edge features reach the encoder in training and in `forward()` (gin/transformer); AFGRL rows need faiss |
-| `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN eval-mode statistics after a short training (BatchNorm momentum), GCN depth (`num_layers`) and weight standardization, CombinedLoss |
+| `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN eval-mode statistics after a short training (BatchNorm momentum), GCN depth (`num_layers`) and weight standardization, `drop` reaches every encoder (training only, `None` = encoder default, GCN unchanged at 0), `EncoderConfig.build()` refuses fields the encoder would drop (set, required, `**kwargs` encoders exempt), CombinedLoss |
 | `test_checkpoint.py` | all | `save_model` / `load_model` give the same embeddings, `pretrained_encoder` is the encoder `forward()` uses, fine-tuning starts from its weights |
 | `test_callbacks.py` | — | `EmbeddingLoggerCallback` files, `LinearEvalCallback` history and custom `evaluator`, the model trains again after an evaluation |
 | `test_schedulers.py` | — | `CosineDecayScheduler` (linear warm-up, cosine decay, BGRL's formula), `CosineEMAScheduler` (BGRL's formula, monotonic, clamped) |

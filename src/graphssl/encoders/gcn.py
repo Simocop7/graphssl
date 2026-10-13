@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import Tensor
 from torch_geometric.nn import GCNConv
 
@@ -25,7 +26,7 @@ def _make_norm(norm_type: str, dim: int, batchnorm_mm: float = 0.1) -> nn.Module
 class GCNEncoder(nn.Module):
     """GCNConv backbone (2 layers by default).
 
-    Architecture per layer: GCNConv → Norm → PReLU.
+    Architecture per layer: (Dropout →) GCNConv → Norm → PReLU.
 
     Uses the same ``norm_type`` API as GINEncoder and TransformerEncoder so that
     switching encoder backbones is a one-line config change.
@@ -44,6 +45,9 @@ class GCNEncoder(nn.Module):
             ones the model was trained with.
         pool: If True, apply global_mean_pool to produce graph-level embeddings.
         num_layers: Number of GCNConv layers.
+        drop: Dropout on the input of every layer, as in Kipf & Welling (2017). 0 by
+            default: the encoder had no dropout before this parameter existed, and the
+            ``drop`` of a config was discarded without notice.
     """
 
     def __init__(
@@ -59,12 +63,15 @@ class GCNEncoder(nn.Module):
         batchnorm: bool | None = None,
         layernorm: bool | None = None,
         num_layers: int = 2,
+        drop: float = 0.0,
     ):
         super().__init__()
         if out_dim is None:
             out_dim = hidden_dim
         if num_layers <= 0:
             raise ValueError(f"num_layers must be > 0, got {num_layers}")
+        if not (0.0 <= drop < 1.0):
+            raise ValueError(f"drop must be in [0, 1), got {drop}")
 
         # --- Backwards-compatible norm resolution ---
         # If the caller uses the old batchnorm/layernorm bool flags, honour them.
@@ -80,6 +87,7 @@ class GCNEncoder(nn.Module):
 
         self.weight_standardization = weight_standardization
         self.pool = pool
+        self.drop = drop
 
         dims = [in_channels] + [hidden_dim] * (num_layers - 1) + [out_dim]
         self.convs = nn.ModuleList(GCNConv(i, o) for i, o in zip(dims[:-1], dims[1:], strict=True))
@@ -97,6 +105,8 @@ class GCNEncoder(nn.Module):
         for i, (conv, norm, act) in enumerate(layers):
             if self.weight_standardization and i > 0:
                 apply_weight_standardization(conv)
+            if self.drop > 0:
+                x = F.dropout(x, p=self.drop, training=self.training)
             x = act(norm(conv(x, edge_index)))
         return x
 

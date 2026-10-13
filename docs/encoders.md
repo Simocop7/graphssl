@@ -20,19 +20,34 @@ and are registered via `@ENCODERS.register("name")` (see [Registry Pattern](arch
 | `weight_standardization` | bool | `False` | GCN only: standardize the convolution weights of every layer after the first |
 | `pool` | bool | `True` | graph-level task: the model pools the node embeddings per graph |
 | `readout` | str | `"mean"` | `'mean'`, `'sum'` or `'max'`: the pooling used when `pool=True` |
-| `drop` | float | `0.2` | dropout rate |
+| `drop` | float \| None | `None` | dropout rate; `None` keeps the encoder's own default (GIN 0.2, GCN 0, Transformer 0.1) |
 | `mlp_ratio` | float | `2.0` | hidden-dim multiplier for the internal MLP |
 | `edge_dim` | int \| None | `None` | enables edge-feature-aware convolution (GINEConv / TransformerConv) |
 | `node_emb_num_classes` | int \| None | `None` | replaces `Linear` with `nn.Embedding` for categorical node features (e.g. ZINC: 28 atom types) |
 | `edge_emb_num_classes` | int \| None | `None` | `nn.Embedding` for categorical edge features. Requires `edge_dim` |
 
 `EncoderConfig.build(in_channels)` uses `inspect.signature` to forward only the kwargs the
-specific encoder actually accepts — unsupported fields are silently ignored, so the same
-config schema works across encoders that don't share every feature.
+specific encoder actually accepts, so the same config schema works across encoders that
+don't share every feature. A field left at its default is simply not forwarded to an encoder
+that has no use for it. A field that you **set** and that the encoder does not take raises a
+`ValueError` instead of being dropped:
+
+```python
+EncoderConfig(name="gcn", hidden_dim=64, num_layers=2, edge_dim=16).build(in_channels)
+# ValueError: encoder 'gcn' does not take edge_dim: the value would be discarded. ...
+```
+
+The same holds for the required fields (`hidden_dim`, `num_layers`), which are always set.
+`pool` and `readout` are exempt (the models read them, not the encoder), and an encoder
+whose constructor has `**kwargs` receives every field. Before 0.2.0 such fields were
+ignored without notice — which is how a `drop` given to the GCN or Transformer encoder, and
+`num_layers` given to the GCN encoder, had no effect.
 
 ## GCN
 
 - `num_layers` × (`GCNConv` → norm → `PReLU`).
+- `drop` applies dropout to the input of every layer, as in Kipf & Welling (2017). No
+  dropout by default.
 - Optional weight standardization (`weight_standardization`) of the convolution weights of
   every layer after the first — BGRL's setting on ogbn-arxiv, together with layer norm.
 - Backward compatible with the older `batchnorm=True/False` / `layernorm=True/False` flags.
@@ -53,6 +68,8 @@ config schema works across encoders that don't share every feature.
 
 - A stack of `TransformerBlock`s (PyG's `TransformerConv`), pre-norm + FFN + residual.
 - Supports `edge_attr` via `TransformerConv(edge_dim=...)`.
+- `drop` sets both of its dropout rates (feed-forward and attention); left unset, both are
+  0.1.
 - Same `norm_type` API as GIN (batch/layer/none), and the same `node_emb_num_classes` /
   `edge_emb_num_classes` support.
 

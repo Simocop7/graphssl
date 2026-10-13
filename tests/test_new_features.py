@@ -238,13 +238,129 @@ class TestGCNWeightStandardization:
     def test_config_field_reaches_the_encoder(self):
         cfg = {"hidden_dim": 32, "num_layers": 2, "pool": False, "weight_standardization": True}
         assert EncoderConfig(name="gcn", **cfg).build(7).weight_standardization
-        # Encoders without the option ignore it, like every field they don't take.
-        EncoderConfig(name="gin", **cfg).build(7)
+        # An encoder without the option refuses it instead of ignoring it.
+        with pytest.raises(ValueError, match="does not take weight_standardization"):
+            EncoderConfig(name="gin", **cfg).build(7)
 
 
 # ---------------------------------------------------------------------------
 # TransformerEncoder: edge features, norm_type, node embedding
 # ---------------------------------------------------------------------------
+
+
+class TestEncoderDropout:
+    """``EncoderConfig.drop`` must reach every encoder.
+
+    The GCN encoder had no dropout and the Transformer calls its rate ``dropout``, so a
+    ``drop`` in the config was discarded by ``build()`` for both: the benchmark's supervised
+    reference "with dropout 0.5" trained its GCN without any.
+    """
+
+    @staticmethod
+    def _two_train_passes(enc):
+        torch.manual_seed(0)
+        x = torch.randn(40, 7)
+        edge_index = torch.randint(0, 40, (2, 160))
+        enc.train()
+        return enc(x, edge_index), enc(x, edge_index), x, edge_index
+
+    @pytest.mark.parametrize("name", ["gcn", "gin", "transformer"])
+    def test_drop_is_applied_in_training_only(self, name):
+        cfg = EncoderConfig(name=name, hidden_dim=32, num_layers=2, pool=False, drop=0.5)
+        enc = cfg.build(7)
+        first, second, x, edge_index = self._two_train_passes(enc)
+        assert not torch.allclose(first, second), "two training passes should differ with dropout"
+        enc.eval()
+        assert torch.equal(enc(x, edge_index), enc(x, edge_index))
+
+    @pytest.mark.parametrize("name", ["gcn", "gin", "transformer"])
+    def test_zero_drop_means_no_dropout(self, name):
+        cfg = EncoderConfig(name=name, hidden_dim=32, num_layers=2, pool=False, drop=0.0)
+        first, second, _, _ = self._two_train_passes(cfg.build(7))
+        assert torch.equal(first, second)
+
+    def test_unset_drop_keeps_each_encoder_default(self):
+        """None = the encoder's own default: no dropout for GCN, 0.2 for GIN, 0.1 for Transformer."""
+        cfg = {"hidden_dim": 32, "num_layers": 2, "pool": False}
+        gcn = EncoderConfig(name="gcn", **cfg).build(7)
+        assert gcn.drop == 0.0
+        first, second, _, _ = self._two_train_passes(gcn)
+        assert torch.equal(first, second)
+        for name in ("gin", "transformer"):
+            first, second, _, _ = self._two_train_passes(EncoderConfig(name=name, **cfg).build(7))
+            assert not torch.allclose(first, second), name
+
+    def test_gcn_without_dropout_is_unchanged(self):
+        """drop=0 gives exactly GCNConv → norm → PReLU, the encoder before the parameter existed."""
+        torch.manual_seed(0)
+        enc = GCNEncoder(in_channels=7, hidden_dim=32, num_layers=2).eval()
+        x, edge_index = torch.randn(40, 7), torch.randint(0, 40, (2, 160))
+        expected = x
+        for conv, norm, act in zip(enc.convs, enc.norms, enc.acts, strict=True):
+            expected = act(norm(conv(expected, edge_index)))
+        assert torch.equal(enc(x, edge_index), expected)
+
+    @pytest.mark.parametrize("drop", [-0.1, 1.0])
+    def test_invalid_drop_raises(self, drop):
+        with pytest.raises(ValueError, match="drop must be in"):
+            EncoderConfig(name="gcn", hidden_dim=32, num_layers=2, drop=drop)
+        with pytest.raises(ValueError, match="drop must be in"):
+            GCNEncoder(in_channels=7, hidden_dim=32, drop=drop)
+        with pytest.raises(ValueError, match="drop must be in"):
+            TransformerEncoder(in_channels=7, hidden_dim=32, drop=drop)
+
+
+class TestEncoderConfigRefusesIgnoredFields:
+    """A field that was set and that the encoder cannot use must not be dropped in silence."""
+
+    @pytest.mark.parametrize(
+        "field, value",
+        [("edge_dim", 16), ("node_emb_num_classes", 28), ("mlp_ratio", 4.0)],
+    )
+    def test_gcn_refuses_what_it_cannot_use(self, field, value):
+        cfg = EncoderConfig(name="gcn", hidden_dim=32, num_layers=2, **{field: value})
+        with pytest.raises(ValueError, match=f"'gcn' does not take {field}"):
+            cfg.build(7)
+
+    def test_defaults_and_model_level_fields_pass(self):
+        """Fields left at their default, and pool / readout (read by the models), are fine."""
+        for name in ("gcn", "gin", "transformer"):
+            EncoderConfig(name=name, hidden_dim=32, num_layers=2, pool=True, readout="sum").build(7)
+
+    def test_required_field_the_encoder_drops_is_refused(self):
+        """num_layers is always set: an encoder of fixed depth must not drop it in silence."""
+        from graphssl.registry import ENCODERS
+
+        @ENCODERS.register("_test_fixed_depth_encoder")
+        class _Fixed(torch.nn.Module):
+            def __init__(self, in_channels: int, hidden_dim: int):
+                super().__init__()
+
+        try:
+            cfg = EncoderConfig(name="_test_fixed_depth_encoder", hidden_dim=32, num_layers=2)
+            with pytest.raises(ValueError, match="does not take num_layers"):
+                cfg.build(7)
+        finally:
+            ENCODERS._builders.pop("_test_fixed_depth_encoder", None)
+
+    def test_encoder_with_kwargs_takes_everything(self):
+        from graphssl.registry import ENCODERS
+
+        seen = {}
+
+        @ENCODERS.register("_test_kwargs_encoder")
+        class _Any(torch.nn.Module):
+            def __init__(self, in_channels: int, hidden_dim: int, **kwargs):
+                super().__init__()
+                seen.update(kwargs)
+
+        try:
+            EncoderConfig(
+                name="_test_kwargs_encoder", hidden_dim=32, num_layers=2, edge_dim=16
+            ).build(7)
+        finally:
+            ENCODERS._builders.pop("_test_kwargs_encoder", None)
+        assert seen["edge_dim"] == 16 and seen["num_layers"] == 2 and "drop" not in seen
 
 
 class TestTransformerEncoderNewFeatures:

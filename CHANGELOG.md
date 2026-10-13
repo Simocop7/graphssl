@@ -46,8 +46,24 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
   keyword-only: `lr` and `epochs` are gone, `max_iter` is the L-BFGS budget. Accuracies are
   not comparable with 0.1.0's. The new probe is slower: seconds on Planetoid-size splits,
   minutes on ogbn-arxiv's 91k training nodes.
+- **`EncoderConfig.build()` refuses a field the encoder would drop.** A field that is set (a
+  required one, or one whose value differs from its default) and that the chosen encoder's
+  constructor does not take raises `ValueError`: `edge_dim` or `mlp_ratio` with `gcn`,
+  `weight_standardization` with `gin` or `transformer`, `num_layers` with a custom encoder
+  of fixed depth. Such fields used to be ignored without notice. `pool` and `readout` are
+  exempt (the models read them), and an encoder whose constructor has `**kwargs` receives
+  every field. A config that carried such a field must drop it.
+- **`EncoderConfig.drop` defaults to `None`,** meaning each encoder's own default (GIN 0.2,
+  GCN 0, Transformer 0.1). It was 0.2, but only the GIN encoder read it, so a config that
+  does not set `drop` behaves as before. A config that sets `drop` with the GCN or
+  Transformer encoder now gets that dropout (see Fixed).
 
 ### Fixed
+
+- `EncoderConfig.drop` reaches the GCN and Transformer encoders. The GCN encoder had no
+  dropout and the Transformer calls its rates `dropout` / `attn_dropout`, so `drop` was
+  discarded for both. `GCNEncoder(drop=...)` applies dropout to the input of every layer;
+  `TransformerEncoder(drop=...)` sets both of its rates.
 
 - Edge features reach the encoder. Every model called its encoder without `edge_attr`, so an
   edge-aware encoder (GIN with `edge_dim`, the Transformer) ran on zeros: on molecules the
