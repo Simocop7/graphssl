@@ -55,7 +55,7 @@ reference implementation.
 
 ```python
 config = {
-    "encoder": {"name": "gin", "hidden_dim": 256, "num_layers": 2, "pool": False},
+    "encoder": {"name": "gcn", "hidden_dim": 256, "num_layers": 2, "pool": False},
     "augment": [{"name": "edge_drop", "p": 0.5}, {"name": "feat_mask", "p": 0.2}],
     "pred_hidden": 256,
     "ema_tau": 0.99,

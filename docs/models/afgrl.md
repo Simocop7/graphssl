@@ -55,7 +55,7 @@ from the graph's own structure and embedding geometry.
 
 ```python
 config = {
-    "encoder": {"name": "gin", "hidden_dim": 256, "num_layers": 2, "pool": False},
+    "encoder": {"name": "gcn", "hidden_dim": 256, "num_layers": 2, "pool": False},
     "pred_hidden": 256,
     "ema_tau": 0.99, "ema_tau_end": 1.0, "total_steps": 300,
     "topk": 5, "num_centroids": 50, "num_kmeans": 4, "clus_num_iters": 20,

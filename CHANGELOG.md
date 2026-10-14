@@ -1,9 +1,9 @@
 # Changelog
 
 Notable changes to the `graphssl` package. Benchmark results and ablations are documented in
-[`docs/benchmarks.md`](docs/benchmarks.md).
+the [benchmarks page](https://simocop7.github.io/graphssl/benchmarks/) of the documentation.
 
-## Unreleased (planned as 0.2.0)
+## 0.2.0 (2026-10-14)
 
 ### Changed (behavior differs from 0.1.0)
 
@@ -120,6 +120,7 @@ Notable changes to the `graphssl` package. Benchmark results and ablations are d
 - `AFGRLConfig.knn_chunk_size`: chunked top-k neighbor search, same neighbors with memory
   `O(chunk · N)` instead of `O(N²)`.
 - `graphssl.evaluation.effective_rank`: effective rank of a set of embeddings.
+- `graphssl.__version__`: the installed version, to record next to a result.
 - `KNNEvaluator(chunk_size=4096)`: the evaluated split is scored in row chunks, with identical
   predictions. The full similarity matrix (about 17 GB for the ogbn-arxiv test split) is no
   longer built.

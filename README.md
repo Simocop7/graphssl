@@ -9,7 +9,7 @@
 
 A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
 
-> **Status:** Alpha — all models train end-to-end and pass tests; all 7 SSL methods benchmarked under a shared protocol on the citation networks (two backbones, see below) and on ZINC; large-scale (OGB) benchmarks in progress.
+> **Status:** Alpha — all models train end-to-end and pass tests; all 7 SSL methods benchmarked under a shared protocol on the citation networks (two backbones, see below) and on ZINC; BGRL reproduced on ogbn-arxiv with the protocol of its paper. OGB graph-level benchmarks are not wired up yet.
 
 ---
 
@@ -81,7 +81,7 @@ from torch.optim import AdamW
 
 config = {
     "encoder": {
-        "name": "gin",
+        "name": "gcn",         # 'gcn', 'gin' or 'transformer'
         "hidden_dim": 256,
         "num_layers": 3,
         "norm_type": "batch",  # 'batch', 'layer', or 'none'
@@ -120,6 +120,46 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 | `examples/benchmark_planetoid.py` | Cora / CiteSeer / PubMed | Node classification, multi-seed | BGRL-only multi-seed demo; the cross-method numbers below come from `benchmarks/run_benchmark.py` |
 | `examples/ogbn_arxiv_bgrl.py` | ogbn-arxiv | Node classification (40 classes) | `NeighborLoader` mini-batch training |
 | `examples/zinc_bgrl.py` | ZINC-12k | Molecular property regression | Categorical node/edge embeddings |
+
+Each example prints its result next to the same encoder left untrained: part of a frozen
+GNN's accuracy comes from the architecture alone.
+
+### Evaluate, save, fine-tune
+
+```python
+from graphssl.config import load_model, save_model
+from graphssl.core import pretrained_encoder
+from graphssl.evaluation import LogRegEvaluator, effective_rank, extract_embeddings
+
+z, y = extract_embeddings(model, datamodule)             # frozen embeddings
+probe = LogRegEvaluator().evaluate(z, y, train_idx, val_idx, test_idx, num_classes=7)
+probe["test_acc"], effective_rank(z)
+
+save_model(model, "bgrl.pt", config, in_channels=dataset.num_features)
+model = load_model("bgrl.pt")                            # rebuilt from the saved config
+encoder = pretrained_encoder(model)                      # the encoder to fine-tune from
+```
+
+The [evaluation guide](https://simocop7.github.io/graphssl/evaluation/) has the full
+script: the probes (linear, kNN, ridge for regression), the untrained-encoder reference,
+and fine-tuning.
+
+### Upgrading from 0.1.0
+
+0.2.0 changes behavior in several places; the
+[changelog](https://github.com/Simocop7/graphssl/blob/main/CHANGELOG.md) lists them all.
+The ones most likely to matter:
+
+- **Linear-probe numbers are not comparable with 0.1.0.** `LogRegEvaluator` is now fitted to
+  convergence on standardized features, with the L2 strength selected on validation; its
+  arguments are keyword-only (`lr` and `epochs` are gone).
+- **A config field the encoder cannot use is an error**, not silently dropped
+  (`edge_dim` with `gcn`, for instance).
+- **Edge features reach the encoder.** In 0.1.0 every model ignored `edge_attr`.
+- **GCN**: `num_layers` is honoured (it was always 2), checkpoints have new state-dict
+  keys, and eval-mode outputs differ after short trainings.
+- **GraphDINO** has new defaults (`ema_tau_base`, `teacher_temp`), and **DGI** trains with
+  one forward pass.
 
 ### Benchmark results (citation networks)
 

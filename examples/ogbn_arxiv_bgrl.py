@@ -4,6 +4,12 @@ ogbn-arxiv has 169,343 nodes with 128-dim continuous features; its scale
 requires NeighborLoader for mini-batch training. Linear evaluation reports
 accuracy on the official train/val/test splits.
 
+The script shows the mini-batch API; its gain over the untrained encoder is not
+established. With ``--encoder gcn --epochs 20`` (one seed) the linear probe gave 68.6%
+test against 69.0% for the same encoder untrained; the default (GIN, 1,000 epochs) was not
+measured. The BGRL paper's protocol (full graph, layer-norm GCN, reference predictor:
++1.8 points over the untrained encoder, 3 seeds) is ``benchmarks/reproduce_bgrl_arxiv.py``.
+
 Usage::
 
     pip install "graphssl[benchmark]"
@@ -109,6 +115,23 @@ def main() -> None:
     )
 
     model = build_model(make_config(args), in_channels=data.num_features)
+
+    def linear_probe() -> dict:
+        # one full-graph forward pass; pass mini_batch=True if the graph doesn't fit in memory
+        z_full, y_full = extract_embeddings(model, dm, device=device)
+        return LogRegEvaluator().evaluate(
+            z_full,
+            y_full,
+            train_idx=split_idx["train"],
+            val_idx=split_idx["valid"],
+            test_idx=split_idx["test"],
+            num_classes=num_classes,
+        )
+
+    # The same encoder before any training. Part of a frozen GNN's accuracy comes from the
+    # architecture alone: what training adds is the difference from this number.
+    untrained = linear_probe()
+
     optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=1e-5)
     trainer = DINOTrainer(grad_clip_norm=None, device=device)
 
@@ -116,22 +139,10 @@ def main() -> None:
     losses = trainer.train(model, loader, optimizer, num_epochs=args.epochs)
     print(f"Training done in {time.time() - t0:.1f}s | final SSL loss: {losses[-1]:.4f}\n")
 
-    model.eval()
-    # one full-graph forward pass; pass mini_batch=True if the graph doesn't fit in memory
-    z_full, y_full = extract_embeddings(model, dm, device=device)
-
-    evaluator = LogRegEvaluator()
-    results = evaluator.evaluate(
-        z_full,
-        y_full,
-        train_idx=split_idx["train"],
-        val_idx=split_idx["valid"],
-        test_idx=split_idx["test"],
-        num_classes=num_classes,
-    )
-
+    results = linear_probe()
     print(f"Val  Acc (linear probe): {results['val_acc']:.4f}")
-    print(f"Test Acc (linear probe): {results['test_acc']:.4f}\n")
+    print(f"Test Acc (linear probe): {results['test_acc']:.4f}")
+    print(f"Untrained encoder, test: {untrained['test_acc']:.4f}\n")
 
 
 if __name__ == "__main__":

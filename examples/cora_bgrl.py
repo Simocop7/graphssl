@@ -28,7 +28,7 @@ from graphssl.training import DINOTrainer
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="BGRL on Cora")
-    p.add_argument("--encoder", default="gin", choices=["gin", "gcn", "transformer"])
+    p.add_argument("--encoder", default="gcn", choices=["gin", "gcn", "transformer"])
     p.add_argument("--hidden", type=int, default=128)
     p.add_argument("--layers", type=int, default=2)
     p.add_argument("--epochs", type=int, default=300)
@@ -86,6 +86,17 @@ def main() -> None:
     loader = dm.train_dataloader()  # full-batch: single Data object per "batch"
 
     model = build_model(make_config(args), in_channels=data.num_features)
+
+    def linear_probe() -> dict:
+        z, y = extract_embeddings(model, dm, device=device)
+        return LogRegEvaluator().evaluate(
+            z, y, train_idx, val_idx, test_idx, num_classes=num_classes
+        )
+
+    # The same encoder before any training. Part of a frozen GNN's accuracy comes from the
+    # architecture alone: what training adds is the difference from this number.
+    untrained = linear_probe()
+
     optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=1e-5)
     trainer = DINOTrainer(grad_clip_norm=None, device=device)
 
@@ -93,13 +104,10 @@ def main() -> None:
     losses = trainer.train(model, loader, optimizer, num_epochs=args.epochs)
     print(f"Training done in {time.time() - t0:.1f}s | final SSL loss: {losses[-1]:.4f}\n")
 
-    z, y = extract_embeddings(model, dm, device=device)
-
-    evaluator = LogRegEvaluator()
-    results = evaluator.evaluate(z, y, train_idx, val_idx, test_idx, num_classes=num_classes)
-
+    results = linear_probe()
     print(f"Val  Acc (linear probe): {results['val_acc']:.4f}")
-    print(f"Test Acc (linear probe): {results['test_acc']:.4f}\n")
+    print(f"Test Acc (linear probe): {results['test_acc']:.4f}")
+    print(f"Untrained encoder, test: {untrained['test_acc']:.4f}\n")
 
 
 if __name__ == "__main__":

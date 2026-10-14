@@ -45,7 +45,7 @@ apart from corrupted ones.
 
 ```python
 config = {
-    "encoder": {"name": "gin", "hidden_dim": 128, "num_layers": 2, "pool": False},
+    "encoder": {"name": "gcn", "hidden_dim": 128, "num_layers": 2, "pool": False},
     "corruption": "shuffle_nodes",
     "shuffle_ratio": 1.0,
 }

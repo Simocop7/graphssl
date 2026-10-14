@@ -35,7 +35,7 @@ See [Contributing](contributing.md) for the full dev workflow.
 
 This is [`examples/cora_bgrl.py`](https://github.com/Simocop7/graphssl/blob/main/examples/cora_bgrl.py)
 end to end — BGRL pretraining on Cora, then a linear-probe evaluation, in about 30 lines. It
-runs on CPU in roughly a minute.
+runs on CPU in roughly a minute and reaches about 80% test accuracy.
 
 ```python
 from torch.optim import AdamW
@@ -61,7 +61,7 @@ loader = dm.train_dataloader()  # full-batch: the whole graph as a single "batch
 # 3. Config -> model (BGRL: teacher-student with EMA, no negatives)
 config = {
     "name": "bgrl",
-    "encoder": {"name": "gin", "hidden_dim": 128, "num_layers": 2,
+    "encoder": {"name": "gcn", "hidden_dim": 128, "num_layers": 2,
                 "norm_type": "batch", "pool": False},
     "augment": [{"name": "edge_drop", "p": 0.5}, {"name": "feat_mask", "p": 0.2}],
     "pred_hidden": 128, "ema_tau": 0.99, "ema_tau_end": 1.0, "total_steps": 300,
@@ -89,6 +89,10 @@ A few things that aren't obvious from the code alone:
   each model's `compute_loss` does internally, not the loop itself.
 - `y` comes out of `extract_embeddings` alongside `z` — labels are never passed to the model,
   only to the final evaluation step.
+- The backbone matters as much as the objective: with `"name": "gin"` the same script stops
+  near 50%. And an untrained GCN already gives about 71% with this probe, so read the 80%
+  against that. [Evaluating and Reusing a Model](evaluation.md) shows how to measure it, how
+  to save the model and how to fine-tune from it.
 
 ## Loading from YAML instead
 
@@ -107,6 +111,7 @@ mini-batch training, ZINC with categorical features).
 ## Next steps
 
 - Pick a [model](models/index.md) matching your use case.
+- [Evaluate it, save it and fine-tune from it](evaluation.md).
 - Read [Architecture](architecture.md) for the design principles that make every model behave
   the same way from the outside.
 - See [Benchmarks](benchmarks.md) for validated results and how to reproduce them.

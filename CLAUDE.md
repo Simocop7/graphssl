@@ -1062,6 +1062,7 @@ pytest tests/ -v
 | `test_graphdino.py` | GraphDINO | freeze last layer, teacher temp warmup, defaults (EMA 0.9 → `ema_tau`, teacher temp 0.04 → 0.07), center in logit space, `norm_last_layer`, DINOTrainer hooks |
 | `test_model_encoder_matrix.py` | all | every model × every encoder (gin/gcn/transformer) builds, trains a step and returns one embedding per node / per graph; edge features reach the encoder in training and in `forward()` (gin/transformer); AFGRL rows need faiss |
 | `test_new_features.py` | — | edge_emb_num_classes, norm_type API, GCN eval-mode statistics after a short training (BatchNorm momentum), GCN depth (`num_layers`) and weight standardization, `drop` reaches every encoder (training only, `None` = encoder default, GCN unchanged at 0), `EncoderConfig.build()` refuses fields the encoder would drop (set, required, `**kwargs` encoders exempt), CombinedLoss |
+| `test_package.py` | — | `graphssl.__version__` equals the installed metadata, top-level names resolve |
 | `test_checkpoint.py` | all | `save_model` / `load_model` give the same embeddings, `pretrained_encoder` is the encoder `forward()` uses, fine-tuning starts from its weights |
 | `test_callbacks.py` | — | `EmbeddingLoggerCallback` files, `LinearEvalCallback` history and custom `evaluator`, the model trains again after an evaluation |
 | `test_schedulers.py` | — | `CosineDecayScheduler` (linear warm-up, cosine decay, BGRL's formula), `CosineEMAScheduler` (BGRL's formula, monotonic, clamped) |
@@ -1224,6 +1225,33 @@ dev       = ["pytest", "pytest-cov", "build", "twine", "pyyaml", "ruff", "mypy",
 ```
 
 **Published on PyPI**: `graphssl` v0.1.0 is live (`pip install graphssl`), released 2026-09-07.
+
+**0.2.0 is prepared, not published** (2026-10-13): `pyproject.toml` says 0.2.0, the changelog
+section is titled `0.2.0 (2026-10-14)`, the wheel builds, passes `twine check` and the whole
+test suite when installed into a fresh environment. **The `v0.2.0` tag publishes to PyPI and
+cannot be undone: it is the user's call — never create or push it unasked.** If the tag
+lands on another day, fix the date in `CHANGELOG.md` first.
+
+- The ZINC and ogbn-arxiv examples are API demos, and their docstrings say so (diagnostic
+  of 2026-10-13 on the VM, uncommitted example files identical to the released ones): ZINC
+  as shipped, test MAE 0.643 untrained → 0.699 trained (3 seeds, worse in each; batch norm
+  or the reference predictor give 0.70 too); ogbn-arxiv with `--encoder gcn --epochs 20`,
+  one seed, 68.6 vs 69.0 untrained. Don't present either as a working recipe.
+
+- `graphssl.__version__` comes from the installed metadata (`importlib.metadata`): one
+  source of truth, `pyproject.toml`. An editable install keeps the old number until
+  `pip install -e .` is run again (the laptop and the VM still said 0.1.0 after the bump).
+- Pre-release checklist that found things on 2026-10-13: build every `configs/*.yaml`;
+  smoke-run every example with every `--encoder` (Planetoid ones on a CPU, ZINC and
+  ogbn-arxiv on the VM); diff the config dataclasses and `__init__` exports against the
+  last tag and check each change is in the changelog; build, `twine check`, install the
+  wheel in a scratch venv (`--system-site-packages`, `--no-deps`) and run the tests from a
+  copy of `tests/` outside the repo.
+- Docs site: `docs/evaluation.md` (probes, untrained reference, checkpoints, fine-tuning —
+  its code was run end to end as one script on Cora; rerun it when the API changes) and
+  `docs/changelog.md`, which includes the root `CHANGELOG.md` through `pymdownx.snippets`:
+  **links inside `CHANGELOG.md` must be absolute URLs**, a relative one breaks the strict
+  docs build.
 
 **Release process:** every `v*.*.*` tag on GitHub automatically triggers the
 `.github/workflows/publish.yml` workflow, which builds and publishes to PyPI via Trusted

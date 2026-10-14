@@ -1,8 +1,10 @@
 """Multi-seed BGRL benchmark on Planetoid datasets (Cora, CiteSeer, PubMed).
 
-Reproduces the evaluation protocol described in the paper (GIN-2L encoder,
-hidden_dim=256, linear probing + KNN(k=5)), averaged over multiple seeds with
-the standard public Planetoid train/val/test split.
+BGRL only, with the protocol of the cross-method benchmark (2-layer encoder,
+hidden_dim=256, 300 full-batch steps, linear probe + kNN (k=5)), averaged over several
+seeds on the public Planetoid split. The encoder is GCN by default; ``--encoder gin`` is
+the benchmark's other backbone, with which BGRL does much worse. The numbers of every
+method come from ``benchmarks/run_benchmark.py``.
 
 Usage::
 
@@ -30,7 +32,7 @@ from graphssl.training import DINOTrainer
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-seed BGRL benchmark on Planetoid datasets")
     p.add_argument("--dataset", default="Cora", choices=["Cora", "CiteSeer", "PubMed"])
-    p.add_argument("--encoder", default="gin", choices=["gin", "gcn", "transformer"])
+    p.add_argument("--encoder", default="gcn", choices=["gin", "gcn", "transformer"])
     p.add_argument("--hidden", type=int, default=256)
     p.add_argument("--layers", type=int, default=2)
     p.add_argument("--epochs", type=int, default=300)
@@ -130,7 +132,7 @@ def main() -> None:
         print(f"  seed {seed}: linear test={lt:.4f} | knn test={kt:.4f} | {time.time() - ts:.1f}s")
 
     print(f"\n{args.dataset} results over {args.seeds} seeds ({time.time() - t0:.1f}s total):")
-    print(f"  Linear probe (Adam) — val: {fmt(lin_val)} | test: {fmt(lin_test)}")
+    print(f"  Linear probe        — val: {fmt(lin_val)} | test: {fmt(lin_test)}")
     print(f"  KNN (k={args.knn_k})            — val: {fmt(knn_val)} | test: {fmt(knn_test)}")
 
 

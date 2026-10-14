@@ -4,6 +4,14 @@ ZINC atom features are integer atom types (28 classes) and edge features are
 integer bond types (4 classes). A ridge regression on the frozen graph embeddings
 gives the test MAE; ``benchmarks/run_zinc.py`` runs every method this way.
 
+The script shows the API (categorical atom and bond embeddings, ``attr_mask``, ridge
+probe, untrained reference), not a recipe that works: on ZINC, BGRL's frozen embeddings
+are *worse* than the untrained encoder's. As shipped, test MAE 0.643 untrained -> 0.699
+trained (3 seeds, worse in each); batch norm, or the reference predictor
+(``pred_norm: none``, ``pred_activation: prelu``), gives 0.70 as well. The benchmark
+agrees (10 seeds, its own protocol: 0.692 vs 0.589 untrained); there, pre-training
+helps only after fine-tuning, and with VICReg, GraphCL and GraphDINO, not BGRL.
+
 Usage::
 
     pip install "graphssl[benchmark]"
@@ -100,6 +108,8 @@ def main() -> None:
 
     # in_channels is ignored when node_emb_num_classes is set
     model = build_model(make_config(args), in_channels=1)
+    # The same encoder before any training: the reference for the number printed at the end.
+    untrained = ridge_probe_mae(model, splits, device)
     optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=1e-5)
     trainer = DINOTrainer(grad_clip_norm=None, device=device)
 
@@ -109,7 +119,8 @@ def main() -> None:
 
     probe = ridge_probe_mae(model, splits, device)
     print(f"Val  MAE (ridge probe): {probe['val_mae']:.4f}")
-    print(f"Test MAE (ridge probe): {probe['test_mae']:.4f}\n")
+    print(f"Test MAE (ridge probe): {probe['test_mae']:.4f}")
+    print(f"Untrained encoder, test: {untrained['test_mae']:.4f}\n")
 
 
 if __name__ == "__main__":

@@ -5,9 +5,10 @@ PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you
 through with a debugger.
 
 !!! info "Status: Alpha"
-    All models train end-to-end and pass tests; all 7 SSL methods are benchmarked on the
-    citation networks under a shared protocol (see [Benchmarks](benchmarks.md)), large-scale
-    (OGB) benchmarks are in progress.
+    All models train end-to-end and pass tests. All 7 SSL methods are benchmarked under a
+    shared protocol on the citation networks (two backbones) and on ZINC, and BGRL is
+    reproduced on ogbn-arxiv with the protocol of its paper (see [Benchmarks](benchmarks.md)).
+    What changed since 0.1.0 is in the [changelog](changelog.md).
 
 ## Supported methods
 
@@ -46,7 +47,7 @@ from torch.optim import AdamW
 
 config = {
     "encoder": {
-        "name": "gin",
+        "name": "gcn",         # 'gcn', 'gin' or 'transformer'
         "hidden_dim": 256,
         "num_layers": 3,
         "norm_type": "batch",  # 'batch', 'layer', or 'none'

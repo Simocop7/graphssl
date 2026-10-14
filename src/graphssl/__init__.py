@@ -1,5 +1,13 @@
 """GraphSSL: a modular Graph Machine Learning library in pure PyTorch."""
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _installed_version
+
+try:
+    __version__ = _installed_version("graphssl")
+except PackageNotFoundError:  # a source tree that was never installed
+    __version__ = "0+unknown"
+
 # ── Core abstractions ─────────────────────────────────────────────────────────
 # ── Augmentation ──────────────────────────────────────────────────────────────
 from graphssl.augmentation import MultiView, compose
