@@ -1224,13 +1224,12 @@ full      = ["faiss-cpu", "umap-learn", "matplotlib", "seaborn", "ogb", "pyyaml"
 dev       = ["pytest", "pytest-cov", "build", "twine", "pyyaml", "ruff", "mypy", "pre-commit"]
 ```
 
-**Published on PyPI**: `graphssl` v0.1.0 is live (`pip install graphssl`), released 2026-09-07.
-
-**0.2.0 is prepared, not published** (2026-10-13): `pyproject.toml` says 0.2.0, the changelog
-section is titled `0.2.0 (2026-10-14)`, the wheel builds, passes `twine check` and the whole
-test suite when installed into a fresh environment. **The `v0.2.0` tag publishes to PyPI and
-cannot be undone: it is the user's call — never create or push it unasked.** If the tag
-lands on another day, fix the date in `CHANGELOG.md` first.
+**Published on PyPI**: `graphssl` 0.2.0 is live (`pip install graphssl`), released
+2026-10-14 by the user (tag `v0.2.0` = `5f171f2`; Tests, Docs and Publish workflows green;
+the PyPI wheel, installed in a fresh venv, passes the whole suite). 0.1.0: 2026-09-07.
+**A `v*` tag publishes to PyPI and cannot be undone: it is the user's call — never create or
+push one unasked.** If the tag lands on another day than the changelog's, fix the date in
+`CHANGELOG.md` first.
 
 - The ZINC and ogbn-arxiv examples are API demos, and their docstrings say so (diagnostic
   of 2026-10-13 on the VM, uncommitted example files identical to the released ones): ZINC
