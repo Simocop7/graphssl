@@ -101,6 +101,30 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--repeats-long", type=int, default=3, help="initialisations of adam5000")
     p.add_argument("--knn-k", type=int, default=5)
+    p.add_argument(
+        "--random-splits",
+        type=int,
+        default=0,
+        metavar="K",
+        help="also score every row on K random splits (seeds 0..K-1) with --split-protocols "
+        "and kNN; SSL training never sees labels, so this needs no retraining",
+    )
+    p.add_argument(
+        "--split-fractions",
+        type=float,
+        nargs=2,
+        default=[0.1, 0.1],
+        metavar=("TRAIN", "VAL"),
+        help="train and validation fractions of a random split; the rest is test "
+        "(default 0.1 0.1, the 10/10/80 convention of GRACE, PyGCL and BGRL)",
+    )
+    p.add_argument(
+        "--split-protocols",
+        nargs="+",
+        default=["graphssl"],
+        choices=PROTOCOLS,
+        help="protocols scored on the random splits (default: graphssl only)",
+    )
     p.add_argument("--data-dir", default="data")
     p.add_argument("--out-dir", default="benchmarks/probes/run")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -143,6 +167,15 @@ def load_graph(name: str, data_dir: str):
     data = ToUndirected()(dataset[0])  # as in the stress test and the BGRL reproduction
     split = dataset.get_idx_split()
     return data, split["train"], split["valid"], split["test"], dataset.num_classes
+
+
+def random_split(num_nodes: int, fractions: List[float], seed: int) -> tuple:
+    """(train_idx, val_idx, test_idx): a random permutation of the nodes cut by ``fractions``."""
+    generator = torch.Generator().manual_seed(seed)
+    perm = torch.randperm(num_nodes, generator=generator)
+    n_train = int(round(fractions[0] * num_nodes))
+    n_val = int(round(fractions[1] * num_nodes))
+    return perm[:n_train], perm[n_train : n_train + n_val], perm[n_train + n_val :]
 
 
 # ---------------------------------------------------------------------------
@@ -284,12 +317,12 @@ def row_name(path: Path) -> str:
 
 
 def collect_models(args: argparse.Namespace) -> List[tuple]:
-    """(row name, zero-argument builder of the model), trained rows first."""
+    """(row name, zero-argument builder of the model, checkpoint path or None), untrained first."""
     rows: List[tuple] = []
     untrained: Dict[str, tuple] = {}
     for raw in args.checkpoints:
         path = Path(raw)
-        rows.append((row_name(path), lambda path=path: load_model(path)))
+        rows.append((row_name(path), lambda path=path: load_model(path), str(path)))
         if args.untrained:
             checkpoint = torch.load(path, map_location="cpu")
             encoder = checkpoint["config"]["encoder"]
@@ -303,7 +336,7 @@ def collect_models(args: argparse.Namespace) -> List[tuple]:
                         checkpoint["config"], checkpoint["in_channels"], checkpoint["num_classes"]
                     )
 
-                untrained[key] = (label, build)
+                untrained[key] = (label, build, None)
     return [*untrained.values(), *rows]
 
 
@@ -368,7 +401,7 @@ def main() -> None:
 
     rows: List[dict] = []
     build: Callable[[], torch.nn.Module]
-    for name, build in collect_models(args):
+    for name, build, checkpoint in collect_models(args):
         z, y = extract_embeddings(build(), dm, device=str(device))
         assert y is not None
         if not torch.isfinite(z).all():
@@ -377,6 +410,7 @@ def main() -> None:
         knn = KNNEvaluator(k=args.knn_k).evaluate(z, y, train_idx, val_idx, test_idx)
         row: Dict[str, Any] = {
             "name": name,
+            "checkpoint": checkpoint,
             "dim": z.size(1),
             "test_acc_knn": knn["test_acc"],
             "eff_rank": effective_rank(z),
@@ -387,6 +421,21 @@ def main() -> None:
         for protocol in args.protocols:
             row["protocols"][protocol] = run_protocol(
                 protocol, z_dev, y_dev, *idx, num_classes, args
+            )
+        row["random_splits"] = []
+        for split_seed in range(args.random_splits):
+            split = random_split(z.size(0), args.split_fractions, split_seed)
+            knn_split = KNNEvaluator(k=args.knn_k).evaluate(z, y, *split)
+            split_dev = [i.to(device) for i in split]
+            row["random_splits"].append(
+                {
+                    "split_seed": split_seed,
+                    "test_acc_knn": knn_split["test_acc"],
+                    "protocols": {
+                        p: run_protocol(p, z_dev, y_dev, *split_dev, num_classes, args)
+                        for p in args.split_protocols
+                    },
+                }
             )
         rows.append(row)
         cells = " | ".join(f"{p} {_cell(row['protocols'][p])}" for p in args.protocols)

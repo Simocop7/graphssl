@@ -73,7 +73,7 @@ from torch.optim import Adam, AdamW
 from torch_geometric.datasets import Planetoid
 
 from graphssl.config import schema
-from graphssl.config.load import build_model
+from graphssl.config.load import build_model, save_model
 from graphssl.data import DataModule
 from graphssl.evaluation import (
     KNNEvaluator,
@@ -167,6 +167,14 @@ def parse_args() -> argparse.Namespace:
         default="benchmarks/results",
         help="where JSONs go; keep ablations out of benchmarks/results, whose latest file "
         "per (dataset, model) is what render_tables.py reports",
+    )
+    p.add_argument(
+        "--save-models",
+        default=None,
+        metavar="DIR",
+        help="also save every trained model with save_model(), as "
+        "DIR/<dataset>/<encoder>/<model>_seed<N>.pt, so compare_probes.py can score the same "
+        "embeddings again with other probes and splits without retraining",
     )
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
@@ -363,6 +371,7 @@ def run_one(
     test_idx: torch.Tensor,
     seed: int,
     device: torch.device,
+    checkpoint: Path | None = None,
 ) -> dict:
     torch.manual_seed(seed)
 
@@ -396,6 +405,9 @@ def run_one(
         optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=args.weight_decay)
         trainer.train(model, loader, optimizer, num_epochs=args.epochs)
     wall_time_s = time.time() - t0
+    if checkpoint is not None:
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        save_model(model, checkpoint, config, data.num_features, num_classes)
 
     splits = (num_classes, train_idx, val_idx, test_idx, args.knn_k)
     z, y = extract_embeddings(model, dm, device=device)
@@ -606,6 +618,14 @@ def main() -> None:
             per_seed = []
             for seed in range(args.seeds):
                 t0 = time.time()
+                checkpoint = None
+                if args.save_models is not None:
+                    checkpoint = (
+                        Path(args.save_models)
+                        / dataset_name
+                        / args.encoder
+                        / f"{model_name}_seed{seed}.pt"
+                    )
                 r = run_one(
                     model_name,
                     config,
@@ -617,7 +637,10 @@ def main() -> None:
                     test_idx,
                     seed,
                     device,
+                    checkpoint,
                 )
+                if checkpoint is not None:
+                    r["checkpoint"] = str(checkpoint)
                 per_seed.append(r)
                 alt = ""
                 if "test_acc_linear_alt" in r:
