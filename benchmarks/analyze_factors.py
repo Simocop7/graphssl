@@ -7,7 +7,8 @@ and reports, per dataset:
 - every (backbone, method, probe) cell on the public split: mean test accuracy with a 95%
   percentile-bootstrap interval over seeds, and the gain over the untrained encoder of the
   same backbone, paired by seed;
-- Kendall's tau between method rankings: GCN vs GIN under each probe, and each probe vs the
+- Kendall's tau between method rankings, with a seed-bootstrap 95% interval: GCN vs GIN under
+  each probe, and each probe vs the
   converged GraphSSL probe under each backbone;
 - the share of variance (eta squared, sums of squares of a balanced design) explained by
   method, backbone, probe, split and their interaction with the method, the rest being seed
@@ -132,37 +133,86 @@ def cell_table(df: pd.DataFrame, n_boot: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def rankings(cells: pd.DataFrame) -> pd.DataFrame:
-    """Kendall's tau between method orders: across backbones, and across probes."""
-    ssl = cells[~cells.method.isin(SUPERVISED | {"untrained"})]
+def tau_with_ci(
+    a: pd.DataFrame, b: pd.DataFrame, n_boot: int, rng: np.random.Generator
+) -> tuple[float, float, float]:
+    """Kendall's tau between the method orders of two conditions, with a seed-bootstrap 95% CI.
+
+    ``a`` and ``b`` are (method x seed) accuracy tables. Each bootstrap replicate resamples the
+    seeds of every method (jointly in the two conditions, which share seed indices) and
+    recomputes the method means and tau.
+    """
+    methods = a.index.intersection(b.index)
+    a, b = a.loc[methods].to_numpy(), b.loc[methods].to_numpy()
+    point = kendalltau(a.mean(1), b.mean(1)).statistic
+    n_seeds = a.shape[1]
+    taus = np.empty(n_boot)
+    for i in range(n_boot):
+        idx = rng.integers(0, n_seeds, size=(len(methods), n_seeds))
+        rows = np.arange(len(methods))[:, None]
+        taus[i] = kendalltau(a[rows, idx].mean(1), b[rows, idx].mean(1)).statistic
+    return float(point), float(np.nanpercentile(taus, 2.5)), float(np.nanpercentile(taus, 97.5))
+
+
+def rankings(df: pd.DataFrame, n_boot: int) -> pd.DataFrame:
+    """Kendall's tau between method orders on the public split: GCN vs GIN under each probe,
+    and each probe vs the converged GraphSSL probe under each backbone."""
+    rng = np.random.default_rng(0)
+    ssl = df[~df.method.isin(SUPERVISED | {"untrained"}) & (df.split == "public")]
+
+    def table(g: pd.DataFrame) -> pd.DataFrame:
+        return g.pivot_table(index="method", columns="seed", values="acc").dropna()
+
     rows = []
     for (dataset, probe), g in ssl.groupby(["dataset", "probe"]):
-        wide = g.pivot(index="method", columns="backbone", values="acc").dropna()
-        if wide.shape[1] == 2 and len(wide) > 2:
-            tau = kendalltau(wide.iloc[:, 0], wide.iloc[:, 1]).statistic
-            rows.append(
-                {
-                    "dataset": dataset,
-                    "comparison": f"{wide.columns[0]} vs {wide.columns[1]}",
-                    "within": probe,
-                    "tau": tau,
-                }
-            )
-    for (dataset, backbone), g in ssl.groupby(["dataset", "backbone"]):
-        wide = g.pivot(index="method", columns="probe", values="acc").dropna()
-        if REFERENCE_PROBE not in wide:
+        backbones = sorted(g.backbone.unique())
+        if len(backbones) != 2:
             continue
-        for probe in wide.columns.drop(REFERENCE_PROBE):
-            tau = kendalltau(wide[probe], wide[REFERENCE_PROBE]).statistic
+        tau, lo, hi = tau_with_ci(
+            table(g[g.backbone == backbones[0]]), table(g[g.backbone == backbones[1]]), n_boot, rng
+        )
+        rows.append(
+            {
+                "dataset": dataset,
+                "comparison": f"{backbones[0]} vs {backbones[1]}",
+                "within": probe,
+                "tau": tau,
+                "tau_lo": lo,
+                "tau_hi": hi,
+            }
+        )
+    for (dataset, backbone), g in ssl.groupby(["dataset", "backbone"]):
+        if REFERENCE_PROBE not in set(g.probe):
+            continue
+        ref = table(g[g.probe == REFERENCE_PROBE])
+        for probe in sorted(set(g.probe) - {REFERENCE_PROBE}):
+            tau, lo, hi = tau_with_ci(table(g[g.probe == probe]), ref, n_boot, rng)
             rows.append(
                 {
                     "dataset": dataset,
                     "comparison": f"{probe} vs {REFERENCE_PROBE}",
                     "within": backbone,
                     "tau": tau,
+                    "tau_lo": lo,
+                    "tau_hi": hi,
                 }
             )
     return pd.DataFrame(rows)
+
+
+def gains_by_probe(cells: pd.DataFrame) -> pd.DataFrame:
+    """Gain over the untrained encoder per method under each probe, and whether its sign
+    differs from the sign under the converged GraphSSL probe."""
+    ssl = cells[~cells.method.isin(SUPERVISED | {"untrained"})]
+    wide = ssl.pivot_table(
+        index=["dataset", "backbone", "method"], columns="probe", values="gain"
+    ).reset_index()
+    probes = [c for c in wide.columns if c not in {"dataset", "backbone", "method"}]
+    if REFERENCE_PROBE in probes:
+        for p in probes:
+            if p != REFERENCE_PROBE:
+                wide[f"sign_flip_{p}"] = np.sign(wide[p]) != np.sign(wide[REFERENCE_PROBE])
+    return wide
 
 
 def eta_squared(
@@ -204,6 +254,20 @@ def variance_tables(df: pd.DataFrame) -> pd.DataFrame:
             rows.append(
                 {"dataset": dataset, "design": "public split, all probes", "value": value, **shares}
             )
+            shares = eta_squared(
+                public[public.probe != "knn"],
+                value,
+                ["method", "backbone", "probe"],
+                [("method", "backbone"), ("method", "probe")],
+            )
+            rows.append(
+                {
+                    "dataset": dataset,
+                    "design": "public split, linear probes",
+                    "value": value,
+                    **shares,
+                }
+            )
             ref = g[g.probe == REFERENCE_PROBE]
             if ref.split.nunique() > 1:
                 shares = eta_squared(
@@ -231,8 +295,10 @@ def main() -> None:
     df.to_csv(out / "long_table.csv", index=False)
     cells = cell_table(df, args.bootstrap)
     cells.to_csv(out / "cells.csv", index=False)
-    taus = rankings(cells)
+    taus = rankings(df, min(args.bootstrap, 2000))
     taus.to_csv(out / "kendall_tau.csv", index=False)
+    gains = gains_by_probe(cells)
+    gains.to_csv(out / "gains_by_probe.csv", index=False)
     variance = variance_tables(df)
     variance.to_csv(out / "variance_shares.csv", index=False)
     pd.set_option("display.width", 200)
