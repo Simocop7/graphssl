@@ -1,0 +1,209 @@
+{
+  "dataset": "CiteSeer",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6119999885559082,
+      "test_acc_linear": 0.6150000095367432,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.5979999899864197,
+      "test_acc_knn": 0.5759999752044678,
+      "eff_rank": 109.58443450927734,
+      "wall_time_s": 22.152554988861084,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6259999871253967,
+      "test_acc_linear": 0.6610000133514404,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5879999995231628,
+      "test_acc_knn": 0.6010000109672546,
+      "eff_rank": 111.15536499023438,
+      "wall_time_s": 22.120529174804688,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6499999761581421,
+      "test_acc_linear": 0.6140000224113464,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5460000038146973,
+      "test_acc_knn": 0.5320000052452087,
+      "eff_rank": 108.4757080078125,
+      "wall_time_s": 22.099133253097534,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.671999990940094,
+      "test_acc_linear": 0.6510000228881836,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5699999928474426,
+      "test_acc_knn": 0.5709999799728394,
+      "eff_rank": 105.66558837890625,
+      "wall_time_s": 22.09879779815674,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6380000114440918,
+      "test_acc_linear": 0.6470000147819519,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5600000023841858,
+      "test_acc_knn": 0.5640000104904175,
+      "eff_rank": 109.06365966796875,
+      "wall_time_s": 22.057318925857544,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.6460000276565552,
+      "test_acc_linear": 0.656000018119812,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5320000052452087,
+      "test_acc_knn": 0.5580000281333923,
+      "eff_rank": 109.59149169921875,
+      "wall_time_s": 22.119096994400024,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6380000114440918,
+      "test_acc_linear": 0.6370000243186951,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5699999928474426,
+      "test_acc_knn": 0.6010000109672546,
+      "eff_rank": 109.46342468261719,
+      "wall_time_s": 22.088897705078125,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.6179999709129333,
+      "test_acc_linear": 0.6309999823570251,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5979999899864197,
+      "test_acc_knn": 0.5789999961853027,
+      "eff_rank": 105.88453674316406,
+      "wall_time_s": 22.088742971420288,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.6520000100135803,
+      "test_acc_linear": 0.6420000195503235,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5960000157356262,
+      "test_acc_knn": 0.5789999961853027,
+      "eff_rank": 105.66397094726562,
+      "wall_time_s": 22.10538411140442,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.6179999709129333,
+      "test_acc_linear": 0.6290000081062317,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5699999928474426,
+      "test_acc_knn": 0.5920000076293945,
+      "eff_rank": 107.87818145751953,
+      "wall_time_s": 22.072069883346558,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gin/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6383000135421752,
+      "std": 0.016173025350240056
+    },
+    "test_acc_knn": {
+      "mean": 0.5753000020980835,
+      "std": 0.02094463548020037
+    },
+    "eff_rank": {
+      "mean": 108.24263610839844,
+      "std": 1.9237318955430136
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261024T104530Z",
+    "git": {
+      "commit": "492618496c4b85b81e8e5b1e219a1c11c437cd15",
+      "dirty": false
+    },
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

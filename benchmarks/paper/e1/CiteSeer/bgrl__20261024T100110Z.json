@@ -1,0 +1,296 @@
+{
+  "dataset": "CiteSeer",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6600000262260437,
+      "test_acc_linear": 0.6510000228881836,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5960000157356262,
+      "test_acc_knn": 0.6000000238418579,
+      "eff_rank": 189.400634765625,
+      "wall_time_s": 15.599695920944214,
+      "val_acc_linear_alt": 0.6579999923706055,
+      "test_acc_linear_alt": 0.6650000214576721,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6039999723434448,
+      "test_acc_knn_alt": 0.6150000095367432,
+      "eff_rank_alt": 188.94204711914062,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6980000138282776,
+      "test_acc_linear": 0.6669999957084656,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6439999938011169,
+      "test_acc_knn": 0.6230000257492065,
+      "eff_rank": 189.8479461669922,
+      "wall_time_s": 15.613316059112549,
+      "val_acc_linear_alt": 0.6959999799728394,
+      "test_acc_linear_alt": 0.6859999895095825,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.628000020980835,
+      "test_acc_knn_alt": 0.6119999885559082,
+      "eff_rank_alt": 189.3787841796875,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6639999747276306,
+      "test_acc_linear": 0.6700000166893005,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5740000009536743,
+      "test_acc_knn": 0.5889999866485596,
+      "eff_rank": 189.4285430908203,
+      "wall_time_s": 15.630892038345337,
+      "val_acc_linear_alt": 0.6679999828338623,
+      "test_acc_linear_alt": 0.6610000133514404,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.5600000023841858,
+      "test_acc_knn_alt": 0.5929999947547913,
+      "eff_rank_alt": 189.03521728515625,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6899999976158142,
+      "test_acc_linear": 0.6549999713897705,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6159999966621399,
+      "test_acc_knn": 0.597000002861023,
+      "eff_rank": 189.6512451171875,
+      "wall_time_s": 15.459838151931763,
+      "val_acc_linear_alt": 0.6980000138282776,
+      "test_acc_linear_alt": 0.6700000166893005,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.5979999899864197,
+      "test_acc_knn_alt": 0.5870000123977661,
+      "eff_rank_alt": 190.13558959960938,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6700000166893005,
+      "test_acc_linear": 0.6729999780654907,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5799999833106995,
+      "test_acc_knn": 0.6240000128746033,
+      "eff_rank": 190.01531982421875,
+      "wall_time_s": 16.092257976531982,
+      "val_acc_linear_alt": 0.6840000152587891,
+      "test_acc_linear_alt": 0.6700000166893005,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6100000143051147,
+      "test_acc_knn_alt": 0.6299999952316284,
+      "eff_rank_alt": 189.24075317382812,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.6919999718666077,
+      "test_acc_linear": 0.6840000152587891,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5960000157356262,
+      "test_acc_knn": 0.5899999737739563,
+      "eff_rank": 189.32505798339844,
+      "wall_time_s": 15.498991966247559,
+      "val_acc_linear_alt": 0.6940000057220459,
+      "test_acc_linear_alt": 0.6669999957084656,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.578000009059906,
+      "test_acc_knn_alt": 0.597000002861023,
+      "eff_rank_alt": 189.251220703125,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6320000290870667,
+      "test_acc_linear": 0.6449999809265137,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5759999752044678,
+      "test_acc_knn": 0.5989999771118164,
+      "eff_rank": 189.5584716796875,
+      "wall_time_s": 15.331757068634033,
+      "val_acc_linear_alt": 0.6380000114440918,
+      "test_acc_linear_alt": 0.6549999713897705,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.5860000252723694,
+      "test_acc_knn_alt": 0.6110000014305115,
+      "eff_rank_alt": 188.95367431640625,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.671999990940094,
+      "test_acc_linear": 0.6779999732971191,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5820000171661377,
+      "test_acc_knn": 0.593999981880188,
+      "eff_rank": 190.0010986328125,
+      "wall_time_s": 15.493860960006714,
+      "val_acc_linear_alt": 0.6840000152587891,
+      "test_acc_linear_alt": 0.6869999766349792,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6000000238418579,
+      "test_acc_knn_alt": 0.6010000109672546,
+      "eff_rank_alt": 189.60105895996094,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.6499999761581421,
+      "test_acc_linear": 0.6840000152587891,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6119999885559082,
+      "test_acc_knn": 0.6100000143051147,
+      "eff_rank": 189.5982666015625,
+      "wall_time_s": 15.536978006362915,
+      "val_acc_linear_alt": 0.6679999828338623,
+      "test_acc_linear_alt": 0.6769999861717224,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6079999804496765,
+      "test_acc_knn_alt": 0.6179999709129333,
+      "eff_rank_alt": 189.25665283203125,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.6700000166893005,
+      "test_acc_linear": 0.6600000262260437,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5879999995231628,
+      "test_acc_knn": 0.5929999947547913,
+      "eff_rank": 190.60498046875,
+      "wall_time_s": 15.298663854598999,
+      "val_acc_linear_alt": 0.6639999747276306,
+      "test_acc_linear_alt": 0.6570000052452087,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6179999709129333,
+      "test_acc_knn_alt": 0.6069999933242798,
+      "eff_rank_alt": 191.1358642578125,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/gcn/bgrl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6666999995708466,
+      "std": 0.01364673632443473
+    },
+    "test_acc_knn": {
+      "mean": 0.6018999993801117,
+      "std": 0.012844814127971905
+    },
+    "eff_rank": {
+      "mean": 189.74315643310547,
+      "std": 0.38715297285338107
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.6694999992847442,
+      "std": 0.011057923061610162
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.607099997997284,
+      "std": 0.012853441633642243
+    },
+    "eff_rank_alt": {
+      "mean": 189.4930862426758,
+      "std": 0.6764760190068566
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261024T100110Z",
+    "git": {
+      "commit": "492618496c4b85b81e8e5b1e219a1c11c437cd15",
+      "dirty": false
+    },
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}
