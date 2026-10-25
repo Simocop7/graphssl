@@ -90,6 +90,10 @@ def load_long_table(files: list[str], untrained_root: str) -> pd.DataFrame:
                         {**base, "probe": probe, "split": name, "acc": res["test_acc"]["mean"]}
                     )
     df = pd.DataFrame.from_records(records)
+    # A checkpoint scored by several runs (e.g. extra protocols added later) keeps its last value.
+    df = df.drop_duplicates(
+        subset=["dataset", "backbone", "method", "seed", "probe", "split"], keep="last"
+    )
     df["acc"] *= 100
     return df
 

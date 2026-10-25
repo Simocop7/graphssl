@@ -64,14 +64,25 @@ from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, e
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLANETOID = ["Cora", "CiteSeer", "PubMed"]
-PROTOCOLS = ["adam100", "adam5000", "liblinear", "graphssl"]
+PROTOCOLS = [
+    "adam100",
+    "adam5000",
+    "adam100_std",
+    "adam5000_std",
+    "liblinear",
+    "graphssl",
+    "graphssl_weakl2",
+]
 DEFAULT_PROTOCOLS = ["adam100", "adam5000", "graphssl"]
 # What each protocol stands for, printed under the table.
 SOURCES = {
     "adam100": "DGI reference code, PyG-SSL: 100 Adam steps, test at the last step",
     "adam5000": "PyGCL: 5,000 Adam steps, test at the best validation",
+    "adam100_std": "adam100 on features standardized with the training rows' statistics",
+    "adam5000_std": "adam5000 on features standardized with the training rows' statistics",
     "liblinear": "BGRL reference implementation: liblinear on L2-normalised rows, C on validation",
     "graphssl": "GraphSSL: standardized features, L-BFGS to convergence, L2 on validation",
+    "graphssl_weakl2": "the GraphSSL probe with the weakest L2 of its grid (1e-6), not selected",
 }
 
 
@@ -271,6 +282,11 @@ def run_protocol(
     """Every fit of one protocol on one set of embeddings, with the time it took."""
     splits = (train_idx, val_idx, test_idx)
     t0 = time.time()
+    if name.endswith("_std"):
+        # Same probe on standardized features (training rows' statistics, as LogRegEvaluator):
+        # isolates the feature scale from the other differences with the converged probe.
+        mean, std = z[train_idx].mean(0), z[train_idx].std(0).clamp_min(1e-12)
+        z, name = (z - mean) / std, name.removesuffix("_std")
     fits: List[Dict[str, float]]
     if name == "adam100":
         fits = [
@@ -284,6 +300,11 @@ def run_protocol(
         ]
     elif name == "liblinear":
         fits = [liblinear_probe(z, y, *splits)]
+    elif name == "graphssl_weakl2":
+        # Converged and standardized like graphssl, but (almost) unregularized: isolates the
+        # L2 selected on validation from the solver and the feature scale.
+        lin = LogRegEvaluator(weight_decay=1e-6).evaluate(z, y, *splits, num_classes=num_classes)
+        fits = [{k: lin[k] for k in ("val_acc", "test_acc", "weight_decay", "converged")}]
     else:
         lin = LogRegEvaluator().evaluate(z, y, *splits, num_classes=num_classes)
         fits = [
@@ -412,6 +433,8 @@ def main() -> None:
             "name": name,
             "checkpoint": checkpoint,
             "dim": z.size(1),
+            "feature_std_mean": z.std(0).mean().item(),
+            "row_norm_mean": z.norm(dim=1).mean().item(),
             "test_acc_knn": knn["test_acc"],
             "eff_rank": effective_rank(z),
             "protocols": {},

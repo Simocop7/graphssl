@@ -6,7 +6,8 @@
 #                                           #     plus the untrained encoders; models saved
 #   bash benchmarks/paper_runs.sh probe     # E2 + E3: every saved model scored with 4 probe
 #                                           #     protocols + kNN on the public split, and with
-#                                           #     the GraphSSL probe + kNN on 10 random splits
+#                                           #     the GraphSSL probe + kNN on 10 random splits,
+#                                           #     and the Adam probes on standardized features
 #   bash benchmarks/paper_runs.sh analyze   # CIs, gains over untrained, Kendall tau, variance shares
 #
 # Results: benchmarks/paper/{e1,e1_untrained,probes,analysis} (JSON / CSV, committed);
@@ -39,6 +40,12 @@ case "$step" in
         --protocols adam100 adam5000 liblinear graphssl --random-splits 10 \
         --checkpoints "$OUT"/models/"$D"/*/*.pt "$OUT"/models_untrained/"$D"/*/*.pt \
         --out-dir "$OUT/probes/$D" "$@"
+      # Controls for the gap between the Adam probes and the converged one: the Adam probes
+      # on standardized features (feature scale), and the converged probe without L2 selection.
+      python -u benchmarks/compare_probes.py --dataset "$D" \
+        --protocols adam100_std adam5000_std graphssl_weakl2 \
+        --checkpoints "$OUT"/models/"$D"/*/*.pt "$OUT"/models_untrained/"$D"/*/*.pt \
+        --out-dir "$OUT/probes/${D}_std" "$@"
     done
     ;;
   analyze)

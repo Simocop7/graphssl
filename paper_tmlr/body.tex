@@ -81,10 +81,43 @@ BGRL with each backbone.}
 anchor (BGRL with a batch-norm predictor on ogbn-arxiv; GraphDINO with reference values at
 3,000 steps); untrained GCN-3L on ogbn-arxiv above every trained GIN-2L.}
 
-\section{The probe changes the size of the gain, not the order}
+\section{The probe's regularisation decides how useful SSL looks}
 \label{sec:probe}
-\todo{Claim C3. Figure~\ref{fig:probes} (Planetoid, both backbones) and the ogbn-arxiv
-comparison; Kendall $\tau$ of each probe against the converged one.}
+\todo{Claim C3, revised after the controls of 2026-10-24 (the old wording ``the probe changes the
+size of the gain'' is not enough, and ``the probe has not converged'' is wrong). Evidence, all in
+Table~\ref{tab:probe-ablation} and Figure~\ref{fig:probes}:
+(i) the measured gain depends on the protocol, in both directions: +1.1 (DGI's 100-step probe)
+vs +8.2 (converged, L2 on validation) on CiteSeer with GCN, while on ogbn-arxiv the 100-step probe
+inflated it 3--5$\times$; AFGRL and GraphDINO change sign (benchmarks/paper/analysis/gains\_by\_probe.csv);
+(ii) trained embeddings lose 5--11 points under every unregularised probe, converged or not
+(graphssl\_weakl2), and standardising does not help them: their limit is regularisation;
+(iii) the untrained encoder's raw embeddings are 20--60$\times$ smaller (per-dimension std
+0.02--0.03 vs 0.7--0.9, the feature\_std\_mean field of the probe JSONs), so a short unregularised
+Adam run barely fits them, which acts as regularisation; standardised, they drop like the trained
+ones under no regularisation;
+(iv) hence the asymmetric bias; standardising + L2 chosen on validation removes both sides, and
+two independent converged solvers (L-BFGS, liblinear) agree in sign everywhere;
+(v) rankings move less: Kendall $\tau$ against the converged probe with CIs
+(benchmarks/paper/analysis/kendall\_tau.csv). Say the mechanism is measured on two datasets.}
+
+\begin{table}[t]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \caption{\todo{Caption: mean linear-probe accuracy of the seven SSL methods, of the untrained
+  encoder, and the gain $\Delta$, under each protocol (public split, 10 seeds). Rows 1 and 3 are
+  the protocols of DGI / PyG-SSL and PyGCL; rows 2, 4 and 5 are controls.}}
+  \label{tab:probe-ablation}
+  \resizebox{\linewidth}{!}{\input{../benchmarks/paper/figures/tab_probe_ablation.tex}}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig2_probe_protocols}
+  \caption{\todo{Caption: gain over the untrained encoder per method under each protocol, mean
+  and 95\% CI over 10 seeds.}}
+  \label{fig:probes}
+\end{figure}
 
 \begin{table}[t]
   \centering
@@ -111,13 +144,6 @@ comparison; Kendall $\tau$ of each probe against the converged one.}
   \end{tabularx}
 \end{table}
 
-% \begin{figure}[t]
-%   \centering
-%   \includegraphics[width=\linewidth]{fig2_probe_protocols}
-%   \caption{\todo{}}
-%   \label{fig:probes}
-% \end{figure}
-% Uncomment once `bash benchmarks/paper_runs.sh probe` and `analyze` have run.
 
 \section{Implementation details move results as much as the objective}
 \label{sec:details}
