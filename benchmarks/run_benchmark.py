@@ -5,11 +5,12 @@ under ``benchmarks/results/``, with per-seed metrics, aggregate mean/std, the
 exact hyperparameters used, and enough provenance (git commit, package
 versions, timestamp) to reproduce the run later.
 
-This replaces copy-pasting a new per-dataset/per-model script every time —
-compare it to ``examples/benchmark_planetoid.py``, which does the same thing
-but only for BGRL. ``examples/*.py`` remain as minimal single-file "learn the
-API" demos for onboarding and are not superseded by this script; this one is
-for producing citable, comparable numbers across the whole model zoo.
+This replaces copy-pasting a new per-dataset/per-model script every time.
+``examples/*.py`` remain as minimal single-file "learn the API" demos; this one is
+for producing citable, comparable numbers across the whole model zoo. With
+``--save-models DIR`` it also keeps every trained model, so ``compare_probes.py`` can
+score the same embeddings again with other probes and splits (see
+``benchmarks/paper_runs.sh``).
 
 Usage::
 
@@ -25,7 +26,12 @@ Usage::
     # Supervised references (not part of "all")
     python benchmarks/run_benchmark.py --dataset Cora --model supervised supervised_reg
 
-Both supervised references train full-batch on the public split's ``train_mask``
+Datasets: Planetoid (public split) and Amazon Computers / Photo, Coauthor CS, whose random
+split 0 (10/10/80) stands in for a public split (``benchmarks/node_datasets.py``).
+``--optimizer sgd`` swaps the shared AdamW for SGD with Nesterov momentum (the optimizer
+factor of the paper's study).
+
+Both supervised references train full-batch on that split's ``train_mask``
 only. ``supervised`` keeps the shared SSL protocol unchanged; ``supervised_reg``
 uses the standard Kipf & Welling recipe (dropout 0.5, Adam lr 0.01 + L2 5e-4,
 best-validation checkpoint, and with the GCN backbone no normalization layer, as in
@@ -69,8 +75,8 @@ from pathlib import Path
 
 import torch
 import torch_geometric
-from torch.optim import Adam, AdamW
-from torch_geometric.datasets import Planetoid
+from node_datasets import FULL_BATCH_DATASETS, load_node_dataset
+from torch.optim import SGD, Adam, AdamW
 
 from graphssl.config import schema
 from graphssl.config.load import build_model, save_model
@@ -117,18 +123,16 @@ ALL_MODEL_CHOICES = [*SSL_MODELS, *SUPERVISED_MODELS]
 # suffix. It costs one extra probe, no extra training.
 ALT_ENCODER = {"bgrl": "target", "afgrl": "target", "graphdino": "student"}
 
-# Only Planetoid citation networks are wired up today (CPU-friendly, already
-# validated — see CLAUDE.md). Add an entry here to extend to a new dataset;
-# everything else in this script (model construction, training, evaluation,
-# result storage) is already dataset-agnostic.
-PLANETOID_DATASETS = ["Cora", "CiteSeer", "PubMed"]
+# Full-batch datasets: Planetoid with its public split, Amazon / Coauthor with random split 0
+# (10/10/80) in its place (benchmarks/node_datasets.py). Everything else in this script
+# (model construction, training, evaluation, result storage) is dataset-agnostic.
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--dataset", nargs="+", default=["Cora"], choices=PLANETOID_DATASETS)
+    p.add_argument("--dataset", nargs="+", default=["Cora"], choices=FULL_BATCH_DATASETS)
     p.add_argument(
         "--model",
         nargs="+",
@@ -142,6 +146,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--epochs", type=int, default=300)
     p.add_argument("--lr", type=float, default=5e-4)
     p.add_argument("--weight-decay", type=float, default=1e-5)
+    p.add_argument(
+        "--optimizer",
+        default="adamw",
+        choices=["adamw", "sgd"],
+        help="adamw: the shared protocol. sgd: SGD with Nesterov momentum (--momentum), "
+        "--weight-decay as L2. supervised_reg keeps its own recipe either way",
+    )
+    p.add_argument("--momentum", type=float, default=0.9, help="SGD momentum (--optimizer sgd)")
     p.add_argument(
         "--ema-tau",
         type=float,
@@ -316,6 +328,19 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
 PROBE_THREADS = 4
 
 
+def make_optimizer(params, args: argparse.Namespace) -> torch.optim.Optimizer:
+    """The shared protocol's AdamW or, for the optimizer factor, SGD with Nesterov momentum."""
+    if getattr(args, "optimizer", "adamw") == "sgd":
+        return SGD(
+            params,
+            lr=args.lr,
+            momentum=args.momentum,
+            nesterov=True,
+            weight_decay=args.weight_decay,
+        )
+    return AdamW(params, lr=args.lr, weight_decay=args.weight_decay)
+
+
 def linear_probe_settings() -> dict:
     """The linear probe's protocol, saved with every result: the renderers compare it."""
     probe = LogRegEvaluator()
@@ -402,7 +427,7 @@ def run_one(
             model, loader, optimizer, trainer, data, val_idx, args.epochs, device
         )
     else:
-        optimizer = AdamW(model.student_parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        optimizer = make_optimizer(model.student_parameters(), args)
         trainer.train(model, loader, optimizer, num_epochs=args.epochs)
     wall_time_s = time.time() - t0
     if checkpoint is not None:
@@ -536,11 +561,14 @@ def save_result(
         "hidden_dim": args.hidden,
         "num_layers": args.layers,
         "epochs": args.epochs,
+        "optimizer": args.optimizer,
         "lr": args.lr,
         "weight_decay": args.weight_decay,
         "knn_k": args.knn_k,
         "linear_probe": linear_probe_settings(),
     }
+    if args.optimizer == "sgd":
+        hyperparameters.update(momentum=args.momentum, nesterov=True)
     if model_name == "supervised_reg":
         # Its recipe replaces the shared optimizer settings: record what actually ran.
         hyperparameters.update(SUPERVISED_REG_RECIPE)
@@ -563,6 +591,11 @@ def save_result(
         "provenance": {
             "timestamp_utc": timestamp,
             "git": _git_info(),
+            # CPU results depend on it: the same seed with 3 threads instead of the default
+            # moved a Cora run by 0.1 points (reduction order).
+            "torch_threads": torch.get_num_threads(),
+            # Not recorded before 2026-10-26: the Mac's CPU and its GPU (mps) share a platform.
+            "device": args.device,
             "versions": {
                 "python": sys.version.split()[0],
                 "platform": platform.platform(),
@@ -580,22 +613,13 @@ def save_result(
 # ---------------------------------------------------------------------------
 
 
-def load_planetoid(name: str, data_dir: str):
-    dataset = Planetoid(root=f"{data_dir}/{name}", name=name)
-    data = dataset[0]
-    train_idx = data.train_mask.nonzero(as_tuple=True)[0]
-    val_idx = data.val_mask.nonzero(as_tuple=True)[0]
-    test_idx = data.test_mask.nonzero(as_tuple=True)[0]
-    return data, dataset.num_classes, train_idx, val_idx, test_idx
-
-
 def main() -> None:
     args = parse_args()
     device = torch.device(args.device)
     out_dir = REPO_ROOT / args.out_dir
 
     for dataset_name in args.dataset:
-        data, num_classes, train_idx, val_idx, test_idx = load_planetoid(
+        data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(
             dataset_name, args.data_dir
         )
         print(

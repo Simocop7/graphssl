@@ -8,9 +8,11 @@
 #                                           #     protocols + kNN on the public split, and with
 #                                           #     the GraphSSL probe + kNN on 10 random splits,
 #                                           #     and the Adam probes on standardized features
-#   bash benchmarks/paper_runs.sh analyze   # CIs, gains over untrained, Kendall tau, variance shares
+#   bash benchmarks/paper_runs.sh analyze   # CIs, gains over untrained, Kendall tau, variance shares,
+#                                           #     and the same seeds against the committed results
+#   bash benchmarks/paper_runs.sh figures   # figures and tables for paper_tmlr/ and docs/study.md
 #
-# Results: benchmarks/paper/{e1,e1_untrained,probes,analysis} (JSON / CSV, committed);
+# Results: benchmarks/paper/{e1,e1_untrained,probes,analysis,figures} (committed);
 # models:  benchmarks/paper/{models,models_untrained} (*.pt, git-ignored).
 # Extra arguments go to every python call, e.g. `bash benchmarks/paper_runs.sh train --device cpu`.
 set -euo pipefail
@@ -20,7 +22,7 @@ OUT=benchmarks/paper
 # Cora and CiteSeer by default (~2 h on a laptop CPU). PubMed is ~90% of the cost
 # (GraphCL and AFGRL): add it with DATASETS="Cora CiteSeer PubMed", ideally on a GPU.
 read -r -a DATASETS <<< "${DATASETS:-Cora CiteSeer}"
-step=${1:?usage: paper_runs.sh train|probe|analyze [extra args]}
+step=${1:?usage: paper_runs.sh train|probe|analyze|figures [extra args]}
 shift
 
 case "$step" in
@@ -51,9 +53,14 @@ case "$step" in
   analyze)
     python benchmarks/analyze_factors.py "$OUT"/probes/*/probes__*.json \
       --untrained-root "$OUT/models_untrained" --out "$OUT/analysis" "$@"
+    python benchmarks/compare_reruns.py benchmarks/results "$OUT/e1" \
+      --out "$OUT/analysis/reruns.csv"
+    ;;
+  figures)
+    python benchmarks/paper_figures.py --analysis "$OUT/analysis" --out "$OUT/figures" "$@"
     ;;
   *)
-    echo "unknown step: $step (train | probe | analyze)" >&2
+    echo "unknown step: $step (train | probe | analyze | figures)" >&2
     exit 2
     ;;
 esac

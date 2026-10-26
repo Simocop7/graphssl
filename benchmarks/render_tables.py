@@ -2,10 +2,9 @@
 
 Reads every ``benchmarks/results/<Dataset>/<model>__<timestamp>.json``, keeps
 only the latest run per (dataset, encoder, model), and prints one table per
-dataset and encoder — paste straight into README.md / paper.tex instead of retyping
-numbers by hand (the exact failure mode this script exists to avoid: today
-the same benchmark numbers are copied manually into README.md, CLAUDE.md and
-paper.tex, and they *will* eventually drift out of sync).
+dataset and encoder — paste straight into README.md and docs/benchmarks.md instead of
+retyping numbers by hand (the failure mode this script exists to avoid: numbers copied by
+hand into several documents drift out of sync).
 
 Usage::
 
