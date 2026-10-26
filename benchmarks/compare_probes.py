@@ -55,6 +55,7 @@ from typing import Any, Callable, Dict, List, Optional
 import torch
 import torch.nn.functional as F
 import torch_geometric
+from node_datasets import ALL_DATASETS, load_node_dataset, random_split, split_fractions
 from torch import Tensor
 from torch.optim import Adam
 
@@ -63,7 +64,7 @@ from graphssl.data import DataModule
 from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PLANETOID = ["Cora", "CiteSeer", "PubMed"]
+RAW_FEATURES = "raw features"  # the name of the --raw-features row
 PROTOCOLS = [
     "adam100",
     "adam5000",
@@ -90,12 +91,23 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--dataset", default="ogbn-arxiv", choices=["ogbn-arxiv", *PLANETOID])
+    p.add_argument(
+        "--dataset",
+        default="ogbn-arxiv",
+        choices=ALL_DATASETS,
+        help="arxiv-year scores models trained on ogbn-arxiv against publication-year labels",
+    )
     p.add_argument(
         "--checkpoints",
-        nargs="+",
-        required=True,
+        nargs="*",
+        default=[],
         help="files written by save_model(); each row is named <parent dir>/<file stem>",
+    )
+    p.add_argument(
+        "--raw-features",
+        action="store_true",
+        help="also score the input features themselves (no GNN): with the untrained encoder it "
+        "separates what the graph adds from what training adds",
     )
     p.add_argument(
         "--untrained",
@@ -124,10 +136,10 @@ def parse_args() -> argparse.Namespace:
         "--split-fractions",
         type=float,
         nargs=2,
-        default=[0.1, 0.1],
+        default=None,
         metavar=("TRAIN", "VAL"),
-        help="train and validation fractions of a random split; the rest is test "
-        "(default 0.1 0.1, the 10/10/80 convention of GRACE, PyGCL and BGRL)",
+        help="train and validation fractions of a random split; the rest is test (default "
+        "0.1 0.1, the 10/10/80 convention of GRACE, PyGCL and BGRL; arxiv-year 0.5 0.25)",
     )
     p.add_argument(
         "--split-protocols",
@@ -139,54 +151,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--data-dir", default="data")
     p.add_argument("--out-dir", default="benchmarks/probes/run")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    return p.parse_args()
-
-
-# ---------------------------------------------------------------------------
-# Data
-# ---------------------------------------------------------------------------
-
-
-def load_graph(name: str, data_dir: str):
-    """(data, train_idx, val_idx, test_idx, num_classes), as the benchmark scripts load it."""
-    if name in PLANETOID:
-        from torch_geometric.datasets import Planetoid
-
-        dataset = Planetoid(root=f"{data_dir}/{name}", name=name)
-        data = dataset[0]
-        idx = [
-            m.nonzero(as_tuple=True)[0] for m in (data.train_mask, data.val_mask, data.test_mask)
-        ]
-        return data, idx[0], idx[1], idx[2], dataset.num_classes
-
-    try:
-        from ogb.nodeproppred import PygNodePropPredDataset
-    except ImportError as e:
-        raise ImportError('Install ogb: pip install "graphssl[benchmark]"') from e
-    from torch_geometric.transforms import ToUndirected
-
-    # ogb (<= 1.3.6) loads its processed file with a bare torch.load(); since PyTorch 2.6
-    # that defaults to weights_only=True and rejects PyG's Data classes unless allow-listed.
-    add_safe_globals = getattr(torch.serialization, "add_safe_globals", None)
-    if add_safe_globals is not None:
-        from torch_geometric.data.data import DataEdgeAttr, DataTensorAttr
-        from torch_geometric.data.storage import GlobalStorage
-
-        add_safe_globals([DataEdgeAttr, DataTensorAttr, GlobalStorage])
-
-    dataset = PygNodePropPredDataset(name=name, root=f"{data_dir}/{name}")
-    data = ToUndirected()(dataset[0])  # as in the stress test and the BGRL reproduction
-    split = dataset.get_idx_split()
-    return data, split["train"], split["valid"], split["test"], dataset.num_classes
-
-
-def random_split(num_nodes: int, fractions: List[float], seed: int) -> tuple:
-    """(train_idx, val_idx, test_idx): a random permutation of the nodes cut by ``fractions``."""
-    generator = torch.Generator().manual_seed(seed)
-    perm = torch.randperm(num_nodes, generator=generator)
-    n_train = int(round(fractions[0] * num_nodes))
-    n_val = int(round(fractions[1] * num_nodes))
-    return perm[:n_train], perm[n_train : n_train + n_val], perm[n_train + n_val :]
+    args = p.parse_args()
+    if not args.checkpoints and not args.raw_features:
+        p.error("nothing to score: pass --checkpoints and/or --raw-features")
+    if args.split_fractions is None:
+        args.split_fractions = list(split_fractions(args.dataset))
+    return args
 
 
 # ---------------------------------------------------------------------------
@@ -358,7 +328,9 @@ def collect_models(args: argparse.Namespace) -> List[tuple]:
                     )
 
                 untrained[key] = (label, build, None)
-    return [*untrained.values(), *rows]
+    # No builder: the input features themselves, scored by the same probes.
+    raw = [(RAW_FEATURES, None, None)] if args.raw_features else []
+    return [*raw, *untrained.values(), *rows]
 
 
 # ---------------------------------------------------------------------------
@@ -410,7 +382,8 @@ def render_summary(rows: List[dict], protocols: List[str], args: argparse.Namesp
 def main() -> None:
     args = parse_args()
     device = torch.device(args.device)
-    data, train_idx, val_idx, test_idx, num_classes = load_graph(args.dataset, args.data_dir)
+    # Datasets without an official split use random split 0 as their "public" one.
+    data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(args.dataset, args.data_dir)
     dm = DataModule(
         data=data, is_graph_level=False, train_idx=train_idx, val_idx=val_idx, test_idx=test_idx
     )
@@ -421,9 +394,12 @@ def main() -> None:
     )
 
     rows: List[dict] = []
-    build: Callable[[], torch.nn.Module]
+    build: Optional[Callable[[], torch.nn.Module]]
     for name, build, checkpoint in collect_models(args):
-        z, y = extract_embeddings(build(), dm, device=str(device))
+        if build is None:
+            z, y = data.x.float(), data.y
+        else:
+            z, y = extract_embeddings(build(), dm, device=str(device))
         assert y is not None
         if not torch.isfinite(z).all():
             raise FloatingPointError(f"non-finite values in the embeddings of {name}")

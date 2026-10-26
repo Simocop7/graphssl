@@ -11,7 +11,7 @@ python benchmarks/run_benchmark.py --dataset Cora --model all --seeds 10
 # One model, multiple datasets
 python benchmarks/run_benchmark.py --dataset Cora CiteSeer PubMed --model bgrl
 
-# Render the results (paste straight into README.md / paper.tex)
+# Render the results (paste into README.md and docs/benchmarks.md)
 python benchmarks/render_tables.py                     # one table per dataset and encoder
 python benchmarks/render_tables.py --latex
 python benchmarks/render_tables.py --summary           # methods x datasets, per encoder
@@ -118,7 +118,7 @@ python -u benchmarks/run_zinc.py --model all supervised --seeds 10 --finetune-ep
 
 `--finetune-epochs N` adds the second evaluation: after pre-training, the encoder and a new
 linear head are trained on the labels for N epochs (best-validation epoch). Its reference is
-the supervised row, the same training from a random initialisation.
+the supervised row, the same training from a random initialization.
 
 One shared, untuned protocol (GINE with 4 layers of 128 units, 100 epochs, 20% of the atoms
 masked and 20% of the bonds dropped): like the citation benchmark it compares the objectives
@@ -136,12 +136,20 @@ linear-evaluation protocols of other codebases, re-implemented from their source
 
 - `adam100`: the reference code of DGI and PyG-SSL's evaluator. 100 full-batch Adam steps on
   the raw embeddings, test accuracy after the last step, averaged over `--repeats` random
-  initialisations.
+  initializations.
 - `adam5000`: PyGCL. 5,000 Adam steps, test accuracy at the best validation accuracy.
-- `liblinear`: the BGRL reference implementation. One-vs-rest liblinear on L2-normalised
+- `liblinear`: the BGRL reference implementation. One-vs-rest liblinear on L2-normalized
   rows, C selected on validation. Needs scikit-learn; 21 × `num_classes` fits per model, so
   it is not run unless named in `--protocols`.
 - `graphssl`: `LogRegEvaluator`, the probe of every other table here.
+
+Three diagnostic controls isolate why the protocols differ (Evaluation Study):
+`adam100_std` and `adam5000_std` are the Adam probes on standardized features, and
+`graphssl_weakl2` is `LogRegEvaluator` with the weakest L2 of its grid (1e-6) instead of one
+chosen on validation. `--random-splits K` also scores every model on K random splits
+(`--split-fractions`, default 10/10/80) with `--split-protocols` and kNN; each row records
+its checkpoint path and the raw scale of its embeddings (`feature_std_mean`,
+`row_norm_mean`).
 
 ```bash
 python -u benchmarks/compare_probes.py --dataset ogbn-arxiv --untrained \
@@ -151,7 +159,7 @@ python -u benchmarks/compare_probes.py --dataset ogbn-arxiv --untrained \
     --out-dir benchmarks/probes/ogbn_arxiv
 ```
 
-`--untrained` adds each distinct architecture at initialisation; `--dataset` also takes
+`--untrained` adds each distinct architecture at initialization; `--dataset` also takes
 Cora, CiteSeer and PubMed. One JSON with every fit and a `summary.md` go to `--out-dir`.
 The committed run (2026-10-13, commit `7204b92`, about 40 minutes on an idle A2) is in
 `benchmarks/probes/ogbn_arxiv/`; its tables and what they say are in
@@ -159,6 +167,59 @@ The committed run (2026-10-13, commit `7204b92`, about 40 minutes on an idle A2)
 agree on well-conditioned embeddings and disagree on weak ones, where the 100-step protocol
 is far from fitted, so it makes self-supervision look about three times more useful against
 an untrained encoder than a converged probe does.
+
+## Evaluation study (`paper_runs.sh`)
+
+The study of `../docs/study.md`: how much of a result is the method, the backbone, the probe,
+the split and the seed. Train once, then evaluate many ways.
+
+```bash
+bash benchmarks/paper_runs.sh train     # run_benchmark.py --save-models, + untrained encoders
+bash benchmarks/paper_runs.sh probe     # compare_probes.py on every saved model
+bash benchmarks/paper_runs.sh analyze   # analyze_factors.py + compare_reruns.py
+bash benchmarks/paper_runs.sh figures   # paper_figures.py
+```
+
+| Script | What it does |
+|---|---|
+| `analyze_factors.py` | Per-cell means with bootstrap intervals, gain over the untrained encoder paired by seed, Kendall's tau between method rankings with seed-bootstrap intervals, variance shares (eta squared) per factor, gains per probe with sign flips |
+| `compare_reruns.py` | Pairs two sets of runs by dataset, encoder, model and seed: per-seed differences against what two independent seeds would give, and whether means and rankings survive |
+| `paper_figures.py` | Figures (PDF, PNG), LaTeX tables for `../paper_tmlr/`, Markdown tables for the docs |
+
+Layout of `paper/`: `e1/` and `e1_untrained/` (run_benchmark JSONs), `probes/<Dataset>[_std,
+_weakl2]/` (compare_probes JSONs), `analysis/` (CSV), `figures/`; the models in `models/` and
+`models_untrained/` are not committed. The committed run: Cora and CiteSeer, both backbones,
+10 seeds, on a laptop CPU (PyTorch 2.14) — training about two hours, probing a few more.
+`DATASETS="Cora CiteSeer PubMed" bash benchmarks/paper_runs.sh train` adds PubMed. If PyG's
+download of a Planetoid dataset fails with `Got more than 8190 bytes when reading`, fetch the
+eight raw files of `https://github.com/kimiyoung/planetoid/raw/master/data/` with `curl -L`
+into `data/<Name>/<Name>/raw/`.
+
+The runs added on 2026-10-26 (scope and dates in `paper/PLAN.md`) go through
+`paper_v2.sh`, into the same layout:
+
+```bash
+bash benchmarks/paper_v2.sh e1        # Amazon Computers/Photo, Coauthor CS (DATASETS), GCN/GIN/Transformer (ENCODERS)
+bash benchmarks/paper_v2.sh e3        # optimizer x learning rate, Cora + CiteSeer, 5 seeds
+EPOCHS=N bash benchmarks/paper_v2.sh ogb   # ogbn-arxiv (OGB_DATASET) in mini-batch, on a GPU
+bash benchmarks/paper_v2.sh probe     # compare_probes.py; DATASETS=arxiv-year reuses the ogbn-arxiv models
+bash benchmarks/paper_v2.sh metrics   # representation_metrics.py
+```
+
+| Script | What it does |
+|---|---|
+| `node_datasets.py` | Every dataset of the study, loaded the same way by each script: Planetoid (public split), Amazon / Coauthor (random split 0, 10/10/80, in its place), ogbn-arxiv / ogbn-products (official split), arxiv-year (ogbn-arxiv with 5 publication-year classes, Lim et al. 2021; edge homophily 0.22 vs 0.65) |
+| `run_ogb.py` | run_benchmark.py's protocol and method configs in mini-batch (NeighborLoader, every node a seed node); `--epochs 0` saves the untrained encoders |
+| `representation_metrics.py` | Label-free metrics of saved models: linear CKA to the untrained encoder of the same seed, effective rank, feature scale, cosine of random pairs vs edges, uniformity; per-seed CKA matrices across methods and backbones |
+| `analyze_representations.py` | What training changes: the metrics per cell with seed intervals, their variance shares, CKA grouping (same backbone vs same method), raw features → untrained → trained per dataset, and the label-free prediction test fixed in advance in `paper/PLAN.md` (development: Cora, CiteSeer) |
+
+`compare_probes.py --raw-features` adds a row for the input features themselves, scored by
+the same probes: with the untrained encoder it separates what the graph adds from what
+training adds.
+
+`run_benchmark.py --optimizer sgd` (Nesterov momentum, `--momentum`) is the optimizer factor;
+the default, AdamW, is unchanged. Results now record `torch_threads`: on the CPU the same seed
+with 3 threads instead of the default moved a Cora run by 0.1 points.
 
 ## Reproductions
 
@@ -254,7 +315,7 @@ single-file demos for learning the API — this is for producing citable,
 comparable numbers across the model zoo. See `../CLAUDE.md` (Benchmarks
 section) for the methodology and current status.
 
-**Linear probe.** `LogRegEvaluator`'s default protocol: standardized features, L2-regularised
+**Linear probe.** `LogRegEvaluator`'s default protocol: standardized features, L2-regularized
 logistic regression fitted to convergence, L2 strength selected on the validation split.
 Each JSON records the settings (`hyperparameters.linear_probe`) and, per seed, the selected
 strength and whether the fit converged (`probe_weight_decay`, `probe_converged`). A JSON

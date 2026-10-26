@@ -12,7 +12,8 @@ and reports, per dataset:
   converged GraphSSL probe under each backbone;
 - the share of variance (eta squared, sums of squares of a balanced design) explained by
   method, backbone, probe, split and their interaction with the method, the rest being seed
-  noise. Computed on accuracy and on the gain over the untrained encoder.
+  noise. Computed on accuracy and on the gain over the untrained encoder;
+  ``variance_shares_ci.csv`` adds a 95% seed-bootstrap interval to each share.
 
 Untrained encoders are the checkpoints under ``--untrained-root`` (``run_benchmark.py
 --epochs 0 --save-models``); supervised references are left out of rankings and variance.
@@ -39,6 +40,9 @@ CHECKPOINT = re.compile(
 )
 SUPERVISED = {"supervised", "supervised_reg"}
 REFERENCE_PROBE = "graphssl"
+# Protocols used in published code (variance decomposition); the *_std and *_weakl2 runs of
+# compare_probes.py are diagnostic controls and are left out of it.
+PRACTICE_PROBES = ["adam100", "adam5000", "liblinear", "graphssl"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,7 +73,9 @@ def load_long_table(files: list[str], untrained_root: str) -> pd.DataFrame:
                 raise ValueError(f"unexpected checkpoint path {path}")
             untrained = path.as_posix().startswith(untrained_root)
             base = {
-                "dataset": m["dataset"],
+                # The probed dataset, not the training one: arxiv-year scores the models
+                # trained on ogbn-arxiv against other labels.
+                "dataset": result.get("dataset", m["dataset"]),
                 "backbone": m["backbone"],
                 "method": "untrained" if untrained else m["method"],
                 "seed": int(m["seed"]),
@@ -243,51 +249,112 @@ def eta_squared(
     return shares
 
 
+def coded_eta_squared(
+    y: np.ndarray,
+    codes: dict[str, np.ndarray],
+    factors: list[str],
+    interactions: list[tuple[str, str]],
+    idx: np.ndarray,
+) -> np.ndarray:
+    """eta_squared on the rows ``idx`` of integer-coded factors, fast enough for a bootstrap:
+    the shares of ``factors``, then of ``interactions``, then the residual."""
+    yy = y[idx]
+    grand = yy.mean()
+    total = ((yy - grand) ** 2).sum()
+
+    def group_means(c: np.ndarray) -> np.ndarray:
+        return (np.bincount(c, weights=yy) / np.maximum(np.bincount(c), 1))[c]
+
+    main = {f: group_means(codes[f][idx]) for f in factors}
+    ss = [((main[f] - grand) ** 2).sum() for f in factors]
+    for a, b in interactions:
+        joint = codes[a][idx] * (codes[b].max() + 1) + codes[b][idx]
+        ss.append(((group_means(joint) - main[a] - main[b] + grand) ** 2).sum())
+    shares = np.array(ss) / total
+    return np.append(shares, max(0.0, 1.0 - shares.sum()))
+
+
+def variance_designs(g: pd.DataFrame) -> list[tuple[str, pd.DataFrame, list[str], list]]:
+    """The designs decomposed for one dataset's SSL rows: (name, rows, factors, interactions)."""
+    public = g[(g.split == "public") & g.probe.isin([*PRACTICE_PROBES, "knn"])]
+    by_probe = (["method", "backbone", "probe"], [("method", "backbone"), ("method", "probe")])
+    designs = [
+        ("public split, all probes", public, *by_probe),
+        ("public split, linear probes", public[public.probe != "knn"], *by_probe),
+    ]
+    ref = g[g.probe == REFERENCE_PROBE]
+    if ref.split.nunique() > 1:
+        designs.append(
+            (
+                f"{REFERENCE_PROBE} probe, all splits",
+                ref,
+                ["method", "backbone", "split"],
+                [("method", "backbone"), ("method", "split")],
+            )
+        )
+    return designs
+
+
 def variance_tables(df: pd.DataFrame) -> pd.DataFrame:
     ssl = df[~df.method.isin(SUPERVISED | {"untrained"})]
     rows = []
     for dataset, g in ssl.groupby("dataset"):
-        public = g[g.split == "public"]
+        designs = variance_designs(g)
         for value in ("acc", "gain"):
-            shares = eta_squared(
-                public,
-                value,
-                ["method", "backbone", "probe"],
-                [("method", "backbone"), ("method", "probe")],
-            )
-            rows.append(
-                {"dataset": dataset, "design": "public split, all probes", "value": value, **shares}
-            )
-            shares = eta_squared(
-                public[public.probe != "knn"],
-                value,
-                ["method", "backbone", "probe"],
-                [("method", "backbone"), ("method", "probe")],
-            )
-            rows.append(
-                {
-                    "dataset": dataset,
-                    "design": "public split, linear probes",
-                    "value": value,
-                    **shares,
-                }
-            )
-            ref = g[g.probe == REFERENCE_PROBE]
-            if ref.split.nunique() > 1:
-                shares = eta_squared(
-                    ref,
-                    value,
-                    ["method", "backbone", "split"],
-                    [("method", "backbone"), ("method", "split")],
-                )
-                rows.append(
-                    {
-                        "dataset": dataset,
-                        "design": f"{REFERENCE_PROBE} probe, all splits",
-                        "value": value,
-                        **shares,
-                    }
-                )
+            for design, d, factors, interactions in designs:
+                shares = eta_squared(d, value, factors, interactions)
+                rows.append({"dataset": dataset, "design": design, "value": value, **shares})
+    return pd.DataFrame(rows)
+
+
+def variance_intervals(df: pd.DataFrame, n_boot: int) -> pd.DataFrame:
+    """95% percentile-bootstrap intervals of the variance shares, one row per component.
+
+    Each replicate resamples, with replacement, the seeds of every method x backbone cell and
+    keeps all rows of a drawn seed together (its scores under every probe or split come from
+    the same checkpoint); probes and splits themselves are not resampled. The point estimate
+    is the share of variance_shares.csv. Shares cannot be negative and resampling adds noise
+    to the cell means, so the interval of a share near zero sits above it (Cora's method x
+    split: 0.12% [0.14, 0.25]), and a drawn seed counted twice leaves the residual a little
+    low: read such intervals as an upper bound, not a range around the point.
+    """
+    rng = np.random.default_rng(0)
+    ssl = df[~df.method.isin(SUPERVISED | {"untrained"})]
+    unit = ["method", "backbone"]
+    rows = []
+    for dataset, g in ssl.groupby("dataset"):
+        designs = variance_designs(g)
+        for value in ("acc", "gain"):
+            for design, d, factors, interactions in designs:
+                d = d.dropna(subset=[value]).sort_values([*unit, "seed"], kind="stable")
+                block_sizes = d.groupby([*unit, "seed"]).size()
+                seeds_per_unit = d.groupby(unit)["seed"].nunique()
+                if block_sizes.nunique() != 1 or seeds_per_unit.nunique() != 1:
+                    raise ValueError(f"{dataset} / {design} / {value}: unbalanced design")
+                n_units, n_seeds = len(seeds_per_unit), int(seeds_per_unit.iloc[0])
+                blocks = np.arange(len(d)).reshape(n_units, n_seeds, int(block_sizes.iloc[0]))
+                y = d[value].to_numpy(dtype=float)
+                codes = {f: d[f].astype("category").cat.codes.to_numpy() for f in factors}
+                names = [*factors, *(f"{a} x {b}" for a, b in interactions), "residual (seed)"]
+                point = coded_eta_squared(y, codes, factors, interactions, blocks.ravel())
+                draws = np.empty((n_boot, len(names)))
+                for i in range(n_boot):
+                    pick = rng.integers(0, n_seeds, size=(n_units, n_seeds))
+                    idx = blocks[np.arange(n_units)[:, None], pick].ravel()
+                    draws[i] = coded_eta_squared(y, codes, factors, interactions, idx)
+                lo, hi = np.percentile(draws, [2.5, 97.5], axis=0)
+                for k, name in enumerate(names):
+                    rows.append(
+                        {
+                            "dataset": dataset,
+                            "design": design,
+                            "value": value,
+                            "component": name,
+                            "share": point[k],
+                            "lo": lo[k],
+                            "hi": hi[k],
+                        }
+                    )
     return pd.DataFrame(rows)
 
 
@@ -305,11 +372,16 @@ def main() -> None:
     gains.to_csv(out / "gains_by_probe.csv", index=False)
     variance = variance_tables(df)
     variance.to_csv(out / "variance_shares.csv", index=False)
+    intervals = variance_intervals(df, args.bootstrap)
+    intervals.to_csv(out / "variance_shares_ci.csv", index=False)
     pd.set_option("display.width", 200)
     pd.set_option("display.max_columns", 20)
     print(cells.round(2).to_string(index=False))
     print("\nKendall tau\n" + taus.round(2).to_string(index=False))
     print("\nShare of variance\n" + variance.round(3).to_string(index=False))
+    linear = intervals[intervals.design == "public split, linear probes"]
+    print("\nShare of variance, linear probes, 95% seed-bootstrap interval\n")
+    print(linear.drop(columns="design").round(3).to_string(index=False))
     print(f"\nCSV files in {out}")
 
 
