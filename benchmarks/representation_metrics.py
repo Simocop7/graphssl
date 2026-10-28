@@ -38,16 +38,16 @@ from pathlib import Path
 from typing import Dict, List
 
 import torch
-import torch.nn.functional as F
 import torch_geometric
 from analyze_factors import CHECKPOINT
+from embedding_geometry import geometry, linear_cka, random_pairs
 from node_datasets import ALL_DATASETS, load_node_dataset
 from run_benchmark import _git_info
 from torch import Tensor
 
 from graphssl.config.load import load_model
 from graphssl.data import DataModule
-from graphssl.evaluation import effective_rank, extract_embeddings
+from graphssl.evaluation import extract_embeddings
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,39 +63,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out", required=True, help="output directory")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
-
-
-def linear_cka(x: Tensor, y: Tensor) -> float:
-    """Linear CKA of two [N, D] matrices of the same nodes, in float64."""
-    x = x.double() - x.double().mean(0)
-    y = y.double() - y.double().mean(0)
-    cross = (x.T @ y).pow(2).sum()
-    norm = (x.T @ x).pow(2).sum().sqrt() * (y.T @ y).pow(2).sum().sqrt()
-    return (cross / norm).item() if norm > 0 else float("nan")
-
-
-def random_pairs(num_nodes: int, n: int) -> tuple:
-    """``n`` pairs of distinct nodes, the same for every checkpoint of a dataset."""
-    g = torch.Generator().manual_seed(0)
-    i = torch.randint(num_nodes, (n,), generator=g)
-    j = (i + torch.randint(1, num_nodes, (n,), generator=g)) % num_nodes
-    return i, j
-
-
-def geometry(z: Tensor, edge_index: Tensor, pairs: tuple, n_edges: int) -> Dict[str, float]:
-    u = F.normalize(z.double(), dim=1)
-    i, j = pairs
-    g = torch.Generator().manual_seed(0)
-    e = torch.randint(edge_index.size(1), (min(n_edges, edge_index.size(1)),), generator=g)
-    src, dst = edge_index[0, e], edge_index[1, e]
-    sq = (u[i] - u[j]).pow(2).sum(1)
-    return {
-        "pair_cos": (u[i] * u[j]).sum(1).mean().item(),
-        "edge_cos": (u[src] * u[dst]).sum(1).mean().item(),
-        "uniformity": torch.log(torch.exp(-2 * sq).mean()).item(),
-        "feature_std_mean": z.std(0).mean().item(),
-        "eff_rank": effective_rank(z),
-    }
 
 
 def main() -> None:

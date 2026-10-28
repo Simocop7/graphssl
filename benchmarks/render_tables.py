@@ -36,6 +36,7 @@ MODEL_DISPLAY_NAMES = {
     "bgrl": "BGRL",
     "afgrl": "AFGRL",
     "graphdino": "GraphDINO",
+    "graphmae": "GraphMAE",
     "supervised": "Supervised*",
     "supervised_reg": "Supervised, std. recipe*",
 }
@@ -48,6 +49,7 @@ MODEL_ORDER = [
     "vicreg",
     "barlow_twins",
     "graphdino",
+    "graphmae",
     "supervised",
     "supervised_reg",
 ]
