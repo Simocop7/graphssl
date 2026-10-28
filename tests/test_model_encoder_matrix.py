@@ -71,6 +71,7 @@ MODELS = [
     "bgrl",
     pytest.param("afgrl", marks=pytest.mark.skipif(not HAS_FAISS, reason="needs faiss-cpu")),
     "graphdino",
+    "graphmae",
     "supervised",
 ]
 
@@ -116,12 +117,15 @@ EDGE_AWARE_ENCODERS = ["gin", "transformer"]
 N_ATOM_TYPES, N_BOND_TYPES = 5, 3
 
 
-def _molecule_batch(n_graphs: int = 4, n: int = 8) -> Batch:
-    """ZINC-like graphs: an integer atom type per node, an integer bond type per edge."""
+def _molecule_batch(n_graphs: int = 4, n: int = 8, continuous: bool = False) -> Batch:
+    """ZINC-like graphs: an integer atom type per node (or continuous features), an integer
+    bond type per edge."""
     g = torch.Generator().manual_seed(0)
     graphs = [
         Data(
-            x=torch.randint(0, N_ATOM_TYPES, (n, 1), generator=g),
+            x=torch.randn(n, IN_CHANNELS, generator=g)
+            if continuous
+            else torch.randint(0, N_ATOM_TYPES, (n, 1), generator=g),
             edge_index=torch.randint(0, n, (2, 3 * n), generator=g),
             edge_attr=torch.randint(0, N_BOND_TYPES, (3 * n,), generator=g),
             y=torch.tensor([i % NUM_CLASSES]),
@@ -141,14 +145,15 @@ def test_edge_features_reach_the_encoder(model_name, encoder):
     """
     torch.manual_seed(0)
     cfg = _config(model_name, encoder, pool=True)
-    cfg["encoder"].update(
-        node_emb_num_classes=N_ATOM_TYPES,
-        edge_dim=HIDDEN,
-        edge_emb_num_classes=N_BOND_TYPES,
-        drop=0.0,
-    )
-    model = build_model(cfg, in_channels=1, num_classes=NUM_CLASSES)
-    batch = _molecule_batch()
+    # GraphMAE reconstructs continuous features and refuses categorical ones: its graphs keep
+    # the integer bond types with continuous node features.
+    continuous = model_name == "graphmae"
+    cfg["encoder"].update(edge_dim=HIDDEN, edge_emb_num_classes=N_BOND_TYPES, drop=0.0)
+    if not continuous:
+        cfg["encoder"]["node_emb_num_classes"] = N_ATOM_TYPES
+    in_channels = IN_CHANNELS if continuous else 1
+    model = build_model(cfg, in_channels=in_channels, num_classes=NUM_CLASSES)
+    batch = _molecule_batch(continuous=continuous)
 
     got_edge_attr = []
 

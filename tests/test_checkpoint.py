@@ -18,6 +18,7 @@ MODELS = [
     "bgrl",
     pytest.param("afgrl", marks=pytest.mark.skipif(not HAS_FAISS, reason="needs faiss-cpu")),
     "graphdino",
+    "graphmae",
 ]
 
 

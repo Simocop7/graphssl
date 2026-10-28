@@ -3,4 +3,5 @@ from .combined import CombinedLoss
 from .dino import DINOLoss
 from .nt_xent import NTXentLoss
 from .regression import CosineRegressionLoss
+from .sce import SCELoss
 from .vicreg import VICRegLoss

@@ -10,6 +10,7 @@ any model — registered in the `LOSSES` registry via `@LOSSES.register("name")`
 | `barlow_twins` | `BarlowTwinsLoss` | [Barlow Twins](models/barlow-twins.md) |
 | `cosine_regression` | `CosineRegressionLoss` | [BGRL](models/bgrl.md), [AFGRL](models/afgrl.md) |
 | — | `DINOLoss` | [GraphDINO](models/graphdino.md) |
+| `sce` | `SCELoss` | [GraphMAE](models/graphmae.md) |
 
 ## Combining losses
 

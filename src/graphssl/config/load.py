@@ -89,6 +89,7 @@ def build_model(
         BarlowTwins,
         GraphCL,
         GraphDINO,
+        GraphMAE,
         Supervised,
         VICReg,
     )
@@ -101,6 +102,7 @@ def build_model(
         "bgrl": BGRL,
         "afgrl": AFGRL,
         "graphdino": GraphDINO,
+        "graphmae": GraphMAE,
         "supervised": Supervised,
     }
 
