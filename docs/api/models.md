@@ -15,3 +15,5 @@
 ::: graphssl.models.BarlowTwins
 
 ::: graphssl.models.GraphDINO
+
+::: graphssl.models.GraphMAE

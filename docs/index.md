@@ -21,6 +21,7 @@ through with a debugger.
 | [VICReg](models/vicreg.md) | Variance-Invariance-Covariance | Bardes et al., ICLR 2022 |
 | [Barlow Twins](models/barlow-twins.md) | Cross-Correlation | Zbontar et al., ICML 2021 |
 | [GraphDINO](models/graphdino.md) | Self-Distillation | Adapted from Caron et al., ICCV 2021 |
+| [GraphMAE](models/graphmae.md) | Masked Feature Reconstruction | Hou et al., KDD 2022 |
 
 Plus a [Supervised](models/supervised.md) baseline for comparison.
 

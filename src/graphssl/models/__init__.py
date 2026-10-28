@@ -10,5 +10,6 @@ from .bgrl import BGRL
 from .dgi import DGI
 from .graphcl import GraphCL
 from .graphdino import GraphDINO
+from .graphmae import GraphMAE
 from .supervised import Supervised
 from .vicreg import VICReg

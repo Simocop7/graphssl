@@ -3,6 +3,19 @@
 Notable changes to the `graphssl` package. Benchmark results and ablations are documented in
 the [benchmarks page](https://simocop7.github.io/graphssl/benchmarks/) of the documentation.
 
+## Unreleased
+
+### Added
+
+- **GraphMAE** (`graphmae`, `GraphMAEConfig`): masked feature reconstruction (Hou et al.,
+  KDD 2022) after the reference implementation — mask token and random replacement on a
+  fraction of the nodes, bias-free map, re-masking, a one-layer GAT decoder and the scaled
+  cosine error on the masked nodes. Defaults are the reference's Cora values (mask rate 0.5,
+  replacement rate 0.05, exponent 3). On a NeighborLoader batch seeds and neighbors are masked
+  in the same proportion and the loss uses the masked seeds. Categorical node features
+  (`node_emb_num_classes`) are refused.
+- **`SCELoss`** (`sce` in the `LOSSES` registry): the scaled cosine error.
+
 ## 0.2.0 (2026-10-14)
 
 ### Changed (behavior differs from 0.1.0)

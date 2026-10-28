@@ -10,4 +10,6 @@
 
 ::: graphssl.losses.DINOLoss
 
+::: graphssl.losses.SCELoss
+
 ::: graphssl.losses.CombinedLoss

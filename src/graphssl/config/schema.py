@@ -488,3 +488,39 @@ class GraphDINOConfig:
             n_views=d.get("n_views", 2),
             n_global_views=d.get("n_global_views", 2),
         )
+
+
+@dataclass
+class GraphMAEConfig:
+    """Validated configuration for GraphMAE (masked feature reconstruction).
+
+    Defaults are the reference implementation's Cora configuration (THUDM/GraphMAE,
+    ``configs.yml``): mask rate 0.5, replacement rate 0.05, scaled cosine error exponent 3.
+    """
+
+    encoder: EncoderConfig
+    mask_rate: float = 0.5
+    replace_rate: float = 0.05
+    alpha: float = 3.0
+
+    def __post_init__(self):
+        if not (0.0 < self.mask_rate < 1.0):
+            raise ValueError(f"mask_rate must be in (0, 1), got {self.mask_rate}")
+        if not (0.0 <= self.replace_rate < 1.0):
+            raise ValueError(f"replace_rate must be in [0, 1), got {self.replace_rate}")
+        if self.alpha < 1.0:
+            raise ValueError(f"alpha must be >= 1, got {self.alpha}")
+        if self.encoder.node_emb_num_classes is not None:
+            raise ValueError(
+                "GraphMAE reconstructs continuous node features: a mask token in feature space "
+                "has no meaning for categorical ones (encoder.node_emb_num_classes is set)"
+            )
+
+    @classmethod
+    def from_dict(cls, d: dict) -> GraphMAEConfig:
+        return cls(
+            encoder=EncoderConfig(**d["encoder"]),
+            mask_rate=d.get("mask_rate", 0.5),
+            replace_rate=d.get("replace_rate", 0.05),
+            alpha=d.get("alpha", 3.0),
+        )

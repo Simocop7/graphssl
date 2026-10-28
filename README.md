@@ -24,6 +24,7 @@ A modular Python library for **Self-Supervised Learning on graphs**, built on Py
 | **VICReg** | Variance-Invariance-Covariance | Bardes et al., ICLR 2022 |
 | **Barlow Twins** | Cross-Correlation | Zbontar et al., ICML 2021 |
 | **GraphDINO** | Self-Distillation | Adapted from Caron et al., ICCV 2021 |
+| **GraphMAE** | Masked Feature Reconstruction | Hou et al., KDD 2022 |
 
 Plus a **Supervised** baseline for comparison.
 

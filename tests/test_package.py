@@ -13,6 +13,8 @@ def test_version_is_the_installed_one():
 def test_top_level_names_resolve():
     for name in (
         "BGRL",
+        "GraphMAE",
+        "SCELoss",
         "GCNEncoder",
         "LogRegEvaluator",
         "RidgeEvaluator",

@@ -22,6 +22,7 @@ for why that boundary is enforced.
 | Need cost linear in the batch, no negatives | [BGRL](bgrl.md) | Teacher-student. Close to its paper on ogbn-arxiv and to the best methods with a GCN encoder; sensitive to the backbone (far behind with GIN) and to the predictor's normalization |
 | Need embeddings that are decorrelated/non-collapsing by construction | [VICReg](vicreg.md) / [Barlow Twins](barlow-twins.md) | Loss terms explicitly penalize redundancy across dimensions |
 | Exploring something closer to ViT-style self-distillation | [GraphDINO](graphdino.md) | Prototypes + teacher temperature warmup |
+| Want a generative objective: no views, no negatives | [GraphMAE](graphmae.md) | Rebuilds masked node features from the neighbors; continuous features only |
 | Have labels and want a supervised reference point | [Supervised](supervised.md) | Same API, direct CrossEntropyLoss |
 
 ## Config dataclasses
@@ -40,5 +41,6 @@ before the model is built — a misconfigured run fails at construction time, no
 | VICReg | `VICRegConfig` |
 | Barlow Twins | `BarlowTwinsConfig` |
 | GraphDINO | `GraphDINOConfig` |
+| GraphMAE | `GraphMAEConfig` |
 
 See the [Config API reference](../api/config.md) for the full field list of each.

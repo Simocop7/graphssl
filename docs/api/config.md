@@ -18,6 +18,8 @@
 
 ::: graphssl.config.schema.GraphDINOConfig
 
+::: graphssl.config.schema.GraphMAEConfig
+
 ::: graphssl.config.schema.HeadConfig
 
 ::: graphssl.config.load.load_config

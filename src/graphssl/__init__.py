@@ -49,6 +49,7 @@ from graphssl.losses import (
     CosineRegressionLoss,
     DINOLoss,
     NTXentLoss,
+    SCELoss,
     VICRegLoss,
 )
 
@@ -60,6 +61,7 @@ from graphssl.models import (
     BarlowTwins,
     GraphCL,
     GraphDINO,
+    GraphMAE,
     Supervised,
     VICReg,
 )

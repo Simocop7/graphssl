@@ -8,6 +8,7 @@ from .schema import (
     EncoderConfig,
     GraphCLConfig,
     GraphDINOConfig,
+    GraphMAEConfig,
     HeadConfig,
     SupervisedConfig,
     VICRegConfig,
