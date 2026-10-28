@@ -46,7 +46,10 @@ from analyze_factors import (
 from compare_probes import RAW_FEATURES
 from scipy.stats import rankdata
 
-SSL_METHODS = ["dgi", "graphcl", "vicreg", "barlow_twins", "bgrl", "afgrl", "graphdino"]
+SSL_METHODS = ["dgi", "graphcl", "vicreg", "barlow_twins", "bgrl", "afgrl", "graphdino", "graphmae"]
+# The prediction test was fixed on 26 Oct with these seven objectives (PLAN.md, "M in detail")
+# and stays as fixed: GraphMAE, added on 28 Oct, is reported beside it, never inside it.
+PREDICTION_METHODS = ["dgi", "graphcl", "vicreg", "barlow_twins", "bgrl", "afgrl", "graphdino"]
 # Candidates of the prediction test, in PLAN.md's order; higher is predicted to mean more gain.
 CANDIDATES = {
     "eff_rank": "effective rank (RankMe)",
@@ -324,11 +327,13 @@ def paired_arrays(gains: pd.DataFrame, m: pd.DataFrame, probe: str) -> dict:
     """{(dataset, backbone): (methods, gain [methods x seeds], {candidate: [methods x seeds]})},
     gain and metrics paired by seed (the same checkpoint)."""
     target = gains[
-        (gains.probe == probe) & (gains.split == "public") & gains.method.isin(SSL_METHODS)
+        (gains.probe == probe) & (gains.split == "public") & gains.method.isin(PREDICTION_METHODS)
     ]
     target = target[["dataset", "backbone", "method", "seed", "gain"]].dropna()
     target["metrics_dataset"] = target["dataset"].map(lambda d: METRICS_FROM.get(d, d))
-    metrics = m[m.method.isin(SSL_METHODS)][["dataset", "backbone", "method", "seed", *CANDIDATES]]
+    metrics = m[m.method.isin(PREDICTION_METHODS)][
+        ["dataset", "backbone", "method", "seed", *CANDIDATES]
+    ]
     metrics = metrics.rename(columns={"dataset": "metrics_dataset"})
     j = target.merge(metrics, on=["metrics_dataset", "backbone", "method", "seed"], how="inner")
     out = {}

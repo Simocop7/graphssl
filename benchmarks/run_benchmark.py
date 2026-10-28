@@ -29,7 +29,11 @@ Usage::
 Datasets: Planetoid (public split) and Amazon Computers / Photo, Coauthor CS, whose random
 split 0 (10/10/80) stands in for a public split (``benchmarks/node_datasets.py``).
 ``--optimizer sgd`` swaps the shared AdamW for SGD with Nesterov momentum (the optimizer
-factor of the paper's study).
+factor of the paper's study). ``--trajectory STEP ...`` also evaluates the embeddings during
+training (step 0 = the untrained encoder), saved per seed under ``trajectory``: the same
+probe, kNN and effective rank as the final evaluation, plus label-free geometry
+(``embedding_geometry.py``) and the linear CKA to the step-0 embeddings. The evaluations
+run on a forked RNG, so the training of each seed is unchanged.
 
 Both supervised references train full-batch on that split's ``train_mask``
 only. ``supervised`` keeps the shared SSL protocol unchanged; ``supervised_reg``
@@ -64,6 +68,7 @@ import argparse
 import copy
 import dataclasses
 import json
+import math
 import platform
 import statistics
 import subprocess
@@ -75,11 +80,13 @@ from pathlib import Path
 
 import torch
 import torch_geometric
+from embedding_geometry import geometry, linear_cka, random_pairs
 from node_datasets import FULL_BATCH_DATASETS, load_node_dataset
 from torch.optim import SGD, Adam, AdamW
 
 from graphssl.config import schema
 from graphssl.config.load import build_model, save_model
+from graphssl.core.callback import Callback
 from graphssl.data import DataModule
 from graphssl.evaluation import (
     KNNEvaluator,
@@ -92,8 +99,17 @@ from graphssl.training import DINOTrainer
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# All 7 SSL models ("all" expands to this).
-SSL_MODELS = ["dgi", "graphcl", "vicreg", "barlow_twins", "bgrl", "afgrl", "graphdino"]
+# All 8 SSL models ("all" expands to this). GraphMAE joined on 2026-10-28 (paper/PLAN.md).
+SSL_MODELS = [
+    "dgi",
+    "graphcl",
+    "vicreg",
+    "barlow_twins",
+    "bgrl",
+    "afgrl",
+    "graphdino",
+    "graphmae",
+]
 
 # Supervised references, deliberately not part of "all": they train on labels, so they're
 # reference points rather than methods to rank. Pass them explicitly via --model.
@@ -116,6 +132,12 @@ SUPERVISED_REG_RECIPE = {
 # shared encoder's batch norm: without a normalization layer the GIN encoder loses more
 # than ten points.
 SUPERVISED_REG_NORM = {"gcn": "none"}
+# Learning rate of the supervised_reg recipe, per backbone (the recipe's 0.01 otherwise). At
+# 0.01 the GIN encoder stays at the majority class on Amazon Photo and Computers (best epoch
+# 0, rank ~1); 1e-3 trains it (Photo, seed 0: 37.5 -> 92.2 linear), while dropout, L2 and
+# the normalization change nothing. One value per backbone, chosen on validation accuracy
+# over every dataset, never per dataset (paper/PLAN.md, 28 Oct).
+SUPERVISED_REG_LR = {"gin": 1e-3}
 ALL_MODEL_CHOICES = [*SSL_MODELS, *SUPERVISED_MODELS]
 
 # Teacher-student models: model.forward() evaluates one encoder (online for BGRL/AFGRL,
@@ -188,8 +210,24 @@ def parse_args() -> argparse.Namespace:
         "DIR/<dataset>/<encoder>/<model>_seed<N>.pt, so compare_probes.py can score the same "
         "embeddings again with other probes and splits without retraining",
     )
+    p.add_argument(
+        "--trajectory",
+        type=int,
+        nargs="+",
+        default=None,
+        metavar="STEP",
+        help="also evaluate the embeddings after these training steps (full batch: one step "
+        "per epoch); step 0, the untrained encoder, is always included. SSL models and "
+        "supervised only",
+    )
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
+    if args.trajectory is not None:
+        if "supervised_reg" in args.model:
+            p.error("--trajectory: supervised_reg trains outside DINOTrainer.train")
+        if not all(0 <= s <= args.epochs for s in args.trajectory):
+            p.error(f"--trajectory steps must be in [0, {args.epochs}]")
+        args.trajectory = sorted({0, *args.trajectory})
     models: list[str] = []
     for name in args.model:
         models += [m for m in (SSL_MODELS if name == "all" else [name]) if m not in models]
@@ -223,6 +261,7 @@ CONFIG_CLASSES = {
     "bgrl": schema.BGRLConfig,
     "afgrl": schema.AFGRLConfig,
     "graphdino": schema.GraphDINOConfig,
+    "graphmae": schema.GraphMAEConfig,
     "supervised": schema.SupervisedConfig,
     "supervised_reg": schema.SupervisedConfig,
 }
@@ -314,9 +353,10 @@ def build_model_config(model_name: str, encoder_cfg: dict, args: argparse.Namesp
         cfg["augment"] = augment
     if model_name in ("bgrl", "afgrl"):
         cfg["pred_hidden"] = args.hidden
-    # dgi and supervised need nothing beyond `encoder` — their dataclasses
-    # already default corruption/shuffle_ratio and nothing extra, respectively
-    # (Supervised's num_classes is passed to build_model() separately).
+    # dgi, graphmae and supervised need nothing beyond `encoder`: their dataclasses default
+    # corruption/shuffle_ratio, the reference GraphMAE Cora values (mask 0.5, replacement
+    # 0.05, SCE exponent 3) and nothing extra, respectively (Supervised's num_classes is
+    # passed to build_model() separately).
     return cfg
 
 
@@ -361,7 +401,28 @@ def evaluate_embeddings(
     knn_k: int,
     suffix: str = "",
 ) -> dict:
-    """Linear probe + kNN accuracy and effective rank of frozen embeddings."""
+    """Linear probe + kNN accuracy and effective rank of frozen embeddings.
+
+    Non-finite embeddings (training diverged: DGI with SGD at lr 5e-2 / 1e-1 in E3 ends with
+    NaN parameters) are recorded as ``diverged`` with null metrics instead of crashing the
+    probe, and with it every later run of the queue.
+    """
+    if not torch.isfinite(z).all():
+        return {
+            f"diverged{suffix}": True,
+            **{
+                f"{key}{suffix}": None
+                for key in (
+                    "val_acc_linear",
+                    "test_acc_linear",
+                    "probe_weight_decay",
+                    "probe_converged",
+                    "val_acc_knn",
+                    "test_acc_knn",
+                    "eff_rank",
+                )
+            },
+        }
     # With 60-140 training nodes the probe's L-BFGS steps are all per-operation overhead:
     # on the CPU, and with few threads (one Cora evaluation took 4.3 s with 4 threads,
     # 20.7 s with the 48 of the benchmark machine, 31-38 s on its shared GPU).
@@ -383,6 +444,57 @@ def evaluate_embeddings(
         f"test_acc_knn{suffix}": knn["test_acc"],
         f"eff_rank{suffix}": effective_rank(z),
     }
+
+
+def _finite_or_none(value):
+    """JSON has no NaN: a non-finite float (a diverged run) is saved as null."""
+    return value if not isinstance(value, float) or math.isfinite(value) else None
+
+
+class TrajectoryCallback(Callback):
+    """Evaluates the embeddings after the given training steps (full batch: one per epoch).
+
+    Every point has the final evaluation's metrics (``evaluate_embeddings``), the label-free
+    geometry, ``cka_to_step0`` and the training loss of that step. ``losses`` keeps the loss
+    of every step.
+    """
+
+    def __init__(self, steps: list[int], dm: DataModule, splits: tuple, device: torch.device):
+        self.steps = set(steps)
+        self.dm = dm
+        self.splits = splits
+        self.device = device
+        self.pairs = random_pairs(dm.data.num_nodes, GEOMETRY_PAIRS)
+        self.z0: torch.Tensor | None = None
+        self.points: list[dict] = []
+        self.losses: list[float | None] = []
+
+    def on_train_start(self, trainer, model) -> None:
+        self._evaluate(model, 0, None)
+
+    def on_epoch_end(self, trainer, model, epoch, metrics) -> None:
+        loss = _finite_or_none(float(metrics["loss"]))
+        self.losses.append(loss)
+        if epoch + 1 in self.steps:
+            self._evaluate(model, epoch + 1, loss)
+
+    def _evaluate(self, model, step: int, loss: float | None) -> None:
+        # The probe draws random numbers (nn.Linear's default init, zeroed right after):
+        # without the fork every evaluation would shift the augmentations of later steps.
+        other = [] if self.device.type == "cpu" else [self.device]
+        with torch.random.fork_rng(devices=other, device_type=self.device.type):
+            z, y = extract_embeddings(model, self.dm, device=self.device)
+            point = {"step": step, "loss": loss, **evaluate_embeddings(z, y, *self.splits)}
+        if self.z0 is None:
+            self.z0 = z
+        if torch.isfinite(z).all():
+            point.update(geometry(z, self.dm.data.edge_index, self.pairs, GEOMETRY_PAIRS))
+            point["cka_to_step0"] = linear_cka(z, self.z0)
+        self.points.append({k: _finite_or_none(v) for k, v in point.items()})
+
+
+# Random node pairs (and edges) per geometry metric, as in representation_metrics.py.
+GEOMETRY_PAIRS = 100_000
 
 
 def run_one(
@@ -414,13 +526,19 @@ def run_one(
     model = build_model(config, in_channels=data.num_features, num_classes=num_classes)
     loader = dm.train_dataloader()
 
-    trainer = DINOTrainer(grad_clip_norm=None, device=device)
+    splits = (num_classes, train_idx, val_idx, test_idx, args.knn_k)
+    trajectory = None
+    if args.trajectory is not None:
+        trajectory = TrajectoryCallback(args.trajectory, dm, splits, device)
+    trainer = DINOTrainer(
+        grad_clip_norm=None, device=device, callbacks=[trajectory] if trajectory else None
+    )
     best_epoch = None
     if model_name == "supervised_reg":
         assert isinstance(model, Supervised)
         optimizer: torch.optim.Optimizer = Adam(
             model.student_parameters(),
-            lr=SUPERVISED_REG_RECIPE["lr"],
+            lr=SUPERVISED_REG_LR.get(args.encoder, SUPERVISED_REG_RECIPE["lr"]),
             weight_decay=SUPERVISED_REG_RECIPE["weight_decay"],
         )
         best_epoch = train_best_val(
@@ -434,7 +552,6 @@ def run_one(
         checkpoint.parent.mkdir(parents=True, exist_ok=True)
         save_model(model, checkpoint, config, data.num_features, num_classes)
 
-    splits = (num_classes, train_idx, val_idx, test_idx, args.knn_k)
     z, y = extract_embeddings(model, dm, device=device)
     result = {"seed": seed, **evaluate_embeddings(z, y, *splits), "wall_time_s": wall_time_s}
     alt = ALT_ENCODER.get(model_name)
@@ -445,6 +562,10 @@ def run_one(
         result.update(head_accuracy(model, data, val_idx, test_idx, device))
     if best_epoch is not None:
         result["best_epoch"] = best_epoch
+    if trajectory is not None:
+        # Training time above includes the evaluations during training.
+        result["trajectory"] = trajectory.points
+        result["loss_per_step"] = trajectory.losses
     return result
 
 
@@ -550,11 +671,15 @@ def save_result(
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = out_dir / f"{model_name}__{timestamp}.json"
 
+    # A metric with a diverged seed gets no mean: one over the surviving seeds would hide it.
     aggregate = {
         metric: _mean_std([r[metric] for r in per_seed])
         for metric in AGGREGATED_METRICS
-        if all(metric in r for r in per_seed)
+        if all(r.get(metric) is not None for r in per_seed)
     }
+    diverged = sum(bool(r.get("diverged")) for r in per_seed)
+    if diverged:
+        aggregate["diverged_seeds"] = diverged
 
     hyperparameters = {
         "encoder": args.encoder,
@@ -572,11 +697,14 @@ def save_result(
     if model_name == "supervised_reg":
         # Its recipe replaces the shared optimizer settings: record what actually ran.
         hyperparameters.update(SUPERVISED_REG_RECIPE)
+        hyperparameters["lr"] = SUPERVISED_REG_LR.get(args.encoder, SUPERVISED_REG_RECIPE["lr"])
         hyperparameters["norm_type"] = config["encoder"]["norm_type"]
     if args.ema_tau is not None and model_name in ALT_ENCODER:
         hyperparameters["ema_tau"] = args.ema_tau
     if args.overrides:
         hyperparameters["overrides"] = args.overrides
+    if args.trajectory is not None:
+        hyperparameters["trajectory_steps"] = args.trajectory
 
     result = {
         "dataset": dataset,
@@ -666,8 +794,13 @@ def main() -> None:
                 if checkpoint is not None:
                     r["checkpoint"] = str(checkpoint)
                 per_seed.append(r)
+                if r.get("diverged"):
+                    print(
+                        f"  seed {seed}: DIVERGED (non-finite embeddings) | {time.time() - t0:.1f}s"
+                    )
+                    continue
                 alt = ""
-                if "test_acc_linear_alt" in r:
+                if r.get("test_acc_linear_alt") is not None:
                     alt = (
                         f"{ALT_ENCODER[model_name]}: linear={r['test_acc_linear_alt']:.4f} "
                         f"rank={r['eff_rank_alt']:.1f} | "
@@ -681,14 +814,18 @@ def main() -> None:
                 )
 
             path = save_result(out_dir, dataset_name, model_name, config, args, per_seed)
+            # --out-dir may point outside the repo (absolute path): print it as-is then.
+            shown = path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path
+            diverged = sum(bool(r.get("diverged")) for r in per_seed)
+            if diverged:
+                print(f"  -> {diverged}/{len(per_seed)} seeds diverged | saved to {shown}")
+                continue
             agg = _mean_std([r["test_acc_linear"] for r in per_seed])
             agg_knn = _mean_std([r["test_acc_knn"] for r in per_seed])
             head = ""
             if "test_acc_head" in per_seed[0]:
                 agg_head = _mean_std([r["test_acc_head"] for r in per_seed])
                 head = f"head {agg_head['mean'] * 100:.2f} ± {agg_head['std'] * 100:.2f} | "
-            # --out-dir may point outside the repo (absolute path): print it as-is then.
-            shown = path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path
             print(
                 f"  -> linear {agg['mean'] * 100:.2f} ± {agg['std'] * 100:.2f} | "
                 f"knn {agg_knn['mean'] * 100:.2f} ± {agg_knn['std'] * 100:.2f} | "

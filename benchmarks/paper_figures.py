@@ -35,6 +35,9 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 METHODS = ["dgi", "graphcl", "bgrl", "afgrl", "vicreg", "barlow_twins", "graphdino"]
+# The v2 study's objectives: GraphMAE joined on 28 Oct. METHODS stays the seven of the v1
+# layouts (docs/study.md); v2 code takes the objectives of METHODS_V2 that have data.
+METHODS_V2 = [*METHODS, "graphmae"]
 NAMES = {
     "dgi": "DGI",
     "graphcl": "GraphCL",
@@ -43,6 +46,7 @@ NAMES = {
     "vicreg": "VICReg",
     "barlow_twins": "Barlow Twins",
     "graphdino": "GraphDINO",
+    "graphmae": "GraphMAE",
     "untrained": "Untrained",
     "supervised_reg": "Supervised (std. recipe)",
 }
@@ -455,15 +459,23 @@ def markdown_tables(analysis: Path, out: Path) -> None:
         r = r.iloc[0]
         return f"{r.tau:.2f} [{r.tau_lo:.2f}, {r.tau_hi:.2f}]"
 
+    # every backbone pair and every backbone present (the Transformer since paper v2)
+    present = {b for c in tau.comparison for b in c.split(" vs ")}
+    backbones = [b for b in ALL_BACKBONES if b in present or b in set(tau.within)]
+    names = BACKBONE_NAMES
     cols = [
-        ("gcn vs gin", "graphssl", "GCN vs GIN"),
-        ("adam100 vs graphssl", "gcn", "100 steps vs converged, GCN"),
-        ("adam100 vs graphssl", "gin", "100 steps vs converged, GIN"),
-        ("knn vs graphssl", "gcn", "kNN vs converged, GCN"),
-        ("knn vs graphssl", "gin", "kNN vs converged, GIN"),
+        (f"{a} vs {b}", "graphssl", f"{names[a]} vs {names[b]}")
+        for i, a in enumerate(backbones)
+        for b in backbones[i + 1 :]
     ]
+    for probe, label in [("adam100", "100 steps"), ("knn", "kNN")]:
+        cols += [
+            (f"{probe} vs graphssl", b, f"{label} vs converged, {names[b]}") for b in backbones
+        ]
     rows = [
-        [d, *[tau_cell(d, c, w) for c, w, _ in cols]] for d in DATASETS if d in set(tau.dataset)
+        [DATASET_NAMES.get(d, d), *[tau_cell(d, c, w) for c, w, _ in cols]]
+        for d in ALL_DATASETS
+        if d in set(tau.dataset)
     ]
     (out / "study_ranking.md").write_text(
         md_table(

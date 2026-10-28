@@ -1,0 +1,225 @@
+"""E3: does tuning each method's optimizer and learning rate change the conclusions of E1?
+
+Reads every ``run_benchmark.py`` JSON under ``benchmarks/paper/e3/<cell>/<dataset>/`` (one
+directory per optimizer x learning-rate cell) and compares, per dataset and backbone, the shared
+untuned cell (AdamW 5e-4, E3's own run of it) with every method at its own best cell, chosen on
+**validation** accuracy (PLAN.md, Analysis). A cell where any seed diverged cannot be chosen.
+Writes to ``--out``:
+
+summary.md   ranking (Kendall tau, shared vs tuned), the lift of every method with its cell,
+             the spread between methods, and the diverged cells.
+e3.csv       one row per (dataset, backbone, method).
+
+Intervals: seed bootstrap, the selection of the cell included in every replicate (each method's
+seeds are resampled together across cells, which share seed indices).
+
+Usage::
+
+    python benchmarks/analyze_e3.py --out benchmarks/paper/analysis/e3
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from pathlib import Path
+
+import numpy as np
+from paper_figures import METHODS_V2, NAMES
+from scipy.stats import kendalltau
+
+SHARED = "adamw_lr5e-4"
+DATASETS = ["Cora", "CiteSeer"]
+BACKBONES = ["gcn", "gin", "transformer"]
+BOOTSTRAP = 2000
+
+
+# The objectives with a run in every (cell, dataset, backbone) of E3, set in main(): a method
+# whose runs are incomplete is left out and named, never a whole group dropped in silence.
+METHODS: list[str] = []
+
+
+def complete_methods(runs: dict) -> list[str]:
+    keys = {(c, d, b) for c, d, b, _ in runs}
+    return [m for m in METHODS_V2 if all((c, d, b, m) in runs for c, d, b in keys)]
+
+
+def cell_key(cell: str) -> tuple:
+    optimizer, lr = cell.split("_lr")
+    return optimizer, float(lr)
+
+
+def load(root: Path) -> dict:
+    """{(cell, dataset, backbone, method): {"test": [seeds], "val": [seeds]}}, NaN = diverged."""
+    runs: dict = {}
+    for path in sorted((root / "benchmarks" / "paper" / "e3").glob("*/*/*.json")):
+        r = json.loads(path.read_text())
+        key = (path.parts[-3], r["dataset"], r["hyperparameters"]["encoder"], r["model"])
+        runs[key] = {  # the newest file of a key wins (sorted names end in a timestamp)
+            split: np.array(
+                [
+                    np.nan if s.get(f"{split}_acc_linear") is None else s[f"{split}_acc_linear"]
+                    for s in r["per_seed"]
+                ],
+                dtype=float,
+            )
+            * 100
+            for split in ("test", "val")
+        }
+    return runs
+
+
+def select(runs: dict, cells: list, dataset: str, backbone: str, method: str, idx=None) -> tuple:
+    """(test accuracy of the shared cell, chosen cell, its test accuracy) for one method."""
+    best_cell, best_val = None, -np.inf
+    for cell in cells:
+        run = runs.get((cell, dataset, backbone, method))
+        if run is None:
+            continue
+        test, val = (
+            (run["test"], run["val"]) if idx is None else (run["test"][idx], run["val"][idx])
+        )
+        if np.isnan(test).any():
+            continue  # a diverged seed: the cell cannot be chosen
+        if val.mean() > best_val:
+            best_cell, best_val = cell, val.mean()
+    shared = runs[(SHARED, dataset, backbone, method)]["test"]
+    chosen = runs[(best_cell, dataset, backbone, method)]["test"]
+    if idx is not None:
+        shared, chosen = shared[idx], chosen[idx]
+    return float(shared.mean()), best_cell, float(chosen.mean())
+
+
+def compare(runs: dict, cells: list, dataset: str, backbone: str, rng) -> dict:
+    point = {m: select(runs, cells, dataset, backbone, m) for m in METHODS}
+    n_seeds = len(runs[(SHARED, dataset, backbone, METHODS[0])]["test"])
+    taus, lifts, spreads = [], {m: [] for m in METHODS}, []
+    for _ in range(BOOTSTRAP):
+        rep = {
+            m: select(runs, cells, dataset, backbone, m, rng.integers(n_seeds, size=n_seeds))
+            for m in METHODS
+        }
+        shared, tuned = [rep[m][0] for m in METHODS], [rep[m][2] for m in METHODS]
+        taus.append(kendalltau(shared, tuned).statistic)
+        spreads.append((max(shared) - min(shared), max(tuned) - min(tuned)))
+        for m in METHODS:
+            lifts[m].append(rep[m][2] - rep[m][0])
+    shared, tuned = [point[m][0] for m in METHODS], [point[m][2] for m in METHODS]
+    return {
+        "point": point,
+        "tau": (kendalltau(shared, tuned).statistic, *np.nanpercentile(taus, [2.5, 97.5])),
+        "lift_ci": {m: tuple(np.percentile(lifts[m], [2.5, 97.5])) for m in METHODS},
+        "spread": (max(shared) - min(shared), max(tuned) - min(tuned)),
+        "spread_change_ci": tuple(np.percentile([t - s for s, t in spreads], [2.5, 97.5])),
+    }
+
+
+def write(runs: dict, out: Path) -> None:
+    rng = np.random.default_rng(0)
+    cells = sorted({k[0] for k in runs}, key=cell_key)
+    lines = [
+        "# E3: optimizer x learning rate",
+        "",
+        "Generated by `benchmarks/analyze_e3.py`. GraphSSL probe, test accuracy in %, means over "
+        f"5 seeds; [95% seed-bootstrap interval, the choice of cell included]. *Shared*: E3's "
+        f"own {SHARED} cell (VM GPU), not E1. *Tuned*: every method at the cell with its best "
+        "mean **validation** accuracy; a cell with a diverged seed is never chosen.",
+        "",
+        "## Ranking and spread, shared vs tuned",
+        "",
+        "| Data | Backbone | Kendall tau | Spread shared | Spread tuned | Change |",
+        "|---|---|---|---|---|---|",
+    ]
+    rows, ranking, per_group = [], [], {}
+    for d in DATASETS:
+        for b in BACKBONES:
+            if any((SHARED, d, b, m) not in runs for m in METHODS):
+                continue
+            res = per_group[(d, b)] = compare(runs, cells, d, b, rng)
+            t, lo, hi = res["tau"]
+            s, u = res["spread"]
+            clo, chi = res["spread_change_ci"]
+            lines.append(
+                f"| {d} | {b} | {t:+.2f} [{lo:+.2f}, {hi:+.2f}] | {s:.1f} | {u:.1f} | "
+                f"{u - s:+.1f} [{clo:+.1f}, {chi:+.1f}] |"
+            )
+            ranking.append(
+                {
+                    "dataset": d,
+                    "backbone": b,
+                    "tau": t,
+                    "tau_lo": lo,
+                    "tau_hi": hi,
+                    "spread_shared": s,
+                    "spread_tuned": u,
+                    "change_lo": clo,
+                    "change_hi": chi,
+                }
+            )
+    for (d, b), res in per_group.items():
+        lines += [
+            "",
+            f"## {d}, {b}",
+            "",
+            "| Method | Shared | Tuned | Cell | Lift |",
+            "|---|---|---|---|---|",
+        ]
+        for m in METHODS:
+            shared, cell, tuned = res["point"][m]
+            lo, hi = res["lift_ci"][m]
+            lines.append(
+                f"| {NAMES[m]} | {shared:.1f} | {tuned:.1f} | {cell} | "
+                f"{tuned - shared:+.1f} [{lo:+.1f}, {hi:+.1f}] |"
+            )
+            rows.append(
+                {
+                    "dataset": d,
+                    "backbone": b,
+                    "method": m,
+                    "shared": shared,
+                    "tuned": tuned,
+                    "cell": cell,
+                    "lift_lo": lo,
+                    "lift_hi": hi,
+                }
+            )
+    diverged = [
+        (cell, d, b, m, int(np.isnan(run["test"]).sum()), len(run["test"]))
+        for (cell, d, b, m), run in sorted(runs.items(), key=lambda kv: cell_key(kv[0][0]))
+        if np.isnan(run["test"]).any()
+    ]
+    lines += ["", "## Diverged cells", "", "| Cell | Data | Backbone | Method | Seeds |"]
+    lines += ["|---|---|---|---|---|"]
+    lines += [f"| {c} | {d} | {b} | {NAMES[m]} | {n} of {k} |" for c, d, b, m, n, k in diverged]
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "summary.md").write_text("\n".join(lines) + "\n")
+    for name, table in (("e3.csv", rows), ("ranking.csv", ranking)):
+        with open(out / name, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(table[0]))
+            w.writeheader()
+            w.writerows(table)
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--root", type=Path, default=Path("."), help="tree whose benchmarks/paper/e3 holds the runs"
+    )
+    p.add_argument("--out", type=Path, default=Path("benchmarks/paper/analysis/e3"))
+    args = p.parse_args()
+    runs = load(args.root)
+    METHODS[:] = complete_methods(runs)
+    left_out = sorted({k[3] for k in runs} - set(METHODS))
+    print(
+        f"objectives: {', '.join(METHODS)}"
+        + (f"; incomplete, left out: {left_out}" if left_out else "")
+    )
+    write(runs, args.out)
+    print(f"{len(runs)} runs -> {args.out}")
+
+
+if __name__ == "__main__":
+    main()

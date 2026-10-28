@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from itertools import combinations
 from pathlib import Path
 
 import numpy as np
@@ -55,6 +56,12 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--bootstrap", type=int, default=10_000)
     p.add_argument("--out", default="benchmarks/paper/analysis")
+    p.add_argument(
+        "--exclude",
+        nargs="*",
+        default=[],
+        help="methods left out of every table (sensitivity analyses, e.g. graphdino)",
+    )
     return p.parse_args()
 
 
@@ -165,8 +172,8 @@ def tau_with_ci(
 
 
 def rankings(df: pd.DataFrame, n_boot: int) -> pd.DataFrame:
-    """Kendall's tau between method orders on the public split: GCN vs GIN under each probe,
-    and each probe vs the converged GraphSSL probe under each backbone."""
+    """Kendall's tau between method orders on the public split: every pair of backbones under
+    each probe, and each probe vs the converged GraphSSL probe under each backbone."""
     rng = np.random.default_rng(0)
     ssl = df[~df.method.isin(SUPERVISED | {"untrained"}) & (df.split == "public")]
 
@@ -175,22 +182,20 @@ def rankings(df: pd.DataFrame, n_boot: int) -> pd.DataFrame:
 
     rows = []
     for (dataset, probe), g in ssl.groupby(["dataset", "probe"]):
-        backbones = sorted(g.backbone.unique())
-        if len(backbones) != 2:
-            continue
-        tau, lo, hi = tau_with_ci(
-            table(g[g.backbone == backbones[0]]), table(g[g.backbone == backbones[1]]), n_boot, rng
-        )
-        rows.append(
-            {
-                "dataset": dataset,
-                "comparison": f"{backbones[0]} vs {backbones[1]}",
-                "within": probe,
-                "tau": tau,
-                "tau_lo": lo,
-                "tau_hi": hi,
-            }
-        )
+        for a, b in combinations(sorted(g.backbone.unique()), 2):
+            tau, lo, hi = tau_with_ci(
+                table(g[g.backbone == a]), table(g[g.backbone == b]), n_boot, rng
+            )
+            rows.append(
+                {
+                    "dataset": dataset,
+                    "comparison": f"{a} vs {b}",
+                    "within": probe,
+                    "tau": tau,
+                    "tau_lo": lo,
+                    "tau_hi": hi,
+                }
+            )
     for (dataset, backbone), g in ssl.groupby(["dataset", "backbone"]):
         if REFERENCE_PROBE not in set(g.probe):
             continue
@@ -274,6 +279,19 @@ def coded_eta_squared(
     return np.append(shares, max(0.0, 1.0 - shares.sum()))
 
 
+def drop_repeated_splits(ref: pd.DataFrame) -> pd.DataFrame:
+    """Rows of every random split that repeats the public one dropped. Datasets without a public
+    split (Amazon, Coauthor) use random split 0 as their standard split, so it is scored twice;
+    the split factor must count it once."""
+    acc = ref.pivot_table(index=["backbone", "method", "seed"], columns="split", values="acc")
+    if "public" not in acc:
+        return ref
+    repeated = [
+        s for s in acc.columns if s != "public" and np.allclose(acc[s], acc["public"], atol=1e-9)
+    ]
+    return ref[~ref.split.isin(repeated)]
+
+
 def variance_designs(g: pd.DataFrame) -> list[tuple[str, pd.DataFrame, list[str], list]]:
     """The designs decomposed for one dataset's SSL rows: (name, rows, factors, interactions)."""
     public = g[(g.split == "public") & g.probe.isin([*PRACTICE_PROBES, "knn"])]
@@ -282,7 +300,7 @@ def variance_designs(g: pd.DataFrame) -> list[tuple[str, pd.DataFrame, list[str]
         ("public split, all probes", public, *by_probe),
         ("public split, linear probes", public[public.probe != "knn"], *by_probe),
     ]
-    ref = g[g.probe == REFERENCE_PROBE]
+    ref = drop_repeated_splits(g[g.probe == REFERENCE_PROBE])
     if ref.split.nunique() > 1:
         designs.append(
             (
@@ -363,6 +381,7 @@ def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     df = add_gain(load_long_table(args.probe_files, args.untrained_root))
+    df = df[~df.method.isin(args.exclude)]
     df.to_csv(out / "long_table.csv", index=False)
     cells = cell_table(df, args.bootstrap)
     cells.to_csv(out / "cells.csv", index=False)
