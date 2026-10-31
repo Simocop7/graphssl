@@ -17,7 +17,9 @@ Reads the JSON files of ``representation_metrics.py`` and ``compare_probes.py`` 
                             and the gain over the untrained encoder, selection regret, random regret
 ``prediction.csv``          the test fixed in advance: per candidate and set, the mean rho with a
                             95% seed-bootstrap interval, groups with rho > 0, regret vs random,
-                            verdict. Target: GraphSSL probe (decision) and kNN (sensitivity)
+                            verdict. Target: GraphSSL probe (decision) and kNN (sensitivity);
+                            sets "test without <dataset>": the test set less one dataset
+                            (sensitivity, not part of the decision)
 
 Usage::
 
@@ -411,7 +413,14 @@ def prediction(
                 for c in CANDIDATES:
                     draws[(key, c)][i] = spearman(cand[c][rows_, pick].mean(1), g)
         groups = pd.DataFrame([r for r in group_rows if r["target"] == probe])
-        for set_name, gs in groups.groupby("set"):
+        subsets = list(groups.groupby("set"))
+        # Sensitivity, not part of the decision: the test set without each of its datasets in
+        # turn, to show whether a verdict rests on one dataset (it reuses the draws above).
+        test = groups[groups.set == "test"]
+        subsets += [
+            (f"test without {d}", test[test.dataset != d]) for d in sorted(set(test.dataset))
+        ]
+        for set_name, gs in subsets:
             for c in CANDIDATES:
                 gc = gs[gs.candidate == c]
                 set_keys = [(d, b) for d, b in zip(gc.dataset, gc.backbone, strict=True)]

@@ -7,6 +7,12 @@ come from the objective rather than from per-method tuning. The whole comparison
 twice, with two backbones: **GCN**, the encoder the node-level SSL literature uses, and
 **GIN**, which is where the objectives differ most.
 
+!!! tip "Evaluation Study"
+    The [Evaluation Study](study.md) extends this comparison to eight objectives (GraphMAE
+    included), three backbones and six datasets plus ogbn-arxiv, with every model saved and
+    scored with the probes of other codebases and on random splits, and measures how much of a
+    result each factor explains.
+
 | Setting | Value |
 |---|---|
 | Encoder | GCN or GIN, 2 layers, `hidden_dim=256`, batch norm, no dropout |
@@ -15,7 +21,7 @@ twice, with two backbones: **GCN**, the encoder the node-level SSL literature us
 | EMA (BGRL, AFGRL) | cosine schedule 0.99 → 1.0 over training |
 | GraphDINO | reference DINO values: EMA momentum 0.996, teacher temperature 0.04 — not the library defaults, see [Sensitivity](#sensitivity-budget-teacher-and-backbone) |
 | Split | public Planetoid train/val/test |
-| Evaluation | frozen embeddings → linear probe (`LogRegEvaluator`: L2-regularised logistic regression on standardized features, fitted to convergence, L2 strength selected on validation) and kNN (k=5, cosine) |
+| Evaluation | frozen embeddings → linear probe (`LogRegEvaluator`: L2-regularized logistic regression on standardized features, fitted to convergence, L2 strength selected on validation) and kNN (k=5, cosine) |
 | Seeds | 10; mean ± sample std |
 | Hardware | NVIDIA A2 (16 GB), PyTorch 2.11 + CUDA 12.8, PyG 2.8 |
 | Untrained encoder | the same encoder at initialization (0 steps), evaluated the same way |
@@ -143,7 +149,7 @@ their frozen embeddings. This is the accuracy of the head they were trained with
   ≈35–55 s for the other methods. Wall times are indicative only: some runs shared the GPU.
 
 !!! note "What changed since the first version of this page"
-    The tables were rerun on 2026-10-09. The linear probe is now a regularised logistic
+    The tables were rerun on 2026-10-09. The linear probe is now a regularized logistic
     regression fitted to convergence; the 0.1.0 probe (a linear layer trained for 100 Adam
     steps on raw features) gave results that depended on its random seed. With the same GIN
     protocol the linear column moved by −3.2 to +6.0 points (GraphCL on CiteSeer 59.2 →
@@ -351,7 +357,7 @@ S="--model supervised_reg --out-dir benchmarks/ablations/supervised_norm"
 python benchmarks/run_benchmark.py $D $S --encoder gcn --set encoder.norm_type=batch
 python benchmarks/run_benchmark.py $D $S --encoder gin --set encoder.norm_type=none
 python benchmarks/render_tables.py --summary           # the tables of this page
-python benchmarks/render_tables.py --summary --latex   # their rows for paper.tex
+python benchmarks/render_tables.py --summary --latex   # the same rows in LaTeX
 python benchmarks/render_tables.py                     # one table per dataset and encoder
 ```
 
@@ -382,9 +388,7 @@ The BGRL paper's small-dataset evaluation (Appendix C, Table 7 of Thakoor et al.
 table above reaches 80.82 ± 1.23 / 67.05 ± 0.89 / 79.85 ± 1.10. The two are not like for
 like: the paper averages 20 random splits rather than the public split, uses a tuned
 configuration and evaluates with a scikit-learn logistic regression, where this is the
-shared untuned protocol at 300 steps
-([`paper.tex`](https://github.com/Simocop7/graphssl/blob/main/paper.tex) lists the
-differences). With GIN the same protocol gives 63.77 / 47.68 / 68.52: most of the distance
+shared untuned protocol at 300 steps. With GIN the same protocol gives 63.77 / 47.68 / 68.52: most of the distance
 from the paper in the first version of this page was the backbone.
 
 Because the protocols differ, this comparison cannot tell a difference of configuration from
@@ -488,9 +492,9 @@ with three of those protocols, re-implemented from the sources:
 
 | Protocol | Where it comes from | What it does |
 |---|---|---|
-| 100 Adam steps | the reference code of DGI (`execute.py`) and the `LogisticRegression` evaluator of PyG-SSL (its defaults and its BGRL example) | a linear layer, Xavier-uniform weight, Adam at lr 0.01 without weight decay, 100 full-batch steps on the raw embeddings; test accuracy after the last step, averaged over random initialisations |
+| 100 Adam steps | the reference code of DGI (`execute.py`) and the `LogisticRegression` evaluator of PyG-SSL (its defaults and its BGRL example) | a linear layer, Xavier-uniform weight, Adam at lr 0.01 without weight decay, 100 full-batch steps on the raw embeddings; test accuracy after the last step, averaged over random initializations |
 | 5,000 Adam steps | `LRTrainableEvaluator` of PyGCL | the same layer and optimizer for 5,000 steps; validation every 20 steps, test accuracy at the best validation accuracy |
-| GraphSSL probe | `LogRegEvaluator` | standardized features, L-BFGS to convergence from a zero initialisation, L2 strength selected on validation |
+| GraphSSL probe | `LogRegEvaluator` | standardized features, L-BFGS to convergence from a zero initialization, L2 strength selected on validation |
 
 The embeddings are those of models already on this page, all on ogbn-arxiv: the seven
 models of the mini-batch stress test (GIN-2L, 100 epochs, one seed each) and the six models
@@ -499,7 +503,7 @@ group with its encoder untrained. Test accuracy (%), commit `7204b92`.
 
 GIN-2L, mini-batch training:
 
-| Embeddings | 100 Adam steps | its range over 20 initialisations | 5,000 Adam steps | GraphSSL probe | Rank |
+| Embeddings | 100 Adam steps | its range over 20 initializations | 5,000 Adam steps | GraphSSL probe | Rank |
 |---|---|---|---|---|---|
 | *Untrained encoder* | 33.8 ± 3.9 | 25.6–38.5 | 53.3 | 55.1 | 4 |
 | DGI | 20.6 ± 7.7 | 3.2–29.8 | 48.2 | 44.1 | 2 |
@@ -512,7 +516,7 @@ GIN-2L, mini-batch training:
 
 GCN-3L, full-graph training with the protocol of the BGRL paper:
 
-| Embeddings | 100 Adam steps | its range over 20 initialisations | 5,000 Adam steps | GraphSSL probe | Rank |
+| Embeddings | 100 Adam steps | its range over 20 initializations | 5,000 Adam steps | GraphSSL probe | Rank |
 |---|---|---|---|---|---|
 | *Untrained encoder* | 65.2 ± 0.2 | 64.7–65.6 | 69.3 | 69.5 | 116 |
 | BGRL, reference predictor, seed 0 | 71.1 ± 0.1 | 71.0–71.3 | 71.0 | 71.0 | 167 |
@@ -525,8 +529,8 @@ GCN-3L, full-graph training with the protocol of the BGRL paper:
 - **On well-conditioned embeddings the three protocols agree.** For BGRL with the reference
   predictor they are within 0.3 points of each other in every seed.
 - **On weak embeddings the 100-step protocol is far from fitted, and it depends on its
-  random initialisation.** It is 21 points below the GraphSSL probe on the untrained GIN and
-  24 below on DGI, where its 20 initialisations range from 3.2 to 29.8. On BGRL with
+  random initialization.** It is 21 points below the GraphSSL probe on the untrained GIN and
+  24 below on DGI, where its 20 initializations range from 3.2 to 29.8. On BGRL with
   the default predictor, whose embeddings are almost parallel (see above), it is 40, 43
   and 10 points below. On the six mini-batch models that learn it is 3.8 to 7.6 below.
 - **So it inflates what self-supervision appears to add.** It penalises an untrained
@@ -548,7 +552,7 @@ GCN-3L, full-graph training with the protocol of the BGRL paper:
 What this does not show: the mini-batch models have one seed each; there is one dataset;
 the embeddings are GraphSSL's, so the size of the effect inside those codebases' own
 pipelines, where the embeddings have another scale, is not measured; and the fourth
-protocol of the script, one-vs-rest liblinear on L2-normalised rows as in the BGRL
+protocol of the script, one-vs-rest liblinear on L2-normalized rows as in the BGRL
 reference implementation, was not run on this graph (21 values of C × 40 classes per row).
 
 ```bash
@@ -575,7 +579,7 @@ is better), 10 seeds:
   validation. The same encoder untrained gives 0.589 ± 0.011.
 - **Fine-tuned**: the pre-trained encoder and a new linear head are trained on the labels
   for 100 more epochs (best-validation epoch). Its reference is the † row: the same
-  training from a random initialisation.
+  training from a random initialization.
 
 | Method | Frozen encoder | Fine-tuned | Rank |
 |---|---|---|---|
@@ -614,7 +618,7 @@ GraphCL and GraphDINO were 0.007–0.009, against 0.017–0.027 here, and it had
 within one standard deviation of training from scratch. Seeds 0–2 are common to the two runs and
 do not repeat. Each starts from the same encoder (its untrained MAE is equal to five
 decimals in the two runs), yet the fine-tuned MAE of VICReg is 0.329 / 0.330 / 0.345 in
-the first run and 0.354 / 0.294 / 0.313 in the second. A seed fixes the initialisation and
+the first run and 0.354 / 0.294 / 0.313 in the second. A seed fixes the initialization and
 the order of the data, not the result: the runners do not ask for deterministic GPU
 algorithms. Every number of this page is a draw from a distribution, and a rerun is another
 draw.
@@ -627,6 +631,11 @@ python benchmarks/run_zinc.py --model all supervised --seeds 10 --finetune-epoch
 Results are in `benchmarks/zinc_seeds10/` (one JSON per model and `summary.md`, commit
 `acae6df`, about 13 hours on an NVIDIA A2). The 3-seed run stays in `benchmarks/zinc/`.
 
-## In progress
+## Not covered yet
 
-- OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are not wired up yet.
+- OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba): they need a ROC-AUC metric and
+  richer atom and bond features than ZINC's.
+- Heterophilous node-classification graphs (the [Evaluation Study](study.md) uses the year labels
+  of ogbn-arxiv, which neighbors rarely share).
+- GraphMAE in this table: it is in the library and in the [Evaluation Study](study.md), not in
+  these runs.

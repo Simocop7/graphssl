@@ -7,9 +7,9 @@
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
+A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and PyTorch Geometric, and the instrument of a controlled study of how graph SSL methods are evaluated. No Lightning, no Hydra — clean, readable training loops you can step through with a debugger.
 
-> **Status:** Alpha — all models train end-to-end and pass tests; all 7 SSL methods benchmarked under a shared protocol on the citation networks (two backbones, see below) and on ZINC; BGRL reproduced on ogbn-arxiv with the protocol of its paper. OGB graph-level benchmarks are not wired up yet.
+> **Status:** Alpha — all eight SSL objectives train end-to-end with every backbone and pass the test suite. The library is the instrument of an [evaluation study](#evaluation-study) of how much of a graph SSL result comes from the objective, and how much from the backbone, the probe and the training settings. What changed between releases is in the [changelog](https://github.com/Simocop7/graphssl/blob/main/CHANGELOG.md).
 
 ---
 
@@ -49,6 +49,15 @@ pip install "graphssl[full]"       # faiss-cpu + viz + benchmark
 > ```bash
 > pip install torch --index-url https://download.pytorch.org/whl/cpu
 > pip install graphssl
+> ```
+
+> **macOS and AFGRL:** with the PyPI wheels, `torch`, `faiss-cpu` and `scikit-learn` each ship their own OpenMP library, and AFGRL ends with a segmentation fault. Make FAISS and scikit-learn use PyTorch's copy (reinstalling them undoes it):
+> ```bash
+> SP=$(python -c "import site; print(site.getsitepackages()[0])")
+> for d in faiss/.dylibs sklearn/.dylibs; do
+>   mv "$SP/$d/libomp.dylib" "$SP/$d/libomp.dylib.bundled"
+>   ln -s "$SP/torch/lib/libomp.dylib" "$SP/$d/libomp.dylib"
+> done
 > ```
 
 **Development:**
@@ -118,7 +127,6 @@ See `configs/` for reference YAML files and `examples/` for full benchmark scrip
 | Script | Dataset | Task | Notes |
 |---|---|---|---|
 | `examples/cora_bgrl.py` | Cora | Node classification (7 classes) | Full-batch, CPU-friendly — fastest smoke test |
-| `examples/benchmark_planetoid.py` | Cora / CiteSeer / PubMed | Node classification, multi-seed | BGRL-only multi-seed demo; the cross-method numbers below come from `benchmarks/run_benchmark.py` |
 | `examples/ogbn_arxiv_bgrl.py` | ogbn-arxiv | Node classification (40 classes) | `NeighborLoader` mini-batch training |
 | `examples/zinc_bgrl.py` | ZINC-12k | Molecular property regression | Categorical node/edge embeddings |
 
@@ -145,71 +153,35 @@ The [evaluation guide](https://simocop7.github.io/graphssl/evaluation/) has the 
 script: the probes (linear, kNN, ridge for regression), the untrained-encoder reference,
 and fine-tuning.
 
-### Upgrading from 0.1.0
+---
 
-0.2.0 changes behavior in several places; the
-[changelog](https://github.com/Simocop7/graphssl/blob/main/CHANGELOG.md) lists them all.
-The ones most likely to matter:
+## Results
 
-- **Linear-probe numbers are not comparable with 0.1.0.** `LogRegEvaluator` is now fitted to
-  convergence on standardized features, with the L2 strength selected on validation; its
-  arguments are keyword-only (`lr` and `epochs` are gone).
-- **A config field the encoder cannot use is an error**, not silently dropped
-  (`edge_dim` with `gcn`, for instance).
-- **Edge features reach the encoder.** In 0.1.0 every model ignored `edge_attr`.
-- **GCN**: `num_layers` is honoured (it was always 2), checkpoints have new state-dict
-  keys, and eval-mode outputs differ after short trainings.
-- **GraphDINO** has new defaults (`ema_tau_base`, `teacher_temp`), and **DGI** trains with
-  one forward pass.
+### Evaluation study
 
-### Benchmark results (citation networks)
+How much of a graph SSL result is the objective? The [study](https://simocop7.github.io/graphssl/study/) trains the eight objectives with a GCN, a GIN and a graph Transformer on six node-classification datasets (Cora, CiteSeer, PubMed, Amazon Computers, Amazon Photo, Coauthor CS) and on ogbn-arxiv, under one shared, untuned protocol, saves every model, and scores the same embeddings with the linear probes of public codebases, with kNN and on random splits, always against the same encoder left untrained and against the raw features.
 
-All 7 SSL methods under one shared protocol, run with two backbones: a 2-layer GCN or GIN encoder (`hidden_dim=256`), full-batch training for 300 steps, AdamW (lr 5e-4), public Planetoid split. Linear-probe test accuracy (%) on the frozen embeddings (regularised logistic regression fitted to convergence, L2 strength selected on validation), mean ± std over 10 seeds; best SSL method per dataset in bold. *Untrained encoder* is the same encoder at initialization. The two rows marked † are supervised references trained on the labeled nodes (the shared protocol, and a standard recipe: dropout 0.5, Adam lr 0.01 + L2 5e-4, best-validation checkpoint and, with GCN, no normalization layer, as in Kipf & Welling's model), not ranked.
+![Raw features, the untrained encoder and the eight objectives on six datasets with three backbones](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_teaser.png)
 
-**GCN encoder**
+- **A frozen representation is mostly its backbone.** Models that share a backbone are more similar (linear CKA 0.43–0.81) than models that share an objective (0.25–0.45), and the backbone explains 68–82% of the variance of the gain over the untrained encoder on four of the six datasets. An untrained GCN is already a good feature map: with a GCN the average objective adds 0.2 to 1.5 points on the Amazon and Coauthor graphs.
+- **The probe decides how large the gain looks, in both directions.** With a GCN, the 100-step probe of DGI and PyG-SSL measures a gain of 1.5 points on CiteSeer where a probe regularized on validation measures 8.6, and 9.5 on Coauthor CS where it measures 1.5. Standardizing the embeddings and choosing the L2 penalty on validation, as `LogRegEvaluator` does, removes both biases.
+- **What survives is the order within one backbone.** It holds across probes and machines, partly across learning rates, and not across backbones; GraphCL is the best objective in 13 of the 18 dataset–backbone cells.
+- **Tests fixed in advance**: the small GCN gains hold against tuning the optimizer and learning rate and against ten times the training budget; of four label-free metrics, only the CKA distance from the untrained encoder identifies the objective that helped most better than chance, and narrowly.
 
-| Method | Cora | CiteSeer | PubMed |
-|---|---|---|---|
-| *Untrained encoder* | 73.17 ± 0.99 | 57.69 ± 1.47 | 74.07 ± 1.60 |
-| DGI | 78.12 ± 1.22 | 65.07 ± 1.44 | 78.60 ± 1.35 |
-| GraphCL | **82.46 ± 1.08** | **69.59 ± 1.00** | 81.28 ± 0.77 |
-| BGRL | 80.82 ± 1.23 | 67.05 ± 0.89 | 79.85 ± 1.10 |
-| AFGRL | 79.18 ± 1.26 | 62.63 ± 2.01 | 78.43 ± 1.00 |
-| VICReg | 81.06 ± 1.10 | 66.78 ± 1.45 | **81.59 ± 0.70** |
-| Barlow Twins | 81.65 ± 0.93 | 68.95 ± 1.33 | 81.24 ± 0.72 |
-| GraphDINO | 77.53 ± 1.22 | 60.16 ± 1.40 | 76.97 ± 2.08 |
-| *Supervised* † | 72.67 ± 0.85 | 56.35 ± 1.52 | 74.12 ± 1.01 |
-| *Supervised, std. recipe* † | 80.90 ± 0.76 | 67.72 ± 1.67 | 78.48 ± 0.92 |
+Every number comes from the result files in `benchmarks/paper/`; the [study page](https://simocop7.github.io/graphssl/study/) lists the commands that regenerate them. A paper is in preparation.
 
-**GIN encoder**
+### Benchmarks
 
-| Method | Cora | CiteSeer | PubMed |
-|---|---|---|---|
-| *Untrained encoder* | 41.70 ± 2.44 | 36.06 ± 1.57 | 56.60 ± 1.50 |
-| DGI | 65.43 ± 3.03 | 49.18 ± 2.86 | 66.90 ± 3.87 |
-| GraphCL | **81.31 ± 1.14** | 65.17 ± 1.44 | **80.36 ± 0.82** |
-| BGRL | 63.77 ± 1.60 | 47.68 ± 2.30 | 68.52 ± 2.57 |
-| AFGRL | 70.75 ± 1.75 | 49.32 ± 3.02 | 74.51 ± 1.11 |
-| VICReg | 77.36 ± 1.88 | 63.52 ± 2.10 | 79.08 ± 1.27 |
-| Barlow Twins | 79.33 ± 0.75 | **65.60 ± 1.62** | 77.67 ± 1.49 |
-| GraphDINO | 62.53 ± 1.91 | 43.34 ± 3.27 | 70.38 ± 3.23 |
-| *Supervised* † | 71.46 ± 1.83 | 51.21 ± 3.73 | 71.49 ± 1.70 |
-| *Supervised, std. recipe* † | 75.83 ± 2.33 | 59.32 ± 4.51 | 71.96 ± 1.90 |
-
-With GCN every objective improves on the untrained encoder and the top four are within 1.6–2.8 points of each other; with GIN the objectives separate, and BGRL, AFGRL, GraphDINO and DGI fall well behind.
+Per-method tables of the library's benchmark runs, under the same shared protocol (citation networks with GCN and GIN encoders, linear probe and kNN, supervised references; ZINC with a frozen probe and fine-tuning), are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`:
 
 ```bash
 D="--dataset Cora CiteSeer PubMed --seeds 10"
 python benchmarks/run_benchmark.py $D --model all supervised supervised_reg                 # GIN
 python benchmarks/run_benchmark.py $D --model all supervised supervised_reg --encoder gcn
-python benchmarks/render_tables.py --summary   # rebuilds these tables from benchmarks/results/*.json
+python benchmarks/render_tables.py --summary   # rebuilds the tables from benchmarks/results/*.json
 ```
 
-This is a deliberately untuned configuration — no per-method or per-dataset hyperparameter search — so it compares objectives at equal budget rather than reproducing each paper's best reported number. kNN results, the graph-level benchmark on ZINC (frozen probe and fine-tuning), per-seed metrics and full provenance (git commit, package versions) are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/) and `benchmarks/results/`. OGB graph-level benchmarks (ogbg-molhiv, ogbg-molpcba) are next.
-
-### Reproduction: BGRL on ogbn-arxiv
-
-Run with the protocol of its own paper (Thakoor et al., ICLR 2022: full-graph training for 10,000 steps, 3-layer GCN with layer normalization and weight standardization) instead of the shared one, BGRL reaches 72.31 ± 0.14 validation / 71.32 ± 0.10 test accuracy over 3 seeds, against 72.53 ± 0.09 / 71.64 ± 0.12 in the paper (20 seeds). The same encoder left untrained gives 70.23 ± 0.18 / 69.53 ± 0.03 (paper: 69.90 ± 0.11 / 68.94 ± 0.15). Close to the paper, not an exact match. This is with the predictor of the public BGRL implementation (`pred_norm: none`, `pred_activation: prelu`); with the library's default predictor, which has a batch normalization, the same training ends 1.6 points *below* the untrained encoder (67.91 ± 0.78 test), so disable it when the encoder uses layer normalization. The protocol, the differences that remain and the predictor comparison are in [the benchmarks docs](https://simocop7.github.io/graphssl/benchmarks/#ogbn-arxiv-bgrl-with-the-protocol-of-its-paper).
+**BGRL on ogbn-arxiv, with the protocol of its paper** (Thakoor et al., ICLR 2022: full-graph training for 10,000 steps, 3-layer GCN with layer normalization and weight standardization) reaches 71.32 ± 0.10% test accuracy over 3 seeds, against 71.64 ± 0.12 in the paper; the same encoder left untrained gives 69.53 ± 0.03 (paper: 68.94 ± 0.15). Close to the paper, not an exact match. It needs the predictor of the public BGRL implementation (`pred_norm: none`, `pred_activation: prelu`): with the library's default predictor, which has a batch normalization, the same training ends below the untrained encoder.
 
 ```bash
 python -u benchmarks/reproduce_bgrl_arxiv.py --seeds 3   # about 4 h per seed on an NVIDIA A2
@@ -295,13 +267,15 @@ src/graphssl/
 ├── registry/      # ENCODERS, HEADS, AUGMENTS, LOSSES, LOADERS, OBJECTIVES, DATASETS
 ├── encoders/      # GCN, GIN, Transformer (auto-registered)
 ├── models/        # All SSL models + Supervised baseline
-├── losses/        # NT-Xent, DINO, VICReg, Barlow Twins, CosineRegression, CombinedLoss
+├── losses/        # NT-Xent, DINO, VICReg, Barlow Twins, CosineRegression, SCE, CombinedLoss
 ├── augmentation/  # 7 transforms, compose(), MultiView
-├── nn/            # MLP, Projector, Predictor, DINOHead, pooling
+├── nn/            # MLP, Projector, Predictor, DINOHead, GATDecoder, pooling
 ├── evaluation/    # LogRegEvaluator, KNNEvaluator, extract_embeddings
 ├── training/      # DINOTrainer + callbacks
 ├── data/          # DataModule (full-batch and NeighborLoader)
 └── utils/         # update_ema_params, CosineDecayScheduler, CosineEMAScheduler, PositiveMiner
+
+benchmarks/        # runners, analyses and result files; benchmarks/paper/ holds the evaluation study
 ```
 
 ---
@@ -313,6 +287,7 @@ src/graphssl/
 - **Protected-node augmentations.** When using `NeighborLoader` for mini-batch training, seed nodes are shielded from `node_drop` so the loss remains valid.
 - **Registry pattern.** All components are registered by name (`@ENCODERS.register("gin")`), so swapping architectures is a one-line config change.
 - **Composable losses.** `CombinedLoss` enables weighted mixtures of any registered losses, configurable from YAML or programmatically.
+- **Measured, not assumed.** Every benchmark result records its configuration, git commit and package versions; models can be saved and scored again with another probe or split without retraining; every number has the untrained encoder as its reference.
 
 ---
 

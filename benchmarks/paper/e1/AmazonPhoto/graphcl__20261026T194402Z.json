@@ -1,0 +1,211 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9307189583778381,
+      "test_acc_linear": 0.9303921461105347,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9176470637321472,
+      "test_acc_knn": 0.9081699252128601,
+      "eff_rank": 43.9775390625,
+      "wall_time_s": 581.1647498607635,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9320261478424072,
+      "test_acc_linear": 0.9269607663154602,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.9084967374801636,
+      "test_acc_knn": 0.908823549747467,
+      "eff_rank": 46.37620544433594,
+      "wall_time_s": 582.4735960960388,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9307189583778381,
+      "test_acc_linear": 0.9222221970558167,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.915032684803009,
+      "test_acc_knn": 0.9063725471496582,
+      "eff_rank": 46.04911804199219,
+      "wall_time_s": 579.7591209411621,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9320261478424072,
+      "test_acc_linear": 0.9297385811805725,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9071895480155945,
+      "test_acc_knn": 0.9045751690864563,
+      "eff_rank": 46.508358001708984,
+      "wall_time_s": 574.9469411373138,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9320261478424072,
+      "test_acc_linear": 0.9222221970558167,
+      "probe_weight_decay": 1e-06,
+      "probe_converged": true,
+      "val_acc_knn": 0.9058823585510254,
+      "test_acc_knn": 0.9055555462837219,
+      "eff_rank": 46.08920669555664,
+      "wall_time_s": 572.9193370342255,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.9372549057006836,
+      "test_acc_linear": 0.9282679557800293,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9163398742675781,
+      "test_acc_knn": 0.9066993594169617,
+      "eff_rank": 45.96369171142578,
+      "wall_time_s": 569.1025621891022,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.9307189583778381,
+      "test_acc_linear": 0.9321895241737366,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9176470637321472,
+      "test_acc_knn": 0.9080065488815308,
+      "eff_rank": 47.38291931152344,
+      "wall_time_s": 536.1949820518494,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.929411768913269,
+      "test_acc_linear": 0.9228758215904236,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9098039269447327,
+      "test_acc_knn": 0.9031046032905579,
+      "eff_rank": 47.265113830566406,
+      "wall_time_s": 497.7325828075409,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.9346405267715454,
+      "test_acc_linear": 0.9348039031028748,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9084967374801636,
+      "test_acc_knn": 0.905718982219696,
+      "eff_rank": 46.647727966308594,
+      "wall_time_s": 514.299968957901,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.9307189583778381,
+      "test_acc_linear": 0.9261437654495239,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9084967374801636,
+      "test_acc_knn": 0.90375816822052,
+      "eff_rank": 45.355560302734375,
+      "wall_time_s": 538.3289802074432,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/transformer/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9275816857814789,
+      "std": 0.0043264175797760925
+    },
+    "test_acc_knn": {
+      "mean": 0.906078439950943,
+      "std": 0.0019145466187138122
+    },
+    "eff_rank": {
+      "mean": 46.16154403686524,
+      "std": 0.9768920932176912
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261026T194402Z",
+    "git": {
+      "commit": "c4651a628133d8ac0c3309fd445eb13a14e8d738",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

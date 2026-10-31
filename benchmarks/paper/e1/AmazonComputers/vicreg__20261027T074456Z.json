@@ -1,0 +1,211 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.890181839466095,
+      "test_acc_linear": 0.8787493109703064,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8429090976715088,
+      "test_acc_knn": 0.8542083501815796,
+      "eff_rank": 63.1348991394043,
+      "wall_time_s": 630.8950841426849,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.897454559803009,
+      "test_acc_linear": 0.8809307217597961,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.848727285861969,
+      "test_acc_knn": 0.8474822640419006,
+      "eff_rank": 64.09886169433594,
+      "wall_time_s": 685.3463449478149,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8923636078834534,
+      "test_acc_linear": 0.8838393092155457,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8392727375030518,
+      "test_acc_knn": 0.8511179685592651,
+      "eff_rank": 64.56168365478516,
+      "wall_time_s": 757.5376861095428,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8843636512756348,
+      "test_acc_linear": 0.8730230927467346,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8516363501548767,
+      "test_acc_knn": 0.8522995710372925,
+      "eff_rank": 63.46314239501953,
+      "wall_time_s": 784.261461019516,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8960000276565552,
+      "test_acc_linear": 0.8829303979873657,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8603636622428894,
+      "test_acc_knn": 0.8556625843048096,
+      "eff_rank": 65.34358978271484,
+      "wall_time_s": 742.9365210533142,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.8887272477149963,
+      "test_acc_linear": 0.8813852071762085,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8407272696495056,
+      "test_acc_knn": 0.8541174530982971,
+      "eff_rank": 64.09767150878906,
+      "wall_time_s": 898.6128289699554,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.890181839466095,
+      "test_acc_linear": 0.8787493109703064,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8581818342208862,
+      "test_acc_knn": 0.8535720705986023,
+      "eff_rank": 64.68651580810547,
+      "wall_time_s": 819.2441852092743,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.8850908875465393,
+      "test_acc_linear": 0.8779312968254089,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.852363646030426,
+      "test_acc_knn": 0.8546627759933472,
+      "eff_rank": 65.68331909179688,
+      "wall_time_s": 761.7839138507843,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.8887272477149963,
+      "test_acc_linear": 0.8806580901145935,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8392727375030518,
+      "test_acc_knn": 0.8475731611251831,
+      "eff_rank": 64.04670715332031,
+      "wall_time_s": 890.3806591033936,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8865454792976379,
+      "test_acc_linear": 0.8822941184043884,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8494545221328735,
+      "test_acc_knn": 0.8498454689979553,
+      "eff_rank": 63.671653747558594,
+      "wall_time_s": 853.4440479278564,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/transformer/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8800490856170654,
+      "std": 0.0031246288872899763
+    },
+    "test_acc_knn": {
+      "mean": 0.8520541667938233,
+      "std": 0.0029405961262284524
+    },
+    "eff_rank": {
+      "mean": 64.278804397583,
+      "std": 0.8037545227567482
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261027T074456Z",
+    "git": {
+      "commit": "c4651a628133d8ac0c3309fd445eb13a14e8d738",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

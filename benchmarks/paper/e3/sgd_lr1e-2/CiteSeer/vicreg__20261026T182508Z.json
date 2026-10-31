@@ -1,0 +1,143 @@
+{
+  "dataset": "CiteSeer",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "sgd",
+    "lr": 0.01,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "momentum": 0.9,
+    "nesterov": true
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7239999771118164,
+      "test_acc_linear": 0.6850000023841858,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6439999938011169,
+      "test_acc_knn": 0.6600000262260437,
+      "eff_rank": 180.60708618164062,
+      "wall_time_s": 34.3012580871582
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7099999785423279,
+      "test_acc_linear": 0.6980000138282776,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.656000018119812,
+      "test_acc_knn": 0.6650000214576721,
+      "eff_rank": 178.37200927734375,
+      "wall_time_s": 34.315550565719604
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7099999785423279,
+      "test_acc_linear": 0.6779999732971191,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6520000100135803,
+      "test_acc_knn": 0.6510000228881836,
+      "eff_rank": 176.81747436523438,
+      "wall_time_s": 34.72343325614929
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7139999866485596,
+      "test_acc_linear": 0.7129999995231628,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6499999761581421,
+      "test_acc_knn": 0.6650000214576721,
+      "eff_rank": 178.86181640625,
+      "wall_time_s": 32.564969062805176
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6980000138282776,
+      "test_acc_linear": 0.6980000138282776,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6399999856948853,
+      "test_acc_knn": 0.6499999761581421,
+      "eff_rank": 178.3549041748047,
+      "wall_time_s": 32.1029314994812
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6944000005722046,
+      "std": 0.013501861097842715
+    },
+    "test_acc_knn": {
+      "mean": 0.6582000136375428,
+      "std": 0.007328040998125556
+    },
+    "eff_rank": {
+      "mean": 178.6026580810547,
+      "std": 1.3588926388683202
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261026T182508Z",
+    "git": {
+      "commit": "ab12e16be53490c6349e3736274d6a87765f0f51",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

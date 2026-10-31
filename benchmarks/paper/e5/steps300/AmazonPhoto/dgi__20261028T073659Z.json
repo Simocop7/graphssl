@@ -1,0 +1,137 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "dgi",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "dgi",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9176470637321472,
+      "test_acc_linear": 0.9178104400634766,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8849673271179199,
+      "test_acc_knn": 0.9011437892913818,
+      "eff_rank": 140.25436401367188,
+      "wall_time_s": 416.38314509391785,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/dgi_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9045751690864563,
+      "test_acc_linear": 0.9142156839370728,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8901960849761963,
+      "test_acc_knn": 0.9004902243614197,
+      "eff_rank": 138.43763732910156,
+      "wall_time_s": 401.99479031562805,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/dgi_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9045751690864563,
+      "test_acc_linear": 0.9186274409294128,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8901960849761963,
+      "test_acc_knn": 0.9065359234809875,
+      "eff_rank": 142.6456298828125,
+      "wall_time_s": 407.0676019191742,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/dgi_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.900653600692749,
+      "test_acc_linear": 0.911928117275238,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8823529481887817,
+      "test_acc_knn": 0.9008169770240784,
+      "eff_rank": 135.07888793945312,
+      "wall_time_s": 404.7517809867859,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/dgi_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8980392217636108,
+      "test_acc_linear": 0.906862735748291,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8836601376533508,
+      "test_acc_knn": 0.9001634120941162,
+      "eff_rank": 143.86802673339844,
+      "wall_time_s": 382.92692399024963,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/dgi_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9138888835906982,
+      "std": 0.004773643454822353
+    },
+    "test_acc_knn": {
+      "mean": 0.9018300652503968,
+      "std": 0.002655905235685221
+    },
+    "eff_rank": {
+      "mean": 140.0569091796875,
+      "std": 3.488116149613571
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261028T073659Z",
+    "git": {
+      "commit": "63396cc73a5d2d4e448eb9e7c85ac083a1b37e4e",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

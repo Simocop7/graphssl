@@ -33,6 +33,12 @@ they reproduce bit for bit). The queues are those launched on 26 Oct (benchmarks
      the worktree graphssl-runs-e5 on 28 Oct: at the GraphMAE commit every --trajectory run on a
      GPU crashed after step 0 (the trainer moves the graph to the device in place), so the
      3,000-step half is rerun at the commit that fixes it; the 300-step JSONs are copied in.
+  E3X-amazon, E3X-cs
+     E3 extended to GCN on Amazon Photo / Computers and Coauthor CS (added 29 Oct, PLAN.md
+     "E3 on the Amazon and Coauthor graphs"): the same ten cells, 5 seeds, the eight
+     objectives, each dataset on the device of its E1 runs (Amazon: Mac CPU, 3 threads; Coauthor
+     CS: Mac GPU, 2 threads), in the worktree graphssl-runs-e3x. One dataset at a time, every
+     cell of it, so each dataset's result is complete before the next one starts.
 
 The launched script logs ``QUEUE STEP FAILED`` for every command that exits non-zero and ends
 with ``QUEUE <name> DONE <date>, <n> failed``: "DONE" alone does not mean every step succeeded.
@@ -65,6 +71,7 @@ RUNS_MPS = MAIN.parent / "graphssl-runs-mps"  # the worktree of the Mac GPU runs
 RUNS_E4 = MAIN.parent / "graphssl-runs-e4"  # the worktree of the trajectory runs
 RUNS_G = MAIN.parent / "graphssl-runs-graphmae"  # GraphMAE and E5, from 28 Oct
 RUNS_E5 = MAIN.parent / "graphssl-runs-e5"  # E5-mps from 28 Oct evening (trajectory fix)
+RUNS_E3X = MAIN.parent / "graphssl-runs-e3x"  # E3 on Amazon / Coauthor CS, from 29 Oct
 PYTHON = MAIN / ".venv" / "bin" / "python"
 # The seven objectives of the queues launched on 26-27 Oct. Never add GraphMAE here: those
 # queues' worktrees sit at commits without it, and --launch would start units they cannot run.
@@ -92,7 +99,8 @@ E4_STEPS = ("1", "2", "5", "10", "20", "30", "50", "75", "100", "150", "200", "2
 E5_STEPS = ("300", "600", "1000", "2000", "3000")
 # (dataset, objective) pairs that run seeds 0-2 in E5 under PLAN.md's cost rule (> 45 min per
 # 3,000-step seed on the dataset's E5 device), from the costs measured before launch.
-E5_THREE_SEEDS: set[tuple[str, str]] = set()
+# from logs/e5v_costs.csv (A2, 30 Oct): over 45 min per 3,000-step seed (71.4 and 49.4 min)
+E5_THREE_SEEDS: set[tuple[str, str]] = {("CoauthorCS", "graphcl"), ("CoauthorCS", "afgrl")}
 
 
 @dataclass(frozen=True)
@@ -142,6 +150,16 @@ def e3(encoder: str, models: list[str] = SSL) -> list[Unit]:
         for opt, lr in E3_GRID
         for d in ("Cora", "CiteSeer")
         for m in models
+    ]
+
+
+def e3x(datasets: list[str]) -> list[Unit]:
+    """E3's grid with GCN on other datasets, dataset by dataset (every cell of one first)."""
+    return [
+        Unit(f"e3/{opt}_lr{lr}", d, "gcn", m, seeds=5, optimizer=opt, lr=lr)
+        for d in datasets
+        for opt, lr in E3_GRID
+        for m in SSL8
     ]
 
 
@@ -203,12 +221,21 @@ QUEUES = {
         device="mps",
     ),
     "E5-V": Queue(MAIN, e5(["AmazonComputers", "CoauthorCS"], "gcn"), device="cuda", mac=False),
+    "E3X-amazon": Queue(RUNS_E3X, e3x(["AmazonPhoto", "AmazonComputers"])),
+    "E3X-cs": Queue(RUNS_E3X, e3x(["CoauthorCS"]), threads=2, device="mps"),
 }
+
+
+def results_root(root: Path) -> Path:
+    """A queue's worktree or, once the worktree is removed, the main tree: every result was
+    copied back and checked before the run worktrees were removed (31 Oct 2026)."""
+    return root if root.exists() else MAIN
 
 
 def done(root: Path, u: Unit) -> bool:
     """Whether a result JSON of this unit exists (same backbone, budget, optimizer, lr, seeds)."""
-    for path in (root / "benchmarks" / "paper" / u.out / u.dataset).glob(f"{u.model}__*.json"):
+    base = results_root(root) / "benchmarks" / "paper" / u.out / u.dataset
+    for path in base.glob(f"{u.model}__*.json"):
         r = json.loads(path.read_text())
         h = r["hyperparameters"]
         # supervised_reg records its own recipe (Adam, lr 0.01) in place of the shared one.
@@ -286,7 +313,8 @@ def running_for(q: Queue) -> list[str]:
 def status() -> None:
     for name, q in QUEUES.items():
         rem = [u for u in q.units if not done(q.root, u)]
-        print(f"queue {name}: {len(q.units) - len(rem)}/{len(q.units)} done ({q.root.name})")
+        where = q.root.name if q.root.exists() else f"{q.root.name} removed: main tree"
+        print(f"queue {name}: {len(q.units) - len(rem)}/{len(q.units)} done ({where})")
         seen: dict = {}
         for u in q.units:
             key = (u.out.split("/")[0], u.dataset, u.encoder)
@@ -306,6 +334,11 @@ def resume(name: str, launch: bool, force: bool) -> None:
         print("  " + line)
     if not launch or not lines:
         return
+    if not q.root.exists():
+        raise SystemExit(
+            f"queue {name}: its worktree {q.root} was removed; recreate it with "
+            f"`git worktree add --detach {q.root} <commit>` before launching"
+        )
     if not q.mac:
         raise SystemExit(f"queue {name} runs on the VM: start its commands in the VM's tmux")
     busy = running_for(q)

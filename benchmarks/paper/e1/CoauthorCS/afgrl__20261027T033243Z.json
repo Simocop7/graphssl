@@ -1,0 +1,289 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "afgrl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "afgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8668848872184753,
+      "test_acc_linear": 0.8733892440795898,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8456082940101624,
+      "test_acc_knn": 0.8451626300811768,
+      "eff_rank": 35.054141998291016,
+      "wall_time_s": 358.5356879234314,
+      "val_acc_linear_alt": 0.8810693025588989,
+      "test_acc_linear_alt": 0.8823890089988708,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8477904796600342,
+      "test_acc_knn_alt": 0.8530715107917786,
+      "eff_rank_alt": 28.547903060913086,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8947081565856934,
+      "test_acc_linear": 0.8884570598602295,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8712493181228638,
+      "test_acc_knn": 0.8672530055046082,
+      "eff_rank": 28.278379440307617,
+      "wall_time_s": 358.1470191478729,
+      "val_acc_linear_alt": 0.8854337334632874,
+      "test_acc_linear_alt": 0.8855253458023071,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8701581954956055,
+      "test_acc_knn_alt": 0.8707302212715149,
+      "eff_rank_alt": 23.555694580078125,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8827059268951416,
+      "test_acc_linear": 0.8819799423217773,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8728860020637512,
+      "test_acc_knn": 0.859889566898346,
+      "eff_rank": 29.103395462036133,
+      "wall_time_s": 368.41508507728577,
+      "val_acc_linear_alt": 0.8887070417404175,
+      "test_acc_linear_alt": 0.8875025510787964,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8772504329681396,
+      "test_acc_knn_alt": 0.8675257563591003,
+      "eff_rank_alt": 26.513858795166016,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.88707035779953,
+      "test_acc_linear": 0.8815026879310608,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8696126341819763,
+      "test_acc_knn": 0.8675257563591003,
+      "eff_rank": 33.25857162475586,
+      "wall_time_s": 365.92259192466736,
+      "val_acc_linear_alt": 0.8881614804267883,
+      "test_acc_linear_alt": 0.8864116668701172,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8690671324729919,
+      "test_acc_knn_alt": 0.8652758002281189,
+      "eff_rank_alt": 28.472187042236328,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8848881721496582,
+      "test_acc_linear": 0.8772755265235901,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.8712493181228638,
+      "test_acc_knn": 0.8695029616355896,
+      "eff_rank": 32.957489013671875,
+      "wall_time_s": 359.1423370838165,
+      "val_acc_linear_alt": 0.8848881721496582,
+      "test_acc_linear_alt": 0.8836162686347961,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8663393259048462,
+      "test_acc_knn_alt": 0.8655484914779663,
+      "eff_rank_alt": 29.634517669677734,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.8848881721496582,
+      "test_acc_linear": 0.8915252089500427,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8723404407501221,
+      "test_acc_knn": 0.8734574317932129,
+      "eff_rank": 34.163204193115234,
+      "wall_time_s": 356.6920702457428,
+      "val_acc_linear_alt": 0.8897981643676758,
+      "test_acc_linear_alt": 0.8901615738868713,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8707037568092346,
+      "test_acc_knn_alt": 0.8698438405990601,
+      "eff_rank_alt": 32.216190338134766,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.8892526030540466,
+      "test_acc_linear": 0.8800709247589111,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8597927093505859,
+      "test_acc_knn": 0.8543669581413269,
+      "eff_rank": 34.30978012084961,
+      "wall_time_s": 365.04303312301636,
+      "val_acc_linear_alt": 0.8816148638725281,
+      "test_acc_linear_alt": 0.8755028247833252,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8614293336868286,
+      "test_acc_knn_alt": 0.8606395125389099,
+      "eff_rank_alt": 31.65359115600586,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.8876159191131592,
+      "test_acc_linear": 0.8877071142196655,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8734315037727356,
+      "test_acc_knn": 0.8747528195381165,
+      "eff_rank": 33.20640563964844,
+      "wall_time_s": 343.69626092910767,
+      "val_acc_linear_alt": 0.8941625952720642,
+      "test_acc_linear_alt": 0.882661759853363,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8767048716545105,
+      "test_acc_knn_alt": 0.8714120388031006,
+      "eff_rank_alt": 29.764652252197266,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.8854337334632874,
+      "test_acc_linear": 0.8800709247589111,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8521549105644226,
+      "test_acc_knn": 0.8534124493598938,
+      "eff_rank": 34.41386413574219,
+      "wall_time_s": 345.288880109787,
+      "val_acc_linear_alt": 0.8919803500175476,
+      "test_acc_linear_alt": 0.8839572072029114,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8592471480369568,
+      "test_acc_knn_alt": 0.85532146692276,
+      "eff_rank_alt": 31.596830368041992,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8772504329681396,
+      "test_acc_linear": 0.8829344511032104,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8505182862281799,
+      "test_acc_knn": 0.860775887966156,
+      "eff_rank": 33.1880989074707,
+      "wall_time_s": 330.3756592273712,
+      "val_acc_linear_alt": 0.8810693025588989,
+      "test_acc_linear_alt": 0.8831390142440796,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8521549105644226,
+      "test_acc_knn_alt": 0.8602304458618164,
+      "eff_rank_alt": 27.194499969482422,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/gin/afgrl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8824913084506989,
+      "std": 0.005452928780328271
+    },
+    "test_acc_knn": {
+      "mean": 0.8626099467277527,
+      "std": 0.00958046647427019
+    },
+    "eff_rank": {
+      "mean": 32.79333305358887,
+      "std": 2.2726354116139142
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8840867221355438,
+      "std": 0.0038841416792265095
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.8639599084854126,
+      "std": 0.0064211133885795895
+    },
+    "eff_rank_alt": {
+      "mean": 28.91499252319336,
+      "std": 2.679306822050982
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261027T033243Z",
+    "git": {
+      "commit": "97533a0e9a3dead39d53ef57ebbddcca835a6215",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

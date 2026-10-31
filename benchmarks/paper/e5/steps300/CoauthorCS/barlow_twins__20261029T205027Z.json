@@ -1,0 +1,147 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9252591133117676,
+      "test_acc_linear": 0.9245926141738892,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9170758128166199,
+      "test_acc_knn": 0.918115496635437,
+      "eff_rank": 122.95590209960938,
+      "wall_time_s": 80.21349453926086,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9247136116027832,
+      "test_acc_linear": 0.9243199229240417,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9192580580711365,
+      "test_acc_knn": 0.9189336895942688,
+      "eff_rank": 123.9092025756836,
+      "wall_time_s": 80.84291768074036,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.926895797252655,
+      "test_acc_linear": 0.9239789843559265,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.924168050289154,
+      "test_acc_knn": 0.9191381931304932,
+      "eff_rank": 124.13310241699219,
+      "wall_time_s": 80.64055895805359,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9252591133117676,
+      "test_acc_linear": 0.9248653650283813,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9219858050346375,
+      "test_acc_knn": 0.9181836843490601,
+      "eff_rank": 123.44590759277344,
+      "wall_time_s": 80.65042805671692,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9236224889755249,
+      "test_acc_linear": 0.9232972264289856,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9132569432258606,
+      "test_acc_knn": 0.9197518229484558,
+      "eff_rank": 123.31071472167969,
+      "wall_time_s": 80.77003765106201,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/barlow_twins_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9242108225822449,
+      "std": 0.0006071450428557794
+    },
+    "test_acc_knn": {
+      "mean": 0.918824577331543,
+      "std": 0.0006862186309585205
+    },
+    "eff_rank": {
+      "mean": 123.55096588134765,
+      "std": 0.4717189956312892
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261029T205027Z",
+    "git": {
+      "commit": "a3b146cd9418020726f7a22436960819be868dda",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

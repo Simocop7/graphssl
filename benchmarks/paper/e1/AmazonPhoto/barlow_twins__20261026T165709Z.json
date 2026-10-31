@@ -1,0 +1,211 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8653594851493835,
+      "test_acc_linear": 0.8611111044883728,
+      "probe_weight_decay": 1e-06,
+      "probe_converged": true,
+      "val_acc_knn": 0.8418300747871399,
+      "test_acc_knn": 0.8619281053543091,
+      "eff_rank": 26.171682357788086,
+      "wall_time_s": 246.94419288635254,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8810457587242126,
+      "test_acc_linear": 0.8733659982681274,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8418300747871399,
+      "test_acc_knn": 0.8632352948188782,
+      "eff_rank": 24.320953369140625,
+      "wall_time_s": 235.06078481674194,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8666666746139526,
+      "test_acc_linear": 0.878104567527771,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.8483660221099854,
+      "test_acc_knn": 0.8642156720161438,
+      "eff_rank": 22.189964294433594,
+      "wall_time_s": 239.0248908996582,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.871895432472229,
+      "test_acc_linear": 0.8651960492134094,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.8444444537162781,
+      "test_acc_knn": 0.8643791079521179,
+      "eff_rank": 25.473373413085938,
+      "wall_time_s": 242.90759921073914,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8679738640785217,
+      "test_acc_linear": 0.8754901885986328,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8535947799682617,
+      "test_acc_knn": 0.8655228614807129,
+      "eff_rank": 22.538143157958984,
+      "wall_time_s": 241.02875804901123,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.8771241903305054,
+      "test_acc_linear": 0.8651960492134094,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8418300747871399,
+      "test_acc_knn": 0.8622549176216125,
+      "eff_rank": 20.0020751953125,
+      "wall_time_s": 236.7110779285431,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.8810457587242126,
+      "test_acc_linear": 0.875,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8470588326454163,
+      "test_acc_knn": 0.8653594851493835,
+      "eff_rank": 24.500324249267578,
+      "wall_time_s": 232.88627409934998,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.8732026219367981,
+      "test_acc_linear": 0.873039186000824,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.843137264251709,
+      "test_acc_knn": 0.8635621070861816,
+      "eff_rank": 21.833885192871094,
+      "wall_time_s": 231.94966197013855,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.8810457587242126,
+      "test_acc_linear": 0.8807189464569092,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8549019694328308,
+      "test_acc_knn": 0.866830050945282,
+      "eff_rank": 20.23845672607422,
+      "wall_time_s": 236.440899848938,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.871895432472229,
+      "test_acc_linear": 0.8645424842834473,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8522875905036926,
+      "test_acc_knn": 0.8643791079521179,
+      "eff_rank": 23.004453659057617,
+      "wall_time_s": 238.41284608840942,
+      "checkpoint": "benchmarks/paper/models/AmazonPhoto/gin/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8711764574050903,
+      "std": 0.0066449722177212124
+    },
+    "test_acc_knn": {
+      "mean": 0.864166671037674,
+      "std": 0.001503597434717647
+    },
+    "eff_rank": {
+      "mean": 23.027331161499024,
+      "std": 2.0818942577855006
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261026T165709Z",
+    "git": {
+      "commit": "c4651a628133d8ac0c3309fd445eb13a14e8d738",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

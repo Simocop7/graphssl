@@ -1,0 +1,211 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8247272968292236,
+      "test_acc_linear": 0.8176695108413696,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7861818075180054,
+      "test_acc_knn": 0.7867660522460938,
+      "eff_rank": 19.374591827392578,
+      "wall_time_s": 231.1862142086029,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8210909366607666,
+      "test_acc_linear": 0.8134884834289551,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7694545388221741,
+      "test_acc_knn": 0.7637702226638794,
+      "eff_rank": 20.97267723083496,
+      "wall_time_s": 227.73556804656982,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8065454363822937,
+      "test_acc_linear": 0.8148518204689026,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7505454421043396,
+      "test_acc_knn": 0.758316695690155,
+      "eff_rank": 18.12630844116211,
+      "wall_time_s": 224.1378538608551,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8210909366607666,
+      "test_acc_linear": 0.8173059225082397,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7643636465072632,
+      "test_acc_knn": 0.7639520168304443,
+      "eff_rank": 19.270652770996094,
+      "wall_time_s": 225.30180597305298,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8210909366607666,
+      "test_acc_linear": 0.8142156004905701,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.76218181848526,
+      "test_acc_knn": 0.7588620185852051,
+      "eff_rank": 16.103897094726562,
+      "wall_time_s": 226.0889708995819,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.8101817965507507,
+      "test_acc_linear": 0.8227595090866089,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.778181791305542,
+      "test_acc_knn": 0.7750409245491028,
+      "eff_rank": 21.79625701904297,
+      "wall_time_s": 224.33905601501465,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.8225454688072205,
+      "test_acc_linear": 0.807853102684021,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.7774545550346375,
+      "test_acc_knn": 0.7697691321372986,
+      "eff_rank": 20.135377883911133,
+      "wall_time_s": 223.31244897842407,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.823272705078125,
+      "test_acc_linear": 0.8116706013679504,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7541818022727966,
+      "test_acc_knn": 0.7605890035629272,
+      "eff_rank": 16.62548828125,
+      "wall_time_s": 223.4995629787445,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.826909065246582,
+      "test_acc_linear": 0.8204872012138367,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.7650908827781677,
+      "test_acc_knn": 0.767224133014679,
+      "eff_rank": 17.319398880004883,
+      "wall_time_s": 222.981351852417,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8240000009536743,
+      "test_acc_linear": 0.8262134194374084,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.774545431137085,
+      "test_acc_knn": 0.7794946432113647,
+      "eff_rank": 18.419681549072266,
+      "wall_time_s": 223.74505996704102,
+      "checkpoint": "benchmarks/paper/models/AmazonComputers/gin/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8166515171527863,
+      "std": 0.005439705570023329
+    },
+    "test_acc_knn": {
+      "mean": 0.768378484249115,
+      "std": 0.009443602136040008
+    },
+    "eff_rank": {
+      "mean": 18.814433097839355,
+      "std": 1.8504971533231396
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261027T001645Z",
+    "git": {
+      "commit": "c4651a628133d8ac0c3309fd445eb13a14e8d738",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}
