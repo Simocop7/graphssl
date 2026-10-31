@@ -1,0 +1,298 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 0,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 0,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8152727484703064,
+      "test_acc_linear": 0.8027631044387817,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7730908989906311,
+      "test_acc_knn": 0.773586630821228,
+      "eff_rank": 4.645259857177734,
+      "wall_time_s": 0.02250981330871582,
+      "val_acc_linear_alt": 0.7949091196060181,
+      "test_acc_linear_alt": 0.8011270761489868,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7767272591590881,
+      "test_acc_knn_alt": 0.770041823387146,
+      "eff_rank_alt": 4.239013195037842,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7847272753715515,
+      "test_acc_linear": 0.7907653450965881,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7505454421043396,
+      "test_acc_knn": 0.7636793255805969,
+      "eff_rank": 4.953091144561768,
+      "wall_time_s": 0.005789995193481445,
+      "val_acc_linear_alt": 0.8087272644042969,
+      "test_acc_linear_alt": 0.8031266927719116,
+      "probe_weight_decay_alt": 1e-06,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7760000228881836,
+      "test_acc_knn_alt": 0.769860029220581,
+      "eff_rank_alt": 3.373554229736328,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8080000281333923,
+      "test_acc_linear": 0.814397394657135,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7810909152030945,
+      "test_acc_knn": 0.7804944515228271,
+      "eff_rank": 3.6459805965423584,
+      "wall_time_s": 0.01080012321472168,
+      "val_acc_linear_alt": 0.8167272806167603,
+      "test_acc_linear_alt": 0.8057625889778137,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7825454473495483,
+      "test_acc_knn_alt": 0.7821305394172668,
+      "eff_rank_alt": 3.797513961791992,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8014545440673828,
+      "test_acc_linear": 0.7955825924873352,
+      "probe_weight_decay": 1e-06,
+      "probe_converged": true,
+      "val_acc_knn": 0.7839999794960022,
+      "test_acc_knn": 0.7703145146369934,
+      "eff_rank": 3.753246545791626,
+      "wall_time_s": 0.0058519840240478516,
+      "val_acc_linear_alt": 0.7934545278549194,
+      "test_acc_linear_alt": 0.7973095774650574,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7629091143608093,
+      "test_acc_knn_alt": 0.767224133014679,
+      "eff_rank_alt": 3.5561795234680176,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8109090924263,
+      "test_acc_linear": 0.8045809864997864,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7738181948661804,
+      "test_acc_knn": 0.7729503512382507,
+      "eff_rank": 3.783202648162842,
+      "wall_time_s": 0.008446931838989258,
+      "val_acc_linear_alt": 0.819636344909668,
+      "test_acc_linear_alt": 0.8052172064781189,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7629091143608093,
+      "test_acc_knn_alt": 0.7755862474441528,
+      "eff_rank_alt": 3.9705328941345215,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.7912726998329163,
+      "test_acc_linear": 0.8019450902938843,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7701818346977234,
+      "test_acc_knn": 0.7749500274658203,
+      "eff_rank": 3.410830497741699,
+      "wall_time_s": 0.007721900939941406,
+      "val_acc_linear_alt": 0.8145454525947571,
+      "test_acc_linear_alt": 0.8039447665214539,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7636363506317139,
+      "test_acc_knn_alt": 0.7720414400100708,
+      "eff_rank_alt": 4.296449184417725,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.8043636083602905,
+      "test_acc_linear": 0.7979458570480347,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.76218181848526,
+      "test_acc_knn": 0.758316695690155,
+      "eff_rank": 5.246007919311523,
+      "wall_time_s": 0.006765127182006836,
+      "val_acc_linear_alt": 0.807272732257843,
+      "test_acc_linear_alt": 0.8030357956886292,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7760000228881836,
+      "test_acc_knn_alt": 0.7753135561943054,
+      "eff_rank_alt": 4.379871845245361,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.7985454797744751,
+      "test_acc_linear": 0.7877658605575562,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.7898181676864624,
+      "test_acc_knn": 0.7799491286277771,
+      "eff_rank": 4.073831558227539,
+      "wall_time_s": 0.008687019348144531,
+      "val_acc_linear_alt": 0.7898181676864624,
+      "test_acc_linear_alt": 0.8015815019607544,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7687272429466248,
+      "test_acc_knn_alt": 0.7712234258651733,
+      "eff_rank_alt": 4.055798530578613,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.8261818289756775,
+      "test_acc_linear": 0.8121250867843628,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.774545431137085,
+      "test_acc_knn": 0.7680421471595764,
+      "eff_rank": 3.474809169769287,
+      "wall_time_s": 0.00773310661315918,
+      "val_acc_linear_alt": 0.8145454525947571,
+      "test_acc_linear_alt": 0.8036720752716064,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7847272753715515,
+      "test_acc_knn_alt": 0.7781312465667725,
+      "eff_rank_alt": 4.596364974975586,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8130909204483032,
+      "test_acc_linear": 0.8158516883850098,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.7701818346977234,
+      "test_acc_knn": 0.7758589386940002,
+      "eff_rank": 4.095990180969238,
+      "wall_time_s": 0.008163213729858398,
+      "val_acc_linear_alt": 0.8029090762138367,
+      "test_acc_linear_alt": 0.7983093857765198,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7789090871810913,
+      "test_acc_knn_alt": 0.773586630821228,
+      "eff_rank_alt": 4.704225540161133,
+      "checkpoint": "benchmarks/paper/models_untrained/AmazonComputers/gin/bgrl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8023723006248474,
+      "std": 0.009663161408928795
+    },
+    "test_acc_knn": {
+      "mean": 0.7718142211437226,
+      "std": 0.006968068034152168
+    },
+    "eff_rank": {
+      "mean": 4.108225011825562,
+      "std": 0.6351711613242614
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8023086667060852,
+      "std": 0.00276953340220733
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.7735139071941376,
+      "std": 0.00441571319111667
+    },
+    "eff_rank_alt": {
+      "mean": 4.096950387954712,
+      "std": 0.43221604206740843
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261027T033218Z",
+    "git": {
+      "commit": "c4651a628133d8ac0c3309fd445eb13a14e8d738",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

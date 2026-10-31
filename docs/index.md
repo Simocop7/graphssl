@@ -1,14 +1,17 @@
 # GraphSSL
 
 A modular Python library for **Self-Supervised Learning on graphs**, built on PyTorch and
-PyTorch Geometric. No Lightning, no Hydra — clean, readable training loops you can step
-through with a debugger.
+PyTorch Geometric, and the instrument of a controlled study of how graph SSL methods are
+evaluated. No Lightning, no Hydra — clean, readable training loops you can step through
+with a debugger.
 
 !!! info "Status: Alpha"
-    All models train end-to-end and pass tests. All 7 SSL methods are benchmarked under a
-    shared protocol on the citation networks (two backbones) and on ZINC, and BGRL is
-    reproduced on ogbn-arxiv with the protocol of its paper (see [Benchmarks](benchmarks.md)).
-    What changed since 0.1.0 is in the [changelog](changelog.md).
+    All eight SSL objectives train end-to-end with every backbone and pass the test suite. The
+    [Evaluation Study](study.md) compares them under one protocol on six node-classification
+    datasets and ogbn-arxiv, with three backbones, and measures how much of a result comes from
+    the objective, the backbone, the probe and the training settings. [Benchmarks](benchmarks.md)
+    has the per-method tables of the citation graphs and ZINC, and a reproduction of BGRL on
+    ogbn-arxiv with the protocol of its paper.
 
 ## Supported methods
 
@@ -34,10 +37,17 @@ Comparing SSL paradigms on graphs today usually means stitching together several
 official repositories — different frameworks, different encoders, different evaluation
 protocols — before you can trust that a difference in reported accuracy reflects the method
 and not the harness. GraphSSL puts bootstrapping (BGRL, AFGRL), redundancy-reduction (VICReg,
-Barlow Twins), self-distillation (GraphDINO), contrastive (GraphCL) and mutual-information
-(DGI) methods behind one identical construction and training API, so swapping one for another
+Barlow Twins), self-distillation (GraphDINO), contrastive (GraphCL), mutual-information (DGI)
+and masked-reconstruction (GraphMAE) methods behind one identical construction and training API, so swapping one for another
 is a one-line config change — see [Architecture](architecture.md) for how that's enforced, not
 just documented.
+
+Holding everything else fixed also makes the harness itself measurable. Every result is
+stored with its configuration and code version, every model can be saved and scored again
+with another probe or split without retraining, and every number is read against the same
+encoder left untrained. The [Evaluation Study](study.md) uses this to show that a frozen
+representation is mostly its backbone, and that the probe decides how large the objective's
+contribution looks.
 
 ## Quick start
 

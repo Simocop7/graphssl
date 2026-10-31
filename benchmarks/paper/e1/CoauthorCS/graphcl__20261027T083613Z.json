@@ -1,0 +1,212 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9312602281570435,
+      "test_acc_linear": 0.9374105334281921,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9230769276618958,
+      "test_acc_knn": 0.9260925650596619,
+      "eff_rank": 61.729576110839844,
+      "wall_time_s": 1063.2004771232605,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9350790977478027,
+      "test_acc_linear": 0.9377514123916626,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9225313663482666,
+      "test_acc_knn": 0.9261607527732849,
+      "eff_rank": 62.5074577331543,
+      "wall_time_s": 1061.9780850410461,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9372613430023193,
+      "test_acc_linear": 0.9402059316635132,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9219858050346375,
+      "test_acc_knn": 0.9255471229553223,
+      "eff_rank": 62.50999069213867,
+      "wall_time_s": 1046.567629814148,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9334424734115601,
+      "test_acc_linear": 0.9389104843139648,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.924168050289154,
+      "test_acc_knn": 0.9261607527732849,
+      "eff_rank": 60.87211227416992,
+      "wall_time_s": 1044.552598953247,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9323513507843018,
+      "test_acc_linear": 0.937274158000946,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.924168050289154,
+      "test_acc_knn": 0.9265016913414001,
+      "eff_rank": 62.37736892700195,
+      "wall_time_s": 1062.8664238452911,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.938897967338562,
+      "test_acc_linear": 0.9358423948287964,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9225313663482666,
+      "test_acc_knn": 0.926228940486908,
+      "eff_rank": 61.61703109741211,
+      "wall_time_s": 1062.6125819683075,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.9312602281570435,
+      "test_acc_linear": 0.9392513632774353,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9219858050346375,
+      "test_acc_knn": 0.9253426194190979,
+      "eff_rank": 60.68706130981445,
+      "wall_time_s": 1078.1230010986328,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.9307146668434143,
+      "test_acc_linear": 0.9377514123916626,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9274413585662842,
+      "test_acc_knn": 0.9274562001228333,
+      "eff_rank": 60.623374938964844,
+      "wall_time_s": 1065.4686179161072,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.9372613430023193,
+      "test_acc_linear": 0.9392513632774353,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9258046746253967,
+      "test_acc_knn": 0.9260925650596619,
+      "eff_rank": 62.28437042236328,
+      "wall_time_s": 1070.3651280403137,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.9421712756156921,
+      "test_acc_linear": 0.9364559650421143,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9225313663482666,
+      "test_acc_knn": 0.9258198738098145,
+      "eff_rank": 60.64190673828125,
+      "wall_time_s": 1061.4855017662048,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9380105018615723,
+      "std": 0.001368821328906072
+    },
+    "test_acc_knn": {
+      "mean": 0.926140308380127,
+      "std": 0.0005740958214536223
+    },
+    "eff_rank": {
+      "mean": 61.585025024414065,
+      "std": 0.8147311929028729
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261027T083613Z",
+    "git": {
+      "commit": "97533a0e9a3dead39d53ef57ebbddcca835a6215",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

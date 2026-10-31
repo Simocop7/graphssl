@@ -245,8 +245,11 @@ def fig_probes(analysis: Path, out: Path) -> None:
 
 
 def tau_groups(analysis: Path) -> list[tuple[str, pd.DataFrame]]:
-    """(label, rows with tau, tau_lo, tau_hi) for each factor that changes."""
+    """(label, rows with tau, tau_lo, tau_hi) for each factor that changes. The six datasets of
+    E1 only, as in every other figure: ogbn-arxiv (3 seeds, mini-batch) is reported in its own
+    section."""
     k = pd.read_csv(analysis / "kendall_tau.csv")
+    k = k[k.dataset.isin(DATASETS)]
     vs_ref = k[k.comparison.str.endswith(f" vs {REFERENCE}")]
     linear = vs_ref[~vs_ref.comparison.str.startswith("knn")]
     knn = vs_ref[vs_ref.comparison.str.startswith("knn")]
@@ -288,7 +291,9 @@ def fig_tau(analysis: Path, out: Path) -> None:
         ax.text(1.04, y, f"median {med:.2f}  (n = {len(tau)})", va="center", fontsize=6.8,
                 color=INK_2, transform=ax.get_yaxis_transform())  # fmt: skip
     ax.set_yticks(ys, [label for label, _ in groups])
-    ax.set_xlim(-0.3, 1.02)
+    # never clip a point or an interval: the axis starts at -0.3 or below the lowest of them
+    lowest = min(np.nanmin(rows[["tau", "tau_lo"]].to_numpy(dtype=float)) for _, rows in groups)
+    ax.set_xlim(min(-0.3, lowest - 0.05), 1.02)
     ax.axvline(0, color=MUTED, lw=0.6)
     ax.set_xlabel("Kendall's τ between the two rankings of the objectives")
     ax.grid(axis="y", visible=False)
@@ -442,17 +447,18 @@ def tab_e3(analysis: Path, out: Path) -> None:
     e3 = pd.read_csv(analysis / "e3" / "e3.csv")
     lift = (e3.tuned - e3.shared).groupby([e3.dataset, e3.backbone, e3.method]).first()
     methods = objectives(e3)
-    lines = [r"\begin{tabular}{llrrr" + "r" * len(methods) + "}", r"\toprule",
-             r" & & & \multicolumn{2}{c}{Spread} & \multicolumn{" + str(len(methods))
+    lines = [r"\begin{tabular}{llrrr" + "r" * (len(methods) + 1) + "}", r"\toprule",
+             r" & & & \multicolumn{2}{c}{Spread} & \multicolumn{" + str(len(methods) + 1)
              + r"}{c}{Lift from tuning (points)} \\",
-             r"\cmidrule(lr){4-5} \cmidrule(lr){6-" + str(5 + len(methods)) + "}",
+             r"\cmidrule(lr){4-5} \cmidrule(lr){6-" + str(6 + len(methods)) + "}",
              " & ".join(["Data", "Backbone", r"$\tau$ shared vs tuned", "shared", "tuned",
-                         *[NAMES[m] for m in methods]]) + r" \\",
+                         "Mean", *[NAMES[m] for m in methods]]) + r" \\",
              r"\midrule"]  # fmt: skip
     for r in rank.itertuples():
-        cells = [r.dataset, BACKBONE_NAMES[r.backbone],
+        cells = [DATASET_NAMES[r.dataset], BACKBONE_NAMES[r.backbone],
                  f"{r.tau:.2f} [{r.tau_lo:.2f}, {r.tau_hi:.2f}]",
-                 f"{r.spread_shared:.1f}", f"{r.spread_tuned:.1f}"]  # fmt: skip
+                 f"{r.spread_shared:.1f}", f"{r.spread_tuned:.1f}",
+                 f"{signed(r.mean_lift)} [{signed(r.mean_lift_lo)}, {signed(r.mean_lift_hi)}]"]  # fmt: skip
         cells += [signed(lift[(r.dataset, r.backbone, m)]) for m in methods]
         lines.append(" & ".join(cells) + r" \\")
     lines += [r"\bottomrule", r"\end{tabular}"]

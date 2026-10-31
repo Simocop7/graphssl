@@ -1,0 +1,211 @@
+{
+  "dataset": "CiteSeer",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6800000071525574,
+      "test_acc_linear": 0.6480000019073486,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5860000252723694,
+      "test_acc_knn": 0.5830000042915344,
+      "eff_rank": 141.3262176513672,
+      "wall_time_s": 98.20232605934143,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6639999747276306,
+      "test_acc_linear": 0.6790000200271606,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6179999709129333,
+      "test_acc_knn": 0.5849999785423279,
+      "eff_rank": 140.79026794433594,
+      "wall_time_s": 96.84263014793396,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6679999828338623,
+      "test_acc_linear": 0.6729999780654907,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6039999723434448,
+      "test_acc_knn": 0.5699999928474426,
+      "eff_rank": 139.86166381835938,
+      "wall_time_s": 106.64940690994263,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6759999990463257,
+      "test_acc_linear": 0.6790000200271606,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6119999885559082,
+      "test_acc_knn": 0.5950000286102295,
+      "eff_rank": 140.0875244140625,
+      "wall_time_s": 106.80477690696716,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6299999952316284,
+      "test_acc_linear": 0.628000020980835,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.550000011920929,
+      "test_acc_knn": 0.5640000104904175,
+      "eff_rank": 139.43695068359375,
+      "wall_time_s": 105.0181839466095,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.656000018119812,
+      "test_acc_linear": 0.6710000038146973,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6240000128746033,
+      "test_acc_knn": 0.5889999866485596,
+      "eff_rank": 141.3368682861328,
+      "wall_time_s": 105.34749293327332,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6740000247955322,
+      "test_acc_linear": 0.675000011920929,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5920000076293945,
+      "test_acc_knn": 0.5870000123977661,
+      "eff_rank": 138.9552764892578,
+      "wall_time_s": 106.81778120994568,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.6759999990463257,
+      "test_acc_linear": 0.6499999761581421,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6200000047683716,
+      "test_acc_knn": 0.6000000238418579,
+      "eff_rank": 141.11053466796875,
+      "wall_time_s": 106.38546323776245,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.671999990940094,
+      "test_acc_linear": 0.6710000038146973,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6159999966621399,
+      "test_acc_knn": 0.6200000047683716,
+      "eff_rank": 140.3100128173828,
+      "wall_time_s": 106.46937704086304,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.6840000152587891,
+      "test_acc_linear": 0.6660000085830688,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6140000224113464,
+      "test_acc_knn": 0.5950000286102295,
+      "eff_rank": 139.752197265625,
+      "wall_time_s": 106.46945786476135,
+      "checkpoint": "benchmarks/paper/models/CiteSeer/transformer/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.664000004529953,
+      "std": 0.016673333020564406
+    },
+    "test_acc_knn": {
+      "mean": 0.5888000071048737,
+      "std": 0.015619081467785257
+    },
+    "eff_rank": {
+      "mean": 140.2967514038086,
+      "std": 0.8243549734431128
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261026T062125Z",
+    "git": {
+      "commit": "c4651a628133d8ac0c3309fd445eb13a14e8d738",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

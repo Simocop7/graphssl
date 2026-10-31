@@ -1,0 +1,212 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.936170220375061,
+      "test_acc_linear": 0.9357742071151733,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.926895797252655,
+      "test_acc_knn": 0.9270471334457397,
+      "eff_rank": 97.57038879394531,
+      "wall_time_s": 254.57886290550232,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9383524060249329,
+      "test_acc_linear": 0.937274158000946,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9187124967575073,
+      "test_acc_knn": 0.9275925755500793,
+      "eff_rank": 99.02252960205078,
+      "wall_time_s": 258.5364968776703,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9399890899658203,
+      "test_acc_linear": 0.9368650913238525,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9230769276618958,
+      "test_acc_knn": 0.9315469861030579,
+      "eff_rank": 96.8365707397461,
+      "wall_time_s": 246.17529606819153,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9350790977478027,
+      "test_acc_linear": 0.9362514615058899,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9274413585662842,
+      "test_acc_knn": 0.9304561018943787,
+      "eff_rank": 96.10131072998047,
+      "wall_time_s": 250.2268569469452,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9405346512794495,
+      "test_acc_linear": 0.9365923404693604,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.929623544216156,
+      "test_acc_knn": 0.9294334053993225,
+      "eff_rank": 100.9556884765625,
+      "wall_time_s": 248.80388808250427,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.9367157816886902,
+      "test_acc_linear": 0.9346833229064941,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9252591133117676,
+      "test_acc_knn": 0.9277970790863037,
+      "eff_rank": 97.46092224121094,
+      "wall_time_s": 249.21016716957092,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.9356246590614319,
+      "test_acc_linear": 0.9377514123916626,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9258046746253967,
+      "test_acc_knn": 0.9283425211906433,
+      "eff_rank": 97.52508544921875,
+      "wall_time_s": 248.16034698486328,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.9339879751205444,
+      "test_acc_linear": 0.9393877387046814,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9258046746253967,
+      "test_acc_knn": 0.9313424825668335,
+      "eff_rank": 97.61483001708984,
+      "wall_time_s": 247.30474209785461,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.9339879751205444,
+      "test_acc_linear": 0.937274158000946,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9203491806983948,
+      "test_acc_knn": 0.9275243878364563,
+      "eff_rank": 95.70747375488281,
+      "wall_time_s": 244.1251928806305,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.9345335364341736,
+      "test_acc_linear": 0.9364559650421143,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9208946824073792,
+      "test_acc_knn": 0.9273880124092102,
+      "eff_rank": 99.62339782714844,
+      "wall_time_s": 245.8983280658722,
+      "checkpoint": "benchmarks/paper/models/CoauthorCS/transformer/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9368309855461121,
+      "std": 0.0012490358315012766
+    },
+    "test_acc_knn": {
+      "mean": 0.9288470685482025,
+      "std": 0.0017158839375078527
+    },
+    "eff_rank": {
+      "mean": 97.8418197631836,
+      "std": 1.6065908462909464
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261027T091758Z",
+    "git": {
+      "commit": "97533a0e9a3dead39d53ef57ebbddcca835a6215",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9018181562423706,
+      "test_acc_linear": 0.8895655274391174,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8865454792976379,
+      "test_acc_knn": 0.8698418736457825,
+      "eff_rank": 86.22582244873047,
+      "wall_time_s": 240.4577271938324,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonComputers/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9076363444328308,
+      "test_acc_linear": 0.8889293074607849,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8821818232536316,
+      "test_acc_knn": 0.8681148886680603,
+      "eff_rank": 87.4495620727539,
+      "wall_time_s": 243.76664781570435,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonComputers/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9076363444328308,
+      "test_acc_linear": 0.8936557173728943,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8814545273780823,
+      "test_acc_knn": 0.8742955923080444,
+      "eff_rank": 87.66143798828125,
+      "wall_time_s": 242.18514227867126,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonComputers/gcn/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9010909199714661,
+      "test_acc_linear": 0.8923832178115845,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8792726993560791,
+      "test_acc_knn": 0.8701145052909851,
+      "eff_rank": 88.88851165771484,
+      "wall_time_s": 240.42073464393616,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonComputers/gcn/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8981817960739136,
+      "test_acc_linear": 0.8933830261230469,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8799999952316284,
+      "test_acc_knn": 0.8725686073303223,
+      "eff_rank": 88.44196319580078,
+      "wall_time_s": 242.3451371192932,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonComputers/gcn/graphcl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8915833592414856,
+      "std": 0.0021959553091339123
+    },
+    "test_acc_knn": {
+      "mean": 0.8709870934486389,
+      "std": 0.002437716639191049
+    },
+    "eff_rank": {
+      "mean": 87.73345947265625,
+      "std": 1.0240699804838742
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261029T194250Z",
+    "git": {
+      "commit": "a3b146cd9418020726f7a22436960819be868dda",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

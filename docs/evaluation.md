@@ -49,7 +49,7 @@ def evaluate(model):
     return {"linear": linear["test_acc"], "knn": knn["test_acc"], "rank": effective_rank(z)}
 
 
-untrained = evaluate(model)  # the encoder as initialised, before any training
+untrained = evaluate(model)  # the encoder as initialized, before any training
 
 trainer = DINOTrainer(device="cpu")
 optimizer = AdamW(model.student_parameters(), lr=5e-4, weight_decay=1e-5)
@@ -66,29 +66,35 @@ One run of this script gave:
 | After 300 steps of BGRL | 79.8 | 73.1 | 172 |
 
 **Measure the untrained encoder every time.** A graph encoder with random weights already
-mixes each node's features with its neighbours', and a probe on top of that is far from
+mixes each node's features with its neighbors', and a probe on top of that is far from
 chance: 72% here, where guessing gives 14%. What pretraining added is 8 points, not 80. The
 benchmark tables report this row for the same reason, and it differs a lot between
 backbones (an untrained GIN gives 42% on Cora).
 
 What the three numbers are:
 
-- **`LogRegEvaluator`** is the linear probe: an L2-regularised logistic regression on the
+- **`LogRegEvaluator`** is the linear probe: an L2-regularized logistic regression on the
   embeddings, standardized with the training rows' statistics and fitted to convergence
-  with L-BFGS from a zero initialisation. It has no seed and no learning rate, so the same
+  with L-BFGS from a zero initialization. It has no seed and no learning rate, so the same
   embeddings always give the same result. The L2 strength is the one with the best
   validation accuracy among `weight_decay` (by default 10 down to 1e-6). `evaluate()`
   returns `val_acc`, `test_acc`, the selected `weight_decay` and `converged`. With 140
   training nodes it takes a few seconds; with the 91k of ogbn-arxiv, minutes.
-- **`KNNEvaluator`** is a cosine k-nearest-neighbour vote. It needs no fit and reads the
+- **`KNNEvaluator`** is a cosine k-nearest-neighbor vote. It needs no fit and reads the
   geometry of the embedding space directly, so it can disagree with the linear probe.
 - **`effective_rank`** says how many directions the embeddings use (1 = a single direction,
   256 = all of them here). A low rank after training means a dimensional collapse that the
   accuracy alone may hide. A higher rank is not better by itself.
 
 "Linear evaluation" is not one protocol across codebases, and the choice changes how much
-pretraining appears to add: see
-[Linear evaluation is not one protocol](benchmarks.md#linear-evaluation-is-not-one-protocol).
+pretraining appears to add. What matters most is **regularization**: with a hundred or so
+labeled nodes, an unregularised classifier overfits the embeddings of a trained encoder,
+while the raw embeddings of an untrained one are small enough that a short optimization
+barely fits them. The bias falls on one side, and the gain of pretraining shrinks or even
+changes sign. Standardizing the embeddings and choosing the L2 strength on validation, as
+`LogRegEvaluator` does, removes it ([Evaluation Study](study.md#the-probe-decides-how-large-the-gain-looks);
+on ogbn-arxiv the same probes go the other way:
+[Linear evaluation is not one protocol](benchmarks.md#linear-evaluation-is-not-one-protocol)).
 When you compare with a number from a paper, check how its probe was fitted.
 
 For a **regression** target use `RidgeEvaluator`: a closed-form ridge regression on the
@@ -164,17 +170,21 @@ test_acc = (prediction[test_idx] == data.y[test_idx]).float().mean().item()
 For a regression target add `"task": "regression"` to the supervised config and pass the
 number of targets as `num_classes`.
 
-The reference for a fine-tuned model is **the same training from a random initialisation**:
-build the supervised model, skip the `load_state_dict` line, and train it identically. On
-ZINC, three of the seven objectives beat that reference after fine-tuning, while with a
-frozen probe none can be told apart from the untrained encoder
-([results](benchmarks.md#molecules-zinc-graph-level-regression)): the two evaluations answer
+The reference for a fine-tuned model is **the same training from a random initialization**:
+build the supervised model, skip the `load_state_dict` line, and train it identically. Give
+both the same total budget and tune the fine-tuning learning rate for both, or the comparison
+favors the pretrained model. On ZINC, with a frozen probe none of the seven objectives can be
+told apart from the untrained encoder, while after fine-tuning three of them reach a lower
+error than the from-scratch reference under one untuned protocol in which neither training has converged
+([results](benchmarks.md#molecules-zinc-graph-level-regression)). The two evaluations answer
 different questions, so run the one that matches how the encoder will be used.
 
 ## How many runs
 
 A seed fixes the initial weights and the order of the data, not the result: on a GPU two
 runs with the same seed end at different numbers, and on ZINC the difference is as large as
-the spread between seeds. Report a mean and a standard deviation over several seeds (the
-benchmarks here use 10), and do not read a difference smaller than that deviation as an
-effect.
+the spread between seeds. The same seed on another device draws other augmentations, so with
+a GIN encoder a rerun elsewhere is close to a new seed
+([Evaluation Study](study.md#a-seed-does-not-pin-a-result-down)). Report a mean and a
+standard deviation over several seeds (the benchmarks here use 10), and do not read a
+difference smaller than that deviation as an effect.

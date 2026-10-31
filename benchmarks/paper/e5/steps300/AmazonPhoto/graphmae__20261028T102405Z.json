@@ -1,0 +1,137 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9124183058738708,
+      "test_acc_linear": 0.9153594970703125,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9241830110549927,
+      "test_acc_knn": 0.9205882549285889,
+      "eff_rank": 114.40035247802734,
+      "wall_time_s": 209.8788731098175,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/graphmae_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9176470637321472,
+      "test_acc_linear": 0.9254902005195618,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9202614426612854,
+      "test_acc_knn": 0.9194444417953491,
+      "eff_rank": 112.69522857666016,
+      "wall_time_s": 216.5784990787506,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/graphmae_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9111111164093018,
+      "test_acc_linear": 0.925000011920929,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9215686321258545,
+      "test_acc_knn": 0.9210784435272217,
+      "eff_rank": 111.48245239257812,
+      "wall_time_s": 226.01359677314758,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/graphmae_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.915032684803009,
+      "test_acc_linear": 0.9230391979217529,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9189542531967163,
+      "test_acc_knn": 0.9197712540626526,
+      "eff_rank": 114.40830993652344,
+      "wall_time_s": 216.69149708747864,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/graphmae_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.915032684803009,
+      "test_acc_linear": 0.921241819858551,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.915032684803009,
+      "test_acc_knn": 0.9160130620002747,
+      "eff_rank": 112.84519958496094,
+      "wall_time_s": 215.19145822525024,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/AmazonPhoto/gcn/graphmae_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9220261454582215,
+      "std": 0.004090513472480823
+    },
+    "test_acc_knn": {
+      "mean": 0.9193790912628174,
+      "std": 0.0019898549092288507
+    },
+    "eff_rank": {
+      "mean": 113.16630859375,
+      "std": 1.2475807316587948
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261028T102405Z",
+    "git": {
+      "commit": "63396cc73a5d2d4e448eb9e7c85ac083a1b37e4e",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

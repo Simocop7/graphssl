@@ -1,0 +1,121 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9236224889755249,
+      "test_acc_linear": 0.9228881001472473,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9203491806983948,
+      "test_acc_knn": 0.9190700054168701,
+      "eff_rank": 127.984619140625,
+      "wall_time_s": 433.2921254634857,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9290780425071716,
+      "test_acc_linear": 0.9264335036277771,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9225313663482666,
+      "test_acc_knn": 0.9182518720626831,
+      "eff_rank": 126.09783172607422,
+      "wall_time_s": 431.9100375175476,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9247136116027832,
+      "test_acc_linear": 0.9242517352104187,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.914893627166748,
+      "test_acc_knn": 0.9175018668174744,
+      "eff_rank": 126.7666015625,
+      "wall_time_s": 430.7711658477783,
+      "checkpoint": "benchmarks/paper/models_e5/steps300/CoauthorCS/gcn/graphcl_seed2.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9245244463284811,
+      "std": 0.0017883651683518907
+    },
+    "test_acc_knn": {
+      "mean": 0.9182745814323425,
+      "std": 0.0007843159142408522
+    },
+    "eff_rank": {
+      "mean": 126.9496841430664,
+      "std": 0.956624853538181
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261029T213645Z",
+    "git": {
+      "commit": "a3b146cd9418020726f7a22436960819be868dda",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

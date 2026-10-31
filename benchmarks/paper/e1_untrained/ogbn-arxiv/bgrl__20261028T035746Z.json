@@ -1,0 +1,107 @@
+{
+  "dataset": "ogbn-arxiv",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 0,
+    "steps_per_epoch": 166,
+    "max_steps": null,
+    "batch": 1024,
+    "fanout": 10,
+    "input_nodes": "all",
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": null
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 0,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "status": "ok",
+      "steps_per_epoch": 166,
+      "wall_time_s": 0.05751466751098633,
+      "checkpoint": "benchmarks/paper/models_untrained/ogbn-arxiv/gin/bgrl_seed0.pt",
+      "val_acc_knn": 0.5484412312507629,
+      "test_acc_knn": 0.5329095125198364,
+      "eff_rank": 3.8465487957000732
+    },
+    {
+      "seed": 1,
+      "status": "ok",
+      "steps_per_epoch": 166,
+      "wall_time_s": 0.02108287811279297,
+      "checkpoint": "benchmarks/paper/models_untrained/ogbn-arxiv/gin/bgrl_seed1.pt",
+      "val_acc_knn": 0.5503876209259033,
+      "test_acc_knn": 0.5320864915847778,
+      "eff_rank": 3.70405650138855
+    },
+    {
+      "seed": 2,
+      "status": "ok",
+      "steps_per_epoch": 166,
+      "wall_time_s": 0.020998477935791016,
+      "checkpoint": "benchmarks/paper/models_untrained/ogbn-arxiv/gin/bgrl_seed2.pt",
+      "val_acc_knn": 0.554448127746582,
+      "test_acc_knn": 0.5370450615882874,
+      "eff_rank": 3.4346985816955566
+    }
+  ],
+  "aggregate": {
+    "test_acc_knn": {
+      "mean": 0.5340136885643005,
+      "std": 0.0026573027062798873
+    },
+    "eff_rank": {
+      "mean": 3.6617679595947266,
+      "std": 0.20915637754842065
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261028T035746Z",
+    "git": {
+      "commit": "ab12e16be53490c6349e3736274d6a87765f0f51",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "gpu": "NVIDIA A2",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}
