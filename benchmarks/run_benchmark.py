@@ -81,7 +81,7 @@ from pathlib import Path
 import torch
 import torch_geometric
 from embedding_geometry import geometry, linear_cka, random_pairs
-from node_datasets import FULL_BATCH_DATASETS, load_node_dataset
+from node_datasets import EXTRA_FULL_BATCH_DATASETS, FULL_BATCH_DATASETS, load_node_dataset
 from torch.optim import SGD, Adam, AdamW
 
 from graphssl.config import schema
@@ -154,7 +154,12 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--dataset", nargs="+", default=["Cora"], choices=FULL_BATCH_DATASETS)
+    p.add_argument(
+        "--dataset",
+        nargs="+",
+        default=["Cora"],
+        choices=[*FULL_BATCH_DATASETS, *EXTRA_FULL_BATCH_DATASETS],
+    )
     p.add_argument(
         "--model",
         nargs="+",

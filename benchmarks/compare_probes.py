@@ -25,6 +25,12 @@ four protocols:
 The first three are re-implementations written from the sources named above, as read on
 2026-10-13; they are not imports of those packages.
 
+Reference rows without any encoder, scored by the same protocols: ``--raw-features`` (the
+input features), ``--propagated K ...`` (the features propagated K times over the
+GCN-normalized adjacency, the parameter-free features of SGC) and ``--pca-dim D`` (the first D
+principal components of the most propagated ones, a label-free compression to the width of
+the encoders).
+
 Usage::
 
     # the seven models of the ogbn-arxiv stress test, and the same encoders untrained
@@ -110,6 +116,23 @@ def parse_args() -> argparse.Namespace:
         "separates what the graph adds from what training adds",
     )
     p.add_argument(
+        "--propagated",
+        type=int,
+        nargs="+",
+        default=[],
+        metavar="K",
+        help="also score the features propagated K times over the GCN-normalized adjacency "
+        "(A^K X, self-loops, symmetric normalization: SGC's features, no parameters)",
+    )
+    p.add_argument(
+        "--pca-dim",
+        type=int,
+        default=0,
+        metavar="D",
+        help="with --propagated, also score the first D principal components of A^K X for the "
+        "largest K (exact, label-free; skipped when A^K X has at most D columns)",
+    )
+    p.add_argument(
         "--untrained",
         action="store_true",
         help="also score each distinct architecture at initialisation (--untrained-seed)",
@@ -152,8 +175,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out-dir", default="benchmarks/probes/run")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
-    if not args.checkpoints and not args.raw_features:
-        p.error("nothing to score: pass --checkpoints and/or --raw-features")
+    if not args.checkpoints and not args.raw_features and not args.propagated:
+        p.error("nothing to score: pass --checkpoints, --raw-features and/or --propagated")
+    if args.pca_dim and not args.propagated:
+        p.error("--pca-dim needs --propagated")
     if args.split_fractions is None:
         args.split_fractions = list(split_fractions(args.dataset))
     return args
@@ -330,7 +355,53 @@ def collect_models(args: argparse.Namespace) -> List[tuple]:
                 untrained[key] = (label, build, None)
     # No builder: the input features themselves, scored by the same probes.
     raw = [(RAW_FEATURES, None, None)] if args.raw_features else []
+    raw += [(propagated_name(k), None, None) for k in sorted(set(args.propagated))]
+    if args.propagated and args.pca_dim:
+        raw.append((pca_name(args.pca_dim, max(args.propagated)), None, None))
     return [*raw, *untrained.values(), *rows]
+
+
+def propagated_name(k: int) -> str:
+    return f"propagated A^{k}X"
+
+
+def pca_name(dim: int, k: int) -> str:
+    return f"PCA-{dim} of A^{k}X"
+
+
+def propagate(x: Tensor, edge_index: Tensor, num_nodes: int, k: int) -> Tensor:
+    """A^k x with A = D^-1/2 (A + I) D^-1/2, the propagation of GCN and SGC (no parameters)."""
+    from torch_geometric.utils import add_self_loops, degree
+
+    edges, _ = add_self_loops(edge_index, num_nodes=num_nodes)
+    deg = degree(edges[0], num_nodes)
+    weight = deg[edges[0]].rsqrt() * deg[edges[1]].rsqrt()
+    adj = torch.sparse_coo_tensor(edges, weight, (num_nodes, num_nodes)).coalesce()
+    for _ in range(k):
+        x = torch.sparse.mm(adj, x)
+    return x
+
+
+def principal_components(x: Tensor, dim: int) -> Tensor:
+    """Scores of the first ``dim`` principal components of ``x`` (exact, float64, no labels)."""
+    centred = x.double() - x.double().mean(0, keepdim=True)
+    eigvals, eigvecs = torch.linalg.eigh(centred.T @ centred)  # ascending
+    top = eigvecs[:, torch.argsort(eigvals, descending=True)[:dim]]
+    return (centred @ top).float()
+
+
+def input_features(name: str, data, args: argparse.Namespace) -> Tensor:
+    """The rows scored without any encoder: raw, propagated, or the PCA of the propagated."""
+    x = data.x.float()
+    if name == RAW_FEATURES:
+        return x
+    for k in sorted(set(args.propagated)):
+        if name == propagated_name(k):
+            return propagate(x, data.edge_index, data.num_nodes, k)
+    k = max(args.propagated)
+    if name == pca_name(args.pca_dim, k):
+        return principal_components(propagate(x, data.edge_index, data.num_nodes, k), args.pca_dim)
+    raise ValueError(f"unknown input-feature row {name!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +468,10 @@ def main() -> None:
     build: Optional[Callable[[], torch.nn.Module]]
     for name, build, checkpoint in collect_models(args):
         if build is None:
-            z, y = data.x.float(), data.y
+            if name.startswith("PCA-") and data.x.size(1) <= args.pca_dim:
+                print(f"  {name}: skipped, the features have {data.x.size(1)} columns")
+                continue
+            z, y = input_features(name, data, args), data.y
         else:
             z, y = extract_embeddings(build(), dm, device=str(device))
         assert y is not None

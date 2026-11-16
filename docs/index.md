@@ -46,7 +46,7 @@ Holding everything else fixed also makes the harness itself measurable. Every re
 stored with its configuration and code version, every model can be saved and scored again
 with another probe or split without retraining, and every number is read against the same
 encoder left untrained. The [Evaluation Study](study.md) uses this to show that a frozen
-representation is mostly its backbone, and that the probe decides how large the objective's
+representation resembles its backbone more than its objective, and that the probe decides how large the objective's
 contribution looks.
 
 ## Quick start
