@@ -10,6 +10,11 @@ fig_cka          CKA grouping (same backbone / same objective / neither) and the
 fig_probes       gain over the untrained encoder per objective under each probe, four GCN cells
 fig_tau          Kendall tau between method rankings when one factor changes
 fig_shares       share of variance of accuracy and gain per factor, per dataset
+fig_propagation  each GCN objective and the untrained GCN minus logistic regression on A^2X, per
+                 label set, with D and its interval (analysis/e6)
+fig_probe_scatter  average gain under the 100-step probe against the regularized probe, one point
+                 per dataset and backbone
+fig_rankings     rank of each objective under each backbone, per dataset
 tab_datasets.tex, tab_main_v2.tex, tab_probe_gains.tex, tab_e3.tex, tab_predict_v2.tex,
 tab_arxiv.tex    LaTeX tables for paper_tmlr/ (tab_arxiv only once its probe files exist)
 
@@ -28,7 +33,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from paper_figures import INK, INK_2, METHODS_V2, MUTED, NAMES, SERIES, plt, save
+from paper_figures import GRID, INK, INK_2, METHODS_V2, MUTED, NAMES, SERIES, plt, save
 
 DATASETS = ["Cora", "CiteSeer", "PubMed", "AmazonComputers", "AmazonPhoto", "CoauthorCS"]
 DATASET_NAMES = {
@@ -331,6 +336,162 @@ def fig_tau(analysis: Path, out: Path) -> None:
     ax.grid(axis="y", visible=False)
     fig.tight_layout()
     save(fig, out / "fig_tau")
+
+
+SSL_ONLY = list(METHODS_V2)  # the eight objectives, no untrained or supervised rows
+# Groups by how each comparison was made: seen after the six datasets' results; the test fixed in
+# advance (E6); computed after that rule was fixed but outside it (ogbn-arxiv and its year labels).
+PROPAGATION_ROWS = [
+    ("Six datasets, after the fact", DATASETS),
+    ("Test fixed in advance", ["WikiCS"]),
+    ("Outside the rule", ["ogbn-arxiv", "arxiv-year"]),
+]
+ROW_NAMES = {**DATASET_NAMES, "ogbn-arxiv": "ogbn-arxiv", "WikiCS": "WikiCS",
+             "arxiv-year": "arxiv-year (years)"}  # fmt: skip
+
+
+def fig_propagation(analysis: Path, out: Path) -> None:
+    """Each GCN objective (markers) and the untrained GCN (gray bar) minus logistic regression on
+    A^2X, per label set; black tick and line: D, the mean over the eight objectives, with its 95%
+    seed-bootstrap interval. All from analysis/e6 (probe better on validation; ogbn-arxiv and
+    arxiv-year: our probe only, as in tab_propagation)."""
+    ref = pd.read_csv(analysis / "e6" / "reference.csv")
+    ref = ref[ref.probe == "valsel"].set_index("dataset")
+    cells = pd.read_csv(analysis / "e6" / "cells.csv")
+    cells = cells[(cells.probe == "valsel") & (cells.backbone == "gcn")]
+    cells = cells.set_index(["dataset", "method"])["mean"]
+    rows: list[tuple[str, str | None]] = []  # (label, dataset or None for a group header)
+    for header, names in PROPAGATION_ROWS:
+        rows.append((header, None))
+        rows += [(ROW_NAMES[d], d) for d in names]
+    fig, ax = plt.subplots(figsize=(6.8, 3.6))
+    ys = np.arange(len(rows))[::-1].astype(float)
+    offsets = np.linspace(-0.26, 0.26, len(SSL_ONLY))
+    ax.axvline(0, color=INK, lw=1.2, ls=(0, (1, 1.5)), zorder=1)
+    for y, (label, d) in zip(ys, rows, strict=True):
+        if d is None:
+            ax.text(-0.01, y, label, transform=ax.get_yaxis_transform(), ha="right", va="center",
+                    fontsize=7.2, fontweight="bold", color=INK)  # fmt: skip
+            continue
+        a2x = ref.loc[d, "A2X"]
+        u = ref.loc[d, "untrained_gcn"] - a2x
+        ax.plot([u, u], [y - 0.32, y + 0.32], color=MUTED, lw=3.2, solid_capstyle="round",
+                zorder=2)  # fmt: skip
+        r = ref.loc[d]
+        ax.plot([r.D_lo, r.D_hi], [y, y], color=INK, lw=1.0, zorder=3)
+        ax.plot([r.D, r.D], [y - 0.34, y + 0.34], color=INK, lw=1.6, zorder=3)
+        for k, m in enumerate(SSL_ONLY):
+            shape, scale = marker(m)
+            ax.plot(cells.loc[(d, m)] - a2x, y + offsets[k], shape, ms=3.6 * scale,
+                    color=color(m), mec="white", mew=0.4, zorder=4)  # fmt: skip
+        ax.text(1.02, y, f"D = {r.D:+.1f} [{r.D_lo:+.1f}, {r.D_hi:+.1f}]".replace("-", "−"),
+                transform=ax.get_yaxis_transform(), va="center", fontsize=6.8,
+                color=INK_2)  # fmt: skip
+    ax.set_yticks([y for y, (_, d) in zip(ys, rows, strict=True) if d is not None],
+                  [label for label, d in rows if d is not None])  # fmt: skip
+    ax.set_ylim(ys[-1] - 0.6, ys[0] + 0.6)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel("Test accuracy minus logistic regression on Â²X (points), GCN")
+    handles = [objective_handle(m) for m in SSL_ONLY]
+    handles += [plt.Line2D([], [], color=MUTED, lw=3.2),
+                plt.Line2D([], [], color=INK, lw=1.6),
+                plt.Line2D([], [], color=INK, lw=1.2, ls=(0, (1, 1.5)))]  # fmt: skip
+    labels = [NAMES[m] for m in SSL_ONLY] + [
+        "Untrained GCN",
+        "Mean of the eight (D), 95% interval",
+        "Â²X",
+    ]
+    legend_below(fig, handles, labels, ncol=6)
+    fig.tight_layout(rect=(0, 0.1, 1, 1))
+    save(fig, out / "fig_propagation")
+
+
+FEW_LABELS = ["Cora", "CiteSeer", "PubMed"]  # public split: 20 labels per class
+MANY_LABELS = ["AmazonComputers", "AmazonPhoto", "CoauthorCS", "ogbn-arxiv"]
+BACKBONE_SHAPES = {"gcn": ("o", 1.0), "gin": ("s", 0.85), "transformer": ("^", 1.1)}
+# the cells the text quotes; label position in data coordinates (None: right of the point)
+PROBE_LABELLED = {("CiteSeer", "gcn"): None, ("ogbn-arxiv", "gcn"): None,
+                  ("CoauthorCS", "gin"): None, ("CoauthorCS", "gcn"): (-3.4, 14.0)}  # fmt: skip
+
+
+def fig_probe_scatter(analysis: Path, out: Path) -> None:
+    """Average gain of the eight objectives over the untrained encoder, under the 100-step probe
+    (y) against the regularized probe (x), one point per dataset and backbone. Above the diagonal
+    the short probe makes the gain look larger."""
+    cells = pd.read_csv(analysis / "cells.csv")
+    cells = cells[cells.method.isin(SSL_ONLY) & cells.probe.isin(["adam100", REFERENCE])]
+    gain = cells.groupby(["dataset", "backbone", "probe"]).gain.mean().unstack()
+    regimes = [(FEW_LABELS, SERIES[1], "20 labels per class (Cora, CiteSeer, PubMed)"),
+               (MANY_LABELS, SERIES[0], "Many labels (Amazon, Coauthor CS, ogbn-arxiv)")]  # fmt: skip
+    fig, ax = plt.subplots(figsize=(4.6, 3.9))
+    lo, hi = -4.0, 36.0
+    ax.plot([lo, hi], [lo, hi], color=MUTED, lw=0.9, ls=(0, (4, 2)), zorder=1)
+    ax.axhline(0, color=GRID, lw=0.7, zorder=0)
+    ax.axvline(0, color=GRID, lw=0.7, zorder=0)
+    for names, c, _ in regimes:
+        for d in names:
+            for b in BACKBONES:
+                x, y = gain.loc[(d, b), REFERENCE], gain.loc[(d, b), "adam100"]
+                shape, scale = BACKBONE_SHAPES[b]
+                ax.plot(x, y, shape, ms=6.0 * scale, color=c, mec="white", mew=0.7, zorder=3)
+                if (d, b) not in PROBE_LABELLED:
+                    continue
+                text, at = f"{ROW_NAMES[d]}, {BACKBONE_NAMES[b]}", PROBE_LABELLED[(d, b)]
+                if at is None:
+                    ax.annotate(text, (x, y), xytext=(6, -2), textcoords="offset points",
+                                fontsize=6.8, color=INK_2, va="center")  # fmt: skip
+                else:
+                    ax.annotate(text, (x, y), xytext=at, textcoords="data", fontsize=6.8,
+                                color=INK_2, va="bottom",
+                                arrowprops={"arrowstyle": "-", "color": MUTED, "lw": 0.6,
+                                            "shrinkA": 1, "shrinkB": 4})  # fmt: skip
+    ax.text(0.03, 0.80, "100-step probe shows a larger gain", transform=ax.transAxes, va="top",
+            fontsize=7, color=INK_2, style="italic")  # fmt: skip
+    ax.text(0.97, 0.03, "100-step probe shows a smaller gain", transform=ax.transAxes,
+            ha="right", va="bottom", fontsize=7, color=INK_2, style="italic")  # fmt: skip
+    ax.set_xlim(lo, hi)
+    ax.set_ylim(lo, hi)
+    ax.set_aspect("equal")
+    ax.set_xlabel("Gain under the regularized probe (points)")
+    ax.set_ylabel("Gain under the 100-step probe (points)")
+    # color = number of labels, shape = backbone: one legend row each
+    legend_below(fig, [dot(c, "o", 1.25) for _, c, _ in regimes],
+                 [lab for _, _, lab in regimes], ncol=1, y=0.055)  # fmt: skip
+    legend_below(fig, [dot(INK_2, *BACKBONE_SHAPES[b]) for b in BACKBONES],
+                 [BACKBONE_NAMES[b] for b in BACKBONES], ncol=3)  # fmt: skip
+    fig.tight_layout(rect=(0, 0.16, 1, 1))
+    save(fig, out / "fig_probe_scatter")
+
+
+def fig_rankings(analysis: Path, out: Path) -> None:
+    """Rank of each objective (1 = best mean accuracy, regularized probe) under each backbone,
+    one panel per dataset; a line follows one objective across the backbones."""
+    cells = reference_cells(analysis)
+    cells = cells[cells.method.isin(SSL_ONLY)]
+    fig, axes = plt.subplots(2, 3, figsize=(6.8, 4.1))
+    n = len(SSL_ONLY)
+    for ax, d in zip(axes.flat, DATASETS, strict=True):
+        g = cells[cells.dataset == d]
+        rank = {b: g[g.backbone == b].set_index("method").acc.rank(ascending=False)
+                for b in BACKBONES}  # fmt: skip
+        for m in SSL_ONLY:
+            ys = [rank[b][m] for b in BACKBONES]
+            shape, scale = marker(m)
+            ax.plot(range(len(BACKBONES)), ys, color=color(m), lw=1.1, alpha=0.85, zorder=2)
+            ax.plot(range(len(BACKBONES)), ys, shape, ms=4.2 * scale, color=color(m),
+                    mec="white", mew=0.5, ls="", zorder=3)  # fmt: skip
+        ax.set_xticks(range(len(BACKBONES)), [BACKBONE_NAMES[b] for b in BACKBONES])
+        ax.set_xlim(-0.25, len(BACKBONES) - 0.75)
+        ax.set_ylim(n + 0.6, 0.4)
+        ax.set_yticks(range(1, n + 1))
+        ax.grid(axis="x", visible=False)
+        ax.set_title(DATASET_NAMES[d], color=INK, fontsize=8.5, fontweight="bold")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("Rank (1 = best)")
+    legend_below(fig, [objective_handle(m) for m in SSL_ONLY], [NAMES[m] for m in SSL_ONLY],
+                 ncol=len(SSL_ONLY))  # fmt: skip
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    save(fig, out / "fig_rankings")
 
 
 SHARE_DESIGNS = [
@@ -637,6 +798,9 @@ def main() -> None:
     fig_probes(args.analysis, args.out)
     fig_tau(args.analysis, args.out)
     fig_shares(args.analysis, args.out)
+    fig_propagation(args.analysis, args.out)
+    fig_probe_scatter(args.analysis, args.out)
+    fig_rankings(args.analysis, args.out)
     tab_datasets(args.analysis, args.out)
     tab_main(args.analysis, args.out)
     tab_probe_gains(args.analysis, args.out)

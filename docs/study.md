@@ -74,6 +74,8 @@ the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `
 
 ## With a GCN, training rarely beats averaging over the graph
 
+![Each GCN objective and the untrained GCN minus logistic regression on Â²X, per dataset](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_propagation.png)
+
 - **On the six datasets.** Logistic regression on Â²X, which has no parameters, is above the
   average GCN objective by 0.2 to 5.5 points, and by 1.0 on ogbn-arxiv. Over the three backbones,
   16 of the 144 trained models are above it, ten of them on Coauthor CS and Amazon Photo.
@@ -89,7 +91,7 @@ the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `
 
 ## The probe decides how large the gain looks
 
-![Gain over the untrained encoder of each objective under each probe](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_probes.png)
+![Mean gain under the 100-step probe against the regularized probe, per dataset and backbone](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_probe_scatter.png)
 
 - **In both directions.** With a GCN, the 100-step probe of DGI and PyG-SSL measures an average
   gain of 1.5 points on CiteSeer, where the regularized probe measures 8.6, and 9.5 on Coauthor
@@ -103,6 +105,8 @@ the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `
   liblinear with its penalty chosen on validation agrees with it.
 
 ## What survives: the order within one backbone
+
+![Rank of each objective under each backbone, per dataset](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_rankings.png)
 
 ![Kendall's tau between rankings of the objectives when one factor changes](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_tau.png)
 
