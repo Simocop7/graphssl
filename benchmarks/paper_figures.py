@@ -522,12 +522,15 @@ def markdown_tables(analysis: Path, out: Path) -> None:
             )
         )
     for md in sorted(out.glob("study_*.md")):
-        md_to_tex(md, out / md.name.replace("study_", "tab_").replace(".md", ".tex"))
+        # the reruns table has long column names: stacked on two lines, it fits the page
+        md_to_tex(md, out / md.name.replace("study_", "tab_").replace(".md", ".tex"),
+                  stack_header=md.name == "study_reruns.md")  # fmt: skip
     print(f"wrote {out}/study_*.md and their tab_*.tex")
 
 
-def md_to_tex(md: Path, tex: Path) -> None:
-    """A generated Markdown table as LaTeX rows (booktabs), for paper_tmlr/body.tex."""
+def md_to_tex(md: Path, tex: Path, stack_header: bool = False) -> None:
+    """A generated Markdown table as LaTeX rows (booktabs), for paper_tmlr/body.tex. With
+    ``stack_header``, a column name of more than one word is split over two lines."""
 
     def cell(text: str) -> str:
         text = text.strip()
@@ -549,6 +552,19 @@ def md_to_tex(md: Path, tex: Path) -> None:
         if line.startswith("|") and not line.startswith("|---")
     ]
     header, body = rows[0], rows[1:]
+    if stack_header:
+
+        def stack(name: str) -> str:
+            words = name.split(" ")
+            if len(words) < 2:
+                return name
+            # the break that makes the two lines most even
+            k = min(range(1, len(words)),
+                    key=lambda i: abs(len(" ".join(words[:i])) - len(" ".join(words[i:]))))  # fmt: skip
+            return (r"\begin{tabular}[b]{@{}c@{}}" + " ".join(words[:k]) + r"\\"
+                    + " ".join(words[k:]) + r"\end{tabular}")  # fmt: skip
+
+        header = [stack(h) for h in header]
     n_text = next((i for i, c in enumerate(body[0]) if any(ch.isdigit() for ch in c)), 1)
     spec = "l" * n_text + "r" * (len(header) - n_text)
     lines = [

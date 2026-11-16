@@ -25,10 +25,11 @@ preparation; this page summarizes the design and the findings.
   the same embeddings are scored again with the linear probes of four public codebases (100 or
   5,000 Adam steps, liblinear, and `LogRegEvaluator`, which standardizes the embeddings and
   chooses its L2 penalty on validation), with kNN, and on ten random splits.
-- **Two references for every number**: the same encoder left **untrained** (same architecture
-  and seed, scored identically), and logistic regression on the **raw features**. The first step
-  (raw → untrained) is what the architecture adds; the second (untrained → trained) is what the
-  objective adds.
+- **Three references for every number**: the same encoder left **untrained** (same architecture
+  and seed, scored identically), logistic regression on the **raw features**, and logistic
+  regression on the features **propagated twice over the graph** (Â²X, the features of SGC),
+  which trains nothing. Raw → Â²X is what the graph adds without parameters; Â²X → untrained is
+  what random weights keep of it; untrained → trained is what the objective adds.
 
 | Experiment | What varies | Levels |
 |---|---|---|
@@ -37,18 +38,24 @@ preparation; this page summarizes the design and the findings.
 | E3 | optimizer × learning rate | AdamW and SGD, 5 learning rates each; every backbone on Cora and CiteSeer, GCN on the Amazon and Coauthor graphs |
 | E4 | training step | 14 evaluations between step 0 and 300, in three optimizer cells (Cora, CiteSeer) |
 | E5 | training budget | 300 against 3,000 steps (GCN on Cora and the Amazon and Coauthor graphs; GIN and Transformer on Cora) |
+| E6 | reference without parameters | raw X, ÂX, Â²X and the first 256 principal components of Â²X, under the probes of E2, on every dataset; WikiCS, used nowhere else, as an out-of-sample test (E1 and E2 there) |
 | M | — | label-free metrics of every saved model: CKA between models, effective rank, uniformity, smoothing |
 
-Four analyses had their decision rules committed before their data existed: the label-free
-prediction test, the definitions summarizing the trajectories of E4, and the rules of E3 and E5
-on the Amazon and Coauthor graphs.
+Five analyses had their decision rules committed before the results they apply to: the label-free
+prediction test, the definitions summarizing the trajectories of E4, the rules of E3 and E5 on
+the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `benchmarks/paper/PREREG.md`, verbatim.
 
-## A representation is mostly its backbone
+## Representations resemble their backbone more than their objective
 
-![Raw features, the untrained encoder and the eight objectives on six datasets with three backbones](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_teaser.png)
+![Raw features, the propagated features Â²X, the untrained encoder and the eight objectives on six datasets with three backbones](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_teaser.png)
 
-- **An untrained GCN is already a good feature map** on these graphs: 20.5, 10.2 and 7.1 points
-  above the raw features on Cora, CiteSeer and PubMed. An untrained GIN or Transformer is not.
+- **Most of what an encoder contributes needs no parameters.** Averaging the features twice over
+  the graph (Â²X) puts logistic regression 21.8, 9.9 and 6.8 points above the raw features on
+  Cora, CiteSeer and PubMed. An untrained GCN applies the same propagation with random weights in
+  between and loses part of it: it is 0.9 to 13.2 points below Â²X on every dataset, though still
+  above the raw features on Cora, PubMed and the Amazon graphs. An untrained GIN or Transformer
+  is weaker still. (Input-feature rows are scored with the regularized probe, ours or liblinear,
+  that is better on validation: ours standardizes, which understates sparse bag-of-words.)
 - **The objectives repair weak feature maps more than they improve good ones.** With a GCN the
   average objective adds 6.9, 8.6 and 5.6 points on the citation graphs but only 1.4, 0.2 and 1.5
   on Amazon Computers, Amazon Photo and Coauthor CS; with a GIN, which starts 6 to 31 points
@@ -59,13 +66,32 @@ on the Amazon and Coauthor graphs.
   exception. With ten times the training budget the grouping weakens below the margin fixed in
   advance: it is a property of the shared budget.
 - **The backbone explains most of the gain**: 68 to 82% of the variance of the gain over the
-  untrained encoder on four of the six datasets.
+  untrained encoder on four of the six datasets, much of it the distance between the untrained
+  encoders, which training narrows. On accuracy the objective weighs more than the backbone on
+  CiteSeer and Coauthor CS.
 
 ![CKA between models that share a backbone, an objective, or neither](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_cka.png)
 
+## With a GCN, training rarely beats averaging over the graph
+
+![Each GCN objective and the untrained GCN minus logistic regression on Â²X, per dataset](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_propagation.png)
+
+- **On the six datasets.** Logistic regression on Â²X, which has no parameters, is above the
+  average GCN objective by 0.2 to 5.5 points, and by 1.0 on ogbn-arxiv. Over the three backbones,
+  16 of the 144 trained models are above it, ten of them on Coauthor CS and Amazon Photo.
+- **Tested out of sample.** This comparison was made after the results of the six datasets were
+  known, so it was tested on WikiCS, a seventh dataset with dense features, under a rule fixed
+  before its runs: the comparison would be restricted to the six datasets if the average GCN
+  objective were at least one point above Â²X. It is 0.8 points below (95% seed-bootstrap
+  interval −0.9 to −0.8), and none of the 24 trained models of the three backbones is above Â²X.
+  The verdict holds under our probe, liblinear and the ten random splits; only the 100-step
+  probe reverses it, because it fits Â²X poorly (74.4%).
+- **Not on labels that neighbors share less often.** On the publication years of ogbn-arxiv the
+  untrained GCN is 0.7 points above Â²X and every GCN objective 2.8 to 3.4 points above it.
+
 ## The probe decides how large the gain looks
 
-![Gain over the untrained encoder of each objective under each probe](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_probes.png)
+![Mean gain under the 100-step probe against the regularized probe, per dataset and backbone](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_probe_scatter.png)
 
 - **In both directions.** With a GCN, the 100-step probe of DGI and PyG-SSL measures an average
   gain of 1.5 points on CiteSeer, where the regularized probe measures 8.6, and 9.5 on Coauthor
@@ -80,6 +106,8 @@ on the Amazon and Coauthor graphs.
 
 ## What survives: the order within one backbone
 
+![Rank of each objective under each backbone, per dataset](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_rankings.png)
+
 ![Kendall's tau between rankings of the objectives when one factor changes](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_tau.png)
 
 - The ranking of the objectives under one backbone holds across probes (median Kendall τ 0.93
@@ -88,7 +116,9 @@ on the Amazon and Coauthor graphs.
 - **It does not hold across backbones**: τ falls to 0.21 between two backbones, and on
   ogbn-arxiv the rankings of the GIN and the Transformer are reversed (τ = −0.79). A ranking of
   graph SSL objectives is a ranking for one backbone.
-- GraphCL is the best objective in 13 of the 18 dataset–backbone cells.
+- GraphCL is the best objective in 13 of the 18 dataset–backbone cells, with a lead over the
+  runner-up clear of seed noise in 8 of them, and among the best three in 17. After tuning (E3) it
+  is first in three of the nine groups and among the best three in all nine.
 
 ## The small gains hold against tuning and budget
 
@@ -139,10 +169,12 @@ of experiments; they are not causal estimates.
 
 ## Recommendations
 
-1. Report the untrained encoder and the raw features, scored in the same way, and the gain over
-   the untrained encoder.
-2. Regularize the probe on validation data: standardize the embeddings and choose the L2
-   penalty on the validation split. Report the solver, the grid and whether the fit converged.
+1. Report the untrained encoder, the raw features and the propagated features (ÂᴷX, with K the
+   depth of the encoder), scored in the same way, and the gain over the untrained encoder.
+2. Regularize the probe on validation data: choose the L2 penalty, and the feature normalization
+   too, on the validation split. Standardizing removes the difference in scale between trained
+   and untrained embeddings but understates sparse input features. Report the solver, the grid
+   and whether the fit converged.
 3. Select nothing on the test split, neither the pretraining epoch nor a probe setting.
 4. Use more than one backbone, or say why one is enough, and report the ranking under each.
 5. Use ten seeds or more, report intervals, and compare means over seeds, not seeds across
@@ -159,13 +191,16 @@ of experiments; they are not causal estimates.
 - The probes of other codebases are re-implementations applied to GraphSSL's embeddings, not
   runs of those codebases' own pipelines.
 - The device is fixed within a dataset and experiment but differs between datasets.
+- The comparison with Â²X was made after the results of the six datasets were known; WikiCS is
+  its only out-of-sample test.
 
 ## Reproduce
 
 Every number comes from the result files in `benchmarks/paper/`: one JSON per run with per-seed
 metrics, the exact model configuration, the git commit and the package versions. Training is
 driven by `benchmarks/paper_runs.sh` (Cora and CiteSeer) and `benchmarks/paper_v2.sh` (the other
-datasets, ogbn-arxiv, E3, probes and metrics; see their headers), and the analysis by:
+datasets, ogbn-arxiv, E3, probes and metrics; see their headers) and `benchmarks/paper_e6.sh`
+(E6: the input-feature rows, and training and scoring on WikiCS), and the analysis by:
 
 ```bash
 P=benchmarks/paper
@@ -175,6 +210,7 @@ python benchmarks/analyze_representations.py --metrics $P/metrics/*/metrics__*.j
 python benchmarks/analyze_e3.py           # E3: shared vs tuned, the decision rule
 python benchmarks/analyze_trajectories.py # E4
 python benchmarks/analyze_e5.py           # E5: training budget, the decision rule
+python benchmarks/analyze_propagation.py  # E6: the propagated features, the test on WikiCS
 python benchmarks/paper_figures_v2.py     # the figures on this page
 ```
 

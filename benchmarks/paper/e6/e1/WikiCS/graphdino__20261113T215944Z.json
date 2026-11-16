@@ -1,0 +1,318 @@
+{
+  "dataset": "WikiCS",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "ema_tau_base": 0.996,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 256,
+      "bottleneck_dim": 64,
+      "n_prototypes": 128,
+      "teacher_temp": 0.04,
+      "warmup_teacher_temp_epochs": 30
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8083662986755371,
+      "test_acc_linear": 0.7879254221916199,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7597512602806091,
+      "test_acc_knn": 0.7496151924133301,
+      "eff_rank": 124.65412902832031,
+      "wall_time_s": 131.71522498130798,
+      "val_acc_linear_alt": 0.8106274604797363,
+      "test_acc_linear_alt": 0.7896357178688049,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7654041647911072,
+      "test_acc_knn_alt": 0.7561142444610596,
+      "eff_rank_alt": 122.06159973144531,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8083662986755371,
+      "test_acc_linear": 0.7843338251113892,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7591859698295593,
+      "test_acc_knn": 0.7391824722290039,
+      "eff_rank": 124.3201675415039,
+      "wall_time_s": 133.5789930820465,
+      "val_acc_linear_alt": 0.8157150745391846,
+      "test_acc_linear_alt": 0.7870702743530273,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.774448812007904,
+      "test_acc_knn_alt": 0.748589038848877,
+      "eff_rank_alt": 120.61308288574219,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8128886222839355,
+      "test_acc_linear": 0.7930562496185303,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7535330653190613,
+      "test_acc_knn": 0.7441422939300537,
+      "eff_rank": 125.01432037353516,
+      "wall_time_s": 131.94371700286865,
+      "val_acc_linear_alt": 0.8219332695007324,
+      "test_acc_linear_alt": 0.7930562496185303,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7614471316337585,
+      "test_acc_knn_alt": 0.7480759620666504,
+      "eff_rank_alt": 120.12178039550781,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8044092655181885,
+      "test_acc_linear": 0.791003942489624,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7490107417106628,
+      "test_acc_knn": 0.7443132996559143,
+      "eff_rank": 124.59042358398438,
+      "wall_time_s": 133.45241403579712,
+      "val_acc_linear_alt": 0.8117580413818359,
+      "test_acc_linear_alt": 0.7903198003768921,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7580553889274597,
+      "test_acc_knn_alt": 0.7533777952194214,
+      "eff_rank_alt": 119.7052230834961,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8094968795776367,
+      "test_acc_linear": 0.7867282629013062,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7665347456932068,
+      "test_acc_knn": 0.7516674995422363,
+      "eff_rank": 124.54664611816406,
+      "wall_time_s": 132.20321488380432,
+      "val_acc_linear_alt": 0.8128886222839355,
+      "test_acc_linear_alt": 0.7940824627876282,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7795364856719971,
+      "test_acc_knn_alt": 0.7526937127113342,
+      "eff_rank_alt": 119.2921142578125,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.8004522323608398,
+      "test_acc_linear": 0.7920300960540771,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7529677748680115,
+      "test_acc_knn": 0.7438002228736877,
+      "eff_rank": 123.32382202148438,
+      "wall_time_s": 133.08364701271057,
+      "val_acc_linear_alt": 0.8100621700286865,
+      "test_acc_linear_alt": 0.7957926988601685,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7642735838890076,
+      "test_acc_knn_alt": 0.749957263469696,
+      "eff_rank_alt": 119.4434585571289,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.797060489654541,
+      "test_acc_linear": 0.7860441207885742,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.739966094493866,
+      "test_acc_knn": 0.734906792640686,
+      "eff_rank": 125.83715057373047,
+      "wall_time_s": 131.1021180152893,
+      "val_acc_linear_alt": 0.8055398464202881,
+      "test_acc_linear_alt": 0.7916880249977112,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7597512602806091,
+      "test_acc_knn_alt": 0.7463656663894653,
+      "eff_rank_alt": 121.06327056884766,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.8106274604797363,
+      "test_acc_linear": 0.7860441207885742,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7637082934379578,
+      "test_acc_knn": 0.7403796911239624,
+      "eff_rank": 124.24614715576172,
+      "wall_time_s": 132.55971574783325,
+      "val_acc_linear_alt": 0.8094968795776367,
+      "test_acc_linear_alt": 0.7872413396835327,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7625777125358582,
+      "test_acc_knn_alt": 0.7497861981391907,
+      "eff_rank_alt": 122.0040512084961,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.8055398464202881,
+      "test_acc_linear": 0.7887805700302124,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7597512602806091,
+      "test_acc_knn": 0.7446553707122803,
+      "eff_rank": 123.38864135742188,
+      "wall_time_s": 132.2739450931549,
+      "val_acc_linear_alt": 0.8151497840881348,
+      "test_acc_linear_alt": 0.7877544164657593,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7507066130638123,
+      "test_acc_knn_alt": 0.7518385648727417,
+      "eff_rank_alt": 118.33927917480469,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8083662986755371,
+      "test_acc_linear": 0.7862151265144348,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7524024844169617,
+      "test_acc_knn": 0.7400376200675964,
+      "eff_rank": 124.27696228027344,
+      "wall_time_s": 132.33048486709595,
+      "val_acc_linear_alt": 0.8100621700286865,
+      "test_acc_linear_alt": 0.7915170192718506,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7591859698295593,
+      "test_acc_knn_alt": 0.7514964938163757,
+      "eff_rank_alt": 122.10444641113281,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/graphdino_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7882161736488342,
+      "std": 0.0029225825670103163
+    },
+    "test_acc_knn": {
+      "mean": 0.7432700455188751,
+      "std": 0.004947305782183548
+    },
+    "eff_rank": {
+      "mean": 124.41984100341797,
+      "std": 0.7293368351559469
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.7908158004283905,
+      "std": 0.0029726365957172497
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.7508294939994812,
+      "std": 0.0028623501883250713
+    },
+    "eff_rank_alt": {
+      "mean": 120.4748306274414,
+      "std": 1.317296947549108
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261113T215944Z",
+    "git": {
+      "commit": "6cf6db9c46423d19f6a42967584a89669043fa51",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

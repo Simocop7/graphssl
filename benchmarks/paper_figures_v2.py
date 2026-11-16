@@ -10,6 +10,11 @@ fig_cka          CKA grouping (same backbone / same objective / neither) and the
 fig_probes       gain over the untrained encoder per objective under each probe, four GCN cells
 fig_tau          Kendall tau between method rankings when one factor changes
 fig_shares       share of variance of accuracy and gain per factor, per dataset
+fig_propagation  each GCN objective and the untrained GCN minus logistic regression on A^2X, per
+                 label set, with D and its interval (analysis/e6)
+fig_probe_scatter  average gain under the 100-step probe against the regularized probe, one point
+                 per dataset and backbone
+fig_rankings     rank of each objective under each backbone, per dataset
 tab_datasets.tex, tab_main_v2.tex, tab_probe_gains.tex, tab_e3.tex, tab_predict_v2.tex,
 tab_arxiv.tex    LaTeX tables for paper_tmlr/ (tab_arxiv only once its probe files exist)
 
@@ -28,7 +33,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from paper_figures import INK, INK_2, METHODS_V2, MUTED, NAMES, SERIES, plt, save
+from paper_figures import GRID, INK, INK_2, METHODS_V2, MUTED, NAMES, SERIES, plt, save
 
 DATASETS = ["Cora", "CiteSeer", "PubMed", "AmazonComputers", "AmazonPhoto", "CoauthorCS"]
 DATASET_NAMES = {
@@ -44,6 +49,7 @@ DATASET_NAMES = {
 SHORT = {"AmazonComputers": "Computers", "AmazonPhoto": "Photo", "CoauthorCS": "CS"}
 BACKBONES = ["gcn", "gin", "transformer"]
 BACKBONE_NAMES = {"gcn": "GCN", "gin": "GIN", "transformer": "Transformer"}
+SHORT_BACKBONES = {**BACKBONE_NAMES, "transformer": "Transf."}
 SUPERVISED = ["supervised", "supervised_reg"]
 SUPERVISED_NAMES = {
     "supervised": "Supervised, shared protocol",
@@ -104,6 +110,18 @@ def color(m: str) -> str:
     return SERIES[METHODS_V2.index(m)]
 
 
+# Eight hues cannot all be told apart (GraphCL's orange and GraphMAE's red least of all), so
+# every objective also keeps its own marker; sizes are matched by eye to the area of the circle.
+MARKERS = {"dgi": ("D", 0.8), "graphcl": ("o", 1.0), "bgrl": ("^", 1.1), "afgrl": ("v", 1.1),
+           "vicreg": ("s", 0.85), "barlow_twins": ("P", 1.1), "graphdino": ("X", 1.1),
+           "graphmae": ("*", 1.45)}  # fmt: skip
+
+
+def marker(m: str) -> tuple[str, float]:
+    """(matplotlib marker, size factor) of an objective."""
+    return MARKERS[m]
+
+
 def method_name(m: str) -> str:
     return NAMES.get(m) or SUPERVISED_NAMES.get(m, m)
 
@@ -118,25 +136,36 @@ def legend_below(fig: plt.Figure, handles: list, labels: list, ncol: int, y: flo
                frameon=False, fontsize=7, handletextpad=0.4, columnspacing=1.2)  # fmt: skip
 
 
-def dot(color: str) -> plt.Line2D:
-    return plt.Line2D([], [], marker="o", ls="", color=color, ms=4.5, mec="white", mew=0.6)
+def dot(color: str, shape: str = "o", scale: float = 1.0) -> plt.Line2D:
+    return plt.Line2D([], [], marker=shape, ls="", color=color, ms=4.5 * scale, mec="white",
+                      mew=0.6)  # fmt: skip
+
+
+def objective_handle(m: str) -> plt.Line2D:
+    """Legend entry of an objective: its color and its marker."""
+    shape, scale = marker(m)
+    return dot(color(m), shape, scale)
 
 
 # --------------------------------------------------------------------------------- figures
 
 
 def fig_teaser(analysis: Path, out: Path) -> None:
-    """Raw features (dashed line), untrained encoder (gray bar) and the objectives (dots,
-    95% interval) per dataset (panel) and backbone (x), regularized probe."""
+    """Raw features (dashed line), the propagated features A^2X (dotted line), untrained encoder
+    (gray bar) and the objectives (dots, 95% interval) per dataset (panel) and backbone (x).
+    Models: regularized probe. Input-feature lines (E6, analysis/e6/reference.csv): the
+    regularized probe better on validation (ours or liblinear), since standardizing understates
+    sparse bag-of-words features."""
     cells = reference_cells(analysis)
-    raw = pd.read_csv(analysis / "graph_contribution.csv")
-    raw = raw[raw.probe == REFERENCE].groupby("dataset").raw_features.first()
+    ref = pd.read_csv(analysis / "e6" / "reference.csv")
+    ref = ref[ref.probe == "valsel"].set_index("dataset")
     fig, axes = plt.subplots(2, 3, figsize=(6.8, 4.3))
     methods = objectives(cells)
     offsets = np.linspace(-0.27, 0.27, len(methods))
     for ax, d in zip(axes.flat, DATASETS, strict=True):
         g = cells[cells.dataset == d].set_index(["backbone", "method"])
-        ax.axhline(raw[d], color=INK_2, lw=1.0, ls=(0, (4, 2)), zorder=1)
+        ax.axhline(ref.loc[d, "raw"], color=INK_2, lw=1.0, ls=(0, (4, 2)), zorder=1)
+        ax.axhline(ref.loc[d, "A2X"], color=INK, lw=1.2, ls=(0, (1, 1.5)), zorder=1)
         for x, b in enumerate(BACKBONES):
             u = g.loc[(b, "untrained"), "acc"]
             ax.plot([x - 0.36, x + 0.36], [u, u], color=MUTED, lw=3.2, solid_capstyle="round",
@@ -144,8 +173,10 @@ def fig_teaser(analysis: Path, out: Path) -> None:
             for k, m in enumerate(methods):
                 r = g.loc[(b, m)]
                 xx = x + offsets[k]
+                shape, scale = marker(m)
                 ax.plot([xx, xx], [r.acc_lo, r.acc_hi], color=color(m), lw=1.0, zorder=3)
-                ax.plot(xx, r.acc, "o", ms=4, color=color(m), mec="white", mew=0.6, zorder=4)
+                ax.plot(xx, r.acc, shape, ms=4.2 * scale, color=color(m), mec="white", mew=0.5,
+                        zorder=4)  # fmt: skip
         ax.set_xticks(range(len(BACKBONES)), [BACKBONE_NAMES[b] for b in BACKBONES])
         ax.set_xlim(-0.55, len(BACKBONES) - 0.45)
         lo, hi = ax.get_ylim()
@@ -154,11 +185,16 @@ def fig_teaser(analysis: Path, out: Path) -> None:
         ax.set_title(DATASET_NAMES[d], color=INK, fontsize=8.5, fontweight="bold")
     for ax in axes[:, 0]:
         ax.set_ylabel("Test accuracy (%)")
-    handles = [dot(color(m)) for m in methods]
+    handles = [objective_handle(m) for m in methods]
     handles += [plt.Line2D([], [], color=MUTED, lw=3.2),
-                plt.Line2D([], [], color=INK_2, lw=1.0, ls=(0, (4, 2)))]  # fmt: skip
-    labels = [NAMES[m] for m in methods] + ["Untrained encoder", "Raw features"]
-    legend_below(fig, handles, labels, ncol=5)
+                plt.Line2D([], [], color=INK_2, lw=1.0, ls=(0, (4, 2))),
+                plt.Line2D([], [], color=INK, lw=1.2, ls=(0, (1, 1.5)))]  # fmt: skip
+    labels = [NAMES[m] for m in methods] + [
+        "Untrained encoder",
+        "Raw features",
+        "Propagated features Â²X",
+    ]
+    legend_below(fig, handles, labels, ncol=6)
     fig.tight_layout(rect=(0, 0.09, 1, 1))
     save(fig, out / "fig_teaser")
 
@@ -229,8 +265,9 @@ def fig_probes(analysis: Path, out: Path) -> None:
             for k, m in enumerate(methods):
                 r = g.loc[(p, m)]
                 xx = x + offsets[k]
+                shape, scale = marker(m)
                 ax.plot([xx, xx], [r.gain_lo, r.gain_hi], color=color(m), lw=0.9)
-                ax.plot(xx, r.gain, "o", ms=3.2, color=color(m), mec="white", mew=0.5)
+                ax.plot(xx, r.gain, shape, ms=3.4 * scale, color=color(m), mec="white", mew=0.4)
         ax.axhline(0, color=INK_2, lw=0.8)
         ax.set_xticks(range(len(PROBE_ORDER)), [PROBE_SHORT[p] for p in PROBE_ORDER],
                       rotation=55, ha="right", rotation_mode="anchor")  # fmt: skip
@@ -238,7 +275,7 @@ def fig_probes(analysis: Path, out: Path) -> None:
         ax.set_title(f"{DATASET_NAMES[d]}, {BACKBONE_NAMES[b]}", color=INK, fontsize=8,
                      fontweight="bold")  # fmt: skip
     axes[0].set_ylabel("Gain over untrained (points)")
-    legend_below(fig, [dot(color(m)) for m in methods], [NAMES[m] for m in methods],
+    legend_below(fig, [objective_handle(m) for m in methods], [NAMES[m] for m in methods],
                  ncol=len(methods))  # fmt: skip
     fig.tight_layout(rect=(0, 0.07, 1, 1))
     save(fig, out / "fig_probes")
@@ -299,6 +336,162 @@ def fig_tau(analysis: Path, out: Path) -> None:
     ax.grid(axis="y", visible=False)
     fig.tight_layout()
     save(fig, out / "fig_tau")
+
+
+SSL_ONLY = list(METHODS_V2)  # the eight objectives, no untrained or supervised rows
+# Groups by how each comparison was made: seen after the six datasets' results; the test fixed in
+# advance (E6); computed after that rule was fixed but outside it (ogbn-arxiv and its year labels).
+PROPAGATION_ROWS = [
+    ("Six datasets, after the fact", DATASETS),
+    ("Test fixed in advance", ["WikiCS"]),
+    ("Outside the rule", ["ogbn-arxiv", "arxiv-year"]),
+]
+ROW_NAMES = {**DATASET_NAMES, "ogbn-arxiv": "ogbn-arxiv", "WikiCS": "WikiCS",
+             "arxiv-year": "arxiv-year (years)"}  # fmt: skip
+
+
+def fig_propagation(analysis: Path, out: Path) -> None:
+    """Each GCN objective (markers) and the untrained GCN (gray bar) minus logistic regression on
+    A^2X, per label set; black tick and line: D, the mean over the eight objectives, with its 95%
+    seed-bootstrap interval. All from analysis/e6 (probe better on validation; ogbn-arxiv and
+    arxiv-year: our probe only, as in tab_propagation)."""
+    ref = pd.read_csv(analysis / "e6" / "reference.csv")
+    ref = ref[ref.probe == "valsel"].set_index("dataset")
+    cells = pd.read_csv(analysis / "e6" / "cells.csv")
+    cells = cells[(cells.probe == "valsel") & (cells.backbone == "gcn")]
+    cells = cells.set_index(["dataset", "method"])["mean"]
+    rows: list[tuple[str, str | None]] = []  # (label, dataset or None for a group header)
+    for header, names in PROPAGATION_ROWS:
+        rows.append((header, None))
+        rows += [(ROW_NAMES[d], d) for d in names]
+    fig, ax = plt.subplots(figsize=(6.8, 3.6))
+    ys = np.arange(len(rows))[::-1].astype(float)
+    offsets = np.linspace(-0.26, 0.26, len(SSL_ONLY))
+    ax.axvline(0, color=INK, lw=1.2, ls=(0, (1, 1.5)), zorder=1)
+    for y, (label, d) in zip(ys, rows, strict=True):
+        if d is None:
+            ax.text(-0.01, y, label, transform=ax.get_yaxis_transform(), ha="right", va="center",
+                    fontsize=7.2, fontweight="bold", color=INK)  # fmt: skip
+            continue
+        a2x = ref.loc[d, "A2X"]
+        u = ref.loc[d, "untrained_gcn"] - a2x
+        ax.plot([u, u], [y - 0.32, y + 0.32], color=MUTED, lw=3.2, solid_capstyle="round",
+                zorder=2)  # fmt: skip
+        r = ref.loc[d]
+        ax.plot([r.D_lo, r.D_hi], [y, y], color=INK, lw=1.0, zorder=3)
+        ax.plot([r.D, r.D], [y - 0.34, y + 0.34], color=INK, lw=1.6, zorder=3)
+        for k, m in enumerate(SSL_ONLY):
+            shape, scale = marker(m)
+            ax.plot(cells.loc[(d, m)] - a2x, y + offsets[k], shape, ms=3.6 * scale,
+                    color=color(m), mec="white", mew=0.4, zorder=4)  # fmt: skip
+        ax.text(1.02, y, f"D = {r.D:+.1f} [{r.D_lo:+.1f}, {r.D_hi:+.1f}]".replace("-", "−"),
+                transform=ax.get_yaxis_transform(), va="center", fontsize=6.8,
+                color=INK_2)  # fmt: skip
+    ax.set_yticks([y for y, (_, d) in zip(ys, rows, strict=True) if d is not None],
+                  [label for label, d in rows if d is not None])  # fmt: skip
+    ax.set_ylim(ys[-1] - 0.6, ys[0] + 0.6)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel("Test accuracy minus logistic regression on Â²X (points), GCN")
+    handles = [objective_handle(m) for m in SSL_ONLY]
+    handles += [plt.Line2D([], [], color=MUTED, lw=3.2),
+                plt.Line2D([], [], color=INK, lw=1.6),
+                plt.Line2D([], [], color=INK, lw=1.2, ls=(0, (1, 1.5)))]  # fmt: skip
+    labels = [NAMES[m] for m in SSL_ONLY] + [
+        "Untrained GCN",
+        "Mean of the eight (D), 95% interval",
+        "Â²X",
+    ]
+    legend_below(fig, handles, labels, ncol=6)
+    fig.tight_layout(rect=(0, 0.1, 1, 1))
+    save(fig, out / "fig_propagation")
+
+
+FEW_LABELS = ["Cora", "CiteSeer", "PubMed"]  # public split: 20 labels per class
+MANY_LABELS = ["AmazonComputers", "AmazonPhoto", "CoauthorCS", "ogbn-arxiv"]
+BACKBONE_SHAPES = {"gcn": ("o", 1.0), "gin": ("s", 0.85), "transformer": ("^", 1.1)}
+# the cells the text quotes; label position in data coordinates (None: right of the point)
+PROBE_LABELLED = {("CiteSeer", "gcn"): None, ("ogbn-arxiv", "gcn"): None,
+                  ("CoauthorCS", "gin"): None, ("CoauthorCS", "gcn"): (-3.4, 14.0)}  # fmt: skip
+
+
+def fig_probe_scatter(analysis: Path, out: Path) -> None:
+    """Average gain of the eight objectives over the untrained encoder, under the 100-step probe
+    (y) against the regularized probe (x), one point per dataset and backbone. Above the diagonal
+    the short probe makes the gain look larger."""
+    cells = pd.read_csv(analysis / "cells.csv")
+    cells = cells[cells.method.isin(SSL_ONLY) & cells.probe.isin(["adam100", REFERENCE])]
+    gain = cells.groupby(["dataset", "backbone", "probe"]).gain.mean().unstack()
+    regimes = [(FEW_LABELS, SERIES[1], "20 labels per class (Cora, CiteSeer, PubMed)"),
+               (MANY_LABELS, SERIES[0], "Many labels (Amazon, Coauthor CS, ogbn-arxiv)")]  # fmt: skip
+    fig, ax = plt.subplots(figsize=(4.6, 3.9))
+    lo, hi = -4.0, 36.0
+    ax.plot([lo, hi], [lo, hi], color=MUTED, lw=0.9, ls=(0, (4, 2)), zorder=1)
+    ax.axhline(0, color=GRID, lw=0.7, zorder=0)
+    ax.axvline(0, color=GRID, lw=0.7, zorder=0)
+    for names, c, _ in regimes:
+        for d in names:
+            for b in BACKBONES:
+                x, y = gain.loc[(d, b), REFERENCE], gain.loc[(d, b), "adam100"]
+                shape, scale = BACKBONE_SHAPES[b]
+                ax.plot(x, y, shape, ms=6.0 * scale, color=c, mec="white", mew=0.7, zorder=3)
+                if (d, b) not in PROBE_LABELLED:
+                    continue
+                text, at = f"{ROW_NAMES[d]}, {BACKBONE_NAMES[b]}", PROBE_LABELLED[(d, b)]
+                if at is None:
+                    ax.annotate(text, (x, y), xytext=(6, -2), textcoords="offset points",
+                                fontsize=6.8, color=INK_2, va="center")  # fmt: skip
+                else:
+                    ax.annotate(text, (x, y), xytext=at, textcoords="data", fontsize=6.8,
+                                color=INK_2, va="bottom",
+                                arrowprops={"arrowstyle": "-", "color": MUTED, "lw": 0.6,
+                                            "shrinkA": 1, "shrinkB": 4})  # fmt: skip
+    ax.text(0.03, 0.80, "100-step probe shows a larger gain", transform=ax.transAxes, va="top",
+            fontsize=7, color=INK_2, style="italic")  # fmt: skip
+    ax.text(0.97, 0.03, "100-step probe shows a smaller gain", transform=ax.transAxes,
+            ha="right", va="bottom", fontsize=7, color=INK_2, style="italic")  # fmt: skip
+    ax.set_xlim(lo, hi)
+    ax.set_ylim(lo, hi)
+    ax.set_aspect("equal")
+    ax.set_xlabel("Gain under the regularized probe (points)")
+    ax.set_ylabel("Gain under the 100-step probe (points)")
+    # color = number of labels, shape = backbone: one legend row each
+    legend_below(fig, [dot(c, "o", 1.25) for _, c, _ in regimes],
+                 [lab for _, _, lab in regimes], ncol=1, y=0.055)  # fmt: skip
+    legend_below(fig, [dot(INK_2, *BACKBONE_SHAPES[b]) for b in BACKBONES],
+                 [BACKBONE_NAMES[b] for b in BACKBONES], ncol=3)  # fmt: skip
+    fig.tight_layout(rect=(0, 0.16, 1, 1))
+    save(fig, out / "fig_probe_scatter")
+
+
+def fig_rankings(analysis: Path, out: Path) -> None:
+    """Rank of each objective (1 = best mean accuracy, regularized probe) under each backbone,
+    one panel per dataset; a line follows one objective across the backbones."""
+    cells = reference_cells(analysis)
+    cells = cells[cells.method.isin(SSL_ONLY)]
+    fig, axes = plt.subplots(2, 3, figsize=(6.8, 4.1))
+    n = len(SSL_ONLY)
+    for ax, d in zip(axes.flat, DATASETS, strict=True):
+        g = cells[cells.dataset == d]
+        rank = {b: g[g.backbone == b].set_index("method").acc.rank(ascending=False)
+                for b in BACKBONES}  # fmt: skip
+        for m in SSL_ONLY:
+            ys = [rank[b][m] for b in BACKBONES]
+            shape, scale = marker(m)
+            ax.plot(range(len(BACKBONES)), ys, color=color(m), lw=1.1, alpha=0.85, zorder=2)
+            ax.plot(range(len(BACKBONES)), ys, shape, ms=4.2 * scale, color=color(m),
+                    mec="white", mew=0.5, ls="", zorder=3)  # fmt: skip
+        ax.set_xticks(range(len(BACKBONES)), [BACKBONE_NAMES[b] for b in BACKBONES])
+        ax.set_xlim(-0.25, len(BACKBONES) - 0.75)
+        ax.set_ylim(n + 0.6, 0.4)
+        ax.set_yticks(range(1, n + 1))
+        ax.grid(axis="x", visible=False)
+        ax.set_title(DATASET_NAMES[d], color=INK, fontsize=8.5, fontweight="bold")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("Rank (1 = best)")
+    legend_below(fig, [objective_handle(m) for m in SSL_ONLY], [NAMES[m] for m in SSL_ONLY],
+                 ncol=len(SSL_ONLY))  # fmt: skip
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    save(fig, out / "fig_rankings")
 
 
 SHARE_DESIGNS = [
@@ -375,8 +568,9 @@ def tab_main(analysis: Path, out: Path) -> None:
     raw = raw[raw.probe == REFERENCE].groupby("dataset").raw_features.first()
     methods = objectives(cells.reset_index())
     rows = ["raw", "untrained", *methods, *SUPERVISED]
-    lines = [r"\begin{tabular}{l" + "r" * 9 + "}", r"\toprule"]
+    lines = [r"\begin{tabular}{l" + "r" * 9 + "}"]
     for block in (DATASETS[:3], DATASETS[3:]):
+        lines.append(r"\toprule" if block is DATASETS[:3] else r"\addlinespace[8pt]\toprule")
         lines.append(" & ".join([""] + [rf"\multicolumn{{3}}{{c}}{{{DATASET_NAMES[d]}}}"
                                         for d in block]) + r" \\")  # fmt: skip
         lines.append(" ".join(rf"\cmidrule(lr){{{2 + 3 * i}-{4 + 3 * i}}}" for i in range(3)))
@@ -408,7 +602,7 @@ def tab_main(analysis: Path, out: Path) -> None:
             lines.append(" & ".join([name, *out_cells]) + r" \\")
             if m in {"untrained", methods[-1]}:
                 lines.append(r"\midrule")
-        lines.append(r"\midrule" if block is DATASETS[:3] else r"\bottomrule")
+        lines.append(r"\bottomrule")
     lines.append(r"\end{tabular}")
     write_table(out, "tab_main_v2.tex", lines)
 
@@ -421,8 +615,9 @@ def tab_probe_gains(analysis: Path, out: Path) -> None:
     cells = pd.read_csv(analysis / "cells.csv")
     ssl = cells[cells.method.isin(METHODS_V2)].groupby(["dataset", "backbone", "probe"]).gain.mean()
     untr = cells[cells.method == "untrained"].set_index(["dataset", "backbone", "probe"]).acc
-    lines = [r"\begin{tabular}{l" + "r" * 9 + "}", r"\toprule"]
+    lines = [r"\begin{tabular}{l" + "r" * 9 + "}"]
     for block in (DATASETS[:3], DATASETS[3:]):
+        lines.append(r"\toprule" if block is DATASETS[:3] else r"\addlinespace[8pt]\toprule")
         lines.append(" & ".join([""] + [rf"\multicolumn{{3}}{{c}}{{{DATASET_NAMES[d]}}}"
                                         for d in block]) + r" \\")  # fmt: skip
         lines.append(" ".join(rf"\cmidrule(lr){{{2 + 3 * i}-{4 + 3 * i}}}" for i in range(3)))
@@ -437,7 +632,7 @@ def tab_probe_gains(analysis: Path, out: Path) -> None:
         for p in ["adam100", "adam100_std", "graphssl"]:
             vals = [untr[(d, b, p)] for d in block for b in BACKBONES]
             lines.append(" & ".join([PROBE_SHORT[p], *[f"{x:.1f}" for x in vals]]) + r" \\")
-        lines.append(r"\midrule" if block is DATASETS[:3] else r"\bottomrule")
+        lines.append(r"\bottomrule")
     lines.append(r"\end{tabular}")
     write_table(out, "tab_probe_gains.tex", lines)
 
@@ -447,20 +642,48 @@ def tab_e3(analysis: Path, out: Path) -> None:
     e3 = pd.read_csv(analysis / "e3" / "e3.csv")
     lift = (e3.tuned - e3.shared).groupby([e3.dataset, e3.backbone, e3.method]).first()
     methods = objectives(e3)
-    lines = [r"\begin{tabular}{llrrr" + "r" * (len(methods) + 1) + "}", r"\toprule",
-             r" & & & \multicolumn{2}{c}{Spread} & \multicolumn{" + str(len(methods) + 1)
-             + r"}{c}{Lift from tuning (points)} \\",
-             r"\cmidrule(lr){4-5} \cmidrule(lr){6-" + str(6 + len(methods)) + "}",
-             " & ".join(["Data", "Backbone", r"$\tau$ shared vs tuned", "shared", "tuned",
-                         "Mean", *[NAMES[m] for m in methods]]) + r" \\",
-             r"\midrule"]  # fmt: skip
-    for r in rank.itertuples():
-        cells = [DATASET_NAMES[r.dataset], BACKBONE_NAMES[r.backbone],
-                 f"{r.tau:.2f} [{r.tau_lo:.2f}, {r.tau_hi:.2f}]",
-                 f"{r.spread_shared:.1f}", f"{r.spread_tuned:.1f}",
-                 f"{signed(r.mean_lift)} [{signed(r.mean_lift_lo)}, {signed(r.mean_lift_hi)}]"]  # fmt: skip
-        cells += [signed(lift[(r.dataset, r.backbone, m)]) for m in methods]
-        lines.append(" & ".join(cells) + r" \\")
+    # One column per (dataset, backbone) group, one row per quantity: fourteen columns of
+    # numbers did not fit the page at a readable size. Intervals go on their own row, in the
+    # small type of the gains of tab_main.
+    groups = list(rank.itertuples())
+    n = len(groups)
+    datasets = list(dict.fromkeys(r.dataset for r in groups))
+    head = []
+    for d in datasets:
+        span = sum(r.dataset == d for r in groups)
+        name = DATASET_NAMES[d]
+        if span == 1 and " " in name:  # stack two-word names over a single column
+            first, second = name.split(" ", 1)
+            name = rf"\begin{{tabular}}[b]{{@{{}}c@{{}}}}{first}\\{second}\end{{tabular}}"
+        head.append(rf"\multicolumn{{{span}}}{{c}}{{{name}}}")
+    rules, col = [], 2
+    for d in datasets:
+        span = sum(r.dataset == d for r in groups)
+        rules.append(rf"\cmidrule(lr){{{col}-{col + span - 1}}}")
+        col += span
+
+    def interval(lo: float, hi: float, fmt) -> str:
+        return rf"{{\tiny [{fmt(lo)}, {fmt(hi)}]}}"
+
+    def two(x: float) -> str:
+        return f"{x:.2f}"
+
+    def row(label: str, values: list[str]) -> str:
+        return " & ".join([label, *values]) + r" \\"
+
+    lines = [r"\begin{tabular}{l" + "r" * n + "}", r"\toprule",
+             " & ".join(["", *head]) + r" \\", " ".join(rules),
+             row("", [SHORT_BACKBONES[r.backbone] for r in groups]), r"\midrule",
+             row(r"$\tau$, shared vs tuned", [two(r.tau) for r in groups]),
+             row("", [interval(r.tau_lo, r.tau_hi, two) for r in groups]),
+             row("Spread, shared", [f"{r.spread_shared:.1f}" for r in groups]),
+             row("Spread, tuned", [f"{r.spread_tuned:.1f}" for r in groups]),
+             row("Mean lift (points)", [signed(r.mean_lift) for r in groups]),
+             row("", [interval(r.mean_lift_lo, r.mean_lift_hi, signed) for r in groups]),
+             r"\midrule",
+             rf"\multicolumn{{{n + 1}}}{{l}}{{\textit{{Lift of each objective (points)}}}} \\"]  # fmt: skip
+    for m in methods:
+        lines.append(row(NAMES[m], [signed(lift[(r.dataset, r.backbone, m)]) for r in groups]))
     lines += [r"\bottomrule", r"\end{tabular}"]
     write_table(out, "tab_e3.tex", lines)
 
@@ -484,7 +707,7 @@ def tab_predict(analysis: Path, out: Path) -> None:
             cells = [name if c == "eff_rank" else "", cname,
                      signed(dev.mean_rho, 2),
                      f"{signed(test.mean_rho, 2)} [{signed(test.rho_lo, 2)}, {signed(test.rho_hi, 2)}]",
-                     f"{test.mean_regret:.1f}", f"{test.mean_random_regret:.1f}",
+                     f"{test.mean_regret:.2f}", f"{test.mean_random_regret:.2f}",
                      test.verdict]  # fmt: skip
             lines.append(" & ".join(cells) + r" \\")
         lines.append(r"\midrule" if target == REFERENCE else r"\bottomrule")
@@ -575,6 +798,9 @@ def main() -> None:
     fig_probes(args.analysis, args.out)
     fig_tau(args.analysis, args.out)
     fig_shares(args.analysis, args.out)
+    fig_propagation(args.analysis, args.out)
+    fig_probe_scatter(args.analysis, args.out)
+    fig_rankings(args.analysis, args.out)
     tab_datasets(args.analysis, args.out)
     tab_main(args.analysis, args.out)
     tab_probe_gains(args.analysis, args.out)

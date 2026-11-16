@@ -6,6 +6,9 @@
   supervised references train on it.
 - ogbn-arxiv, ogbn-products: the official split. ogbn-arxiv is made undirected, as in the
   stress test and the BGRL reproduction; ogbn-products already is.
+- WikiCS (Mernyei & Cangea, 2020): its public split 0 (580 / 1,769 / 5,847 nodes) as the
+  standard split. Dense 300-d features. Used only by E6 (benchmarks/paper/PLAN.md), the
+  out-of-sample test of the parameter-free propagation reference.
 - arxiv-year (Lim et al., NeurIPS 2021): the ogbn-arxiv graph and features, labelled with the
   publication year cut into 5 classes at its quantiles (their ``even_quantile_labels``), with
   random 50/25/25 splits. SSL training never sees labels, so the models trained on ogbn-arxiv
@@ -29,8 +32,12 @@ RANDOM_SPLIT = {
 }
 OGB = ["ogbn-arxiv", "ogbn-products"]
 ARXIV_YEAR = "arxiv-year"
+WIKICS = "WikiCS"
 FULL_BATCH_DATASETS = [*PLANETOID, *RANDOM_SPLIT]
-ALL_DATASETS = [*FULL_BATCH_DATASETS, *OGB, ARXIV_YEAR]
+# Full-batch datasets outside the main study (E6 only): kept out of FULL_BATCH_DATASETS so that
+# the scripts that iterate over the study's datasets do not pick them up.
+EXTRA_FULL_BATCH_DATASETS = [WIKICS]
+ALL_DATASETS = [*FULL_BATCH_DATASETS, *EXTRA_FULL_BATCH_DATASETS, *OGB, ARXIV_YEAR]
 
 DEFAULT_SPLIT_FRACTIONS = (0.1, 0.1)
 # Train and validation fractions of a random split, where a dataset's convention differs.
@@ -111,6 +118,19 @@ def load_node_dataset(name: str, data_dir: str = "data"):
         splits = list(random_split(data.num_nodes, split_fractions(name), seed=0))
         data.train_mask, data.val_mask, data.test_mask = _masks(data.num_nodes, splits)
         return data, dataset.num_classes, *splits
+
+    if name == WIKICS:
+        from torch_geometric.datasets import WikiCS
+
+        data = WikiCS(root=f"{data_dir}/{name}")[0]  # undirected by default
+        splits = [
+            data.train_mask[:, 0].nonzero(as_tuple=True)[0],
+            data.val_mask[:, 0].nonzero(as_tuple=True)[0],
+            data.test_mask.nonzero(as_tuple=True)[0],
+        ]
+        data.train_mask, data.val_mask, data.test_mask = _masks(data.num_nodes, splits)
+        del data.stopping_mask
+        return data, int(data.y.max()) + 1, *splits
 
     from torch_geometric.transforms import ToUndirected
 

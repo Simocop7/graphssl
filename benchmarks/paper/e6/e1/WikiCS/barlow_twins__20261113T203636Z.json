@@ -1,0 +1,212 @@
+{
+  "dataset": "WikiCS",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.814584493637085,
+      "test_acc_linear": 0.7896357178688049,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.768795907497406,
+      "test_acc_knn": 0.753548800945282,
+      "eff_rank": 105.51815795898438,
+      "wall_time_s": 135.30459785461426,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8157150745391846,
+      "test_acc_linear": 0.7918590903282166,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7738835215568542,
+      "test_acc_knn": 0.76124507188797,
+      "eff_rank": 104.45043182373047,
+      "wall_time_s": 134.64932489395142,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8275862336158752,
+      "test_acc_linear": 0.7898067235946655,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7608818411827087,
+      "test_acc_knn": 0.7497861981391907,
+      "eff_rank": 104.04009246826172,
+      "wall_time_s": 134.77032566070557,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8196721076965332,
+      "test_acc_linear": 0.7928852438926697,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7727529406547546,
+      "test_acc_knn": 0.7561142444610596,
+      "eff_rank": 105.2573013305664,
+      "wall_time_s": 134.98977828025818,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8196721076965332,
+      "test_acc_linear": 0.7932273149490356,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7755794525146484,
+      "test_acc_knn": 0.7646656632423401,
+      "eff_rank": 103.67881774902344,
+      "wall_time_s": 133.7577919960022,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.8140192031860352,
+      "test_acc_linear": 0.7922011017799377,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7750141620635986,
+      "test_acc_knn": 0.7583376169204712,
+      "eff_rank": 106.24960327148438,
+      "wall_time_s": 135.29768872261047,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.8078010082244873,
+      "test_acc_linear": 0.7862151265144348,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7648388743400574,
+      "test_acc_knn": 0.7544039487838745,
+      "eff_rank": 103.49482727050781,
+      "wall_time_s": 135.2611289024353,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.8157150745391846,
+      "test_acc_linear": 0.7898067235946655,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7654041647911072,
+      "test_acc_knn": 0.7561142444610596,
+      "eff_rank": 105.66094970703125,
+      "wall_time_s": 135.901859998703,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.8162803649902344,
+      "test_acc_linear": 0.7863861918449402,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.7671000361442566,
+      "test_acc_knn": 0.7516674995422363,
+      "eff_rank": 103.87422943115234,
+      "wall_time_s": 134.4490077495575,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8134539127349854,
+      "test_acc_linear": 0.7865571975708008,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.774448812007904,
+      "test_acc_knn": 0.7586796879768372,
+      "eff_rank": 105.77729797363281,
+      "wall_time_s": 137.4100000858307,
+      "checkpoint": "benchmarks/paper/models_e6/WikiCS/gcn/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7898580431938171,
+      "std": 0.002713851729860285
+    },
+    "test_acc_knn": {
+      "mean": 0.7564562976360321,
+      "std": 0.004461332105489503
+    },
+    "eff_rank": {
+      "mean": 104.8001708984375,
+      "std": 1.0022089185307008
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261113T203636Z",
+    "git": {
+      "commit": "6cf6db9c46423d19f6a42967584a89669043fa51",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

@@ -1,0 +1,265 @@
+section,claim,paper,recomputed,status
+backbone,"untrained GIN rank, Computers / Photo","(4.0, 8.0)","(4.1, 7.6)",OK
+backbone,"untrained GIN rank, Cora / CiteSeer","(145.0, 151.0)","(145.1, 151.0)",OK
+backbone,"GCN, mean gain over objectives, Cora",6.9,6.9,OK
+backbone,"GCN, mean gain over objectives, CiteSeer",8.6,8.64,OK
+backbone,"GCN, mean gain over objectives, PubMed",5.6,5.64,OK
+backbone,"GCN, mean gain over objectives, AmazonComputers",1.4,1.39,OK
+backbone,"GCN, mean gain over objectives, AmazonPhoto",0.2,0.23,OK
+backbone,"GCN, mean gain over objectives, CoauthorCS",1.5,1.48,OK
+backbone,untrained GCN 87.1/91.7/90.7,"(87.1, 91.7, 90.7)","(87.09, 91.69, 90.75)",OK
+backbone,GIN gain citation graphs range,"(17.1, 30.1)","(17.13, 30.12)",OK
+backbone,GIN gain other graphs range,"(1.4, 10.7)","(1.38, 10.72)",OK
+backbone,Transformer gain range,"(5.7, 20.6)","(5.69, 20.59)",OK
+backbone,"best model on CoauthorCS = ('gin', 'graphcl') | best untrained: gcn",94.6,94.58,OK
+backbone,"best model on AmazonPhoto = ('transformer', 'vicreg') | best untrained: gcn",93.6,93.56,OK
+backbone,GraphMAE+GCN gain on AmazonComputers (rank among 8: 5),1.5,1.5,OK
+backbone,GraphMAE+GCN gain on AmazonPhoto (rank among 8: 1),0.7,0.67,OK
+backbone,GraphMAE+GCN gain on CoauthorCS (rank among 8: 1),2.3,2.32,OK
+backbone,"AmazonComputers, GCN, kNN: objectives significantly below untrained",5.0,5.0,OK
+backbone,"AmazonPhoto, GCN, kNN: objectives significantly below untrained",5.0,5.0,OK
+backbone,"Computers, GCN, regularized: significantly above",8.0,8.0,OK
+backbone,"Photo, GCN, regularized: above / below","(4.0, 1.0)","(4.0, 1.0)",OK
+robust,GraphCL best in N of 18,13.0,13.0,OK
+robust,"GraphCL top three in N of 18 | exception [('AmazonPhoto', 'gcn', 'graphmae', np.float64(0.91))]",17.0,17.0,OK
+probe,"CiteSeer, GCN, mean gain, adam100",1.5,1.52,OK
+probe,"CiteSeer, GCN, mean gain, adam5000",3.7,3.74,OK
+probe,"CiteSeer, GCN, mean gain, liblinear",7.3,7.34,OK
+probe,"CiteSeer, GCN, mean gain, graphssl",8.6,8.64,OK
+probe,"CoauthorCS, GCN, mean gain, adam100",9.5,9.55,OK
+probe,"AmazonComputers, GCN, mean gain, adam100",7.1,7.11,OK
+probe,"Coauthor CS, GCN, the other three probes","(1.0, 1.5)","(0.98, 1.48)",OK
+probe,"Computers, GCN, the other three probes","(1.2, 1.4)","(1.21, 1.39)",OK
+probe,"Coauthor CS, GIN, adam100 / regularized","(33.5, 10.7)","(33.55, 10.72)",OK
+probe,CiteSeer GCN AFGRL adam100 / regularized,"(-3.5, 4.9)","(-3.47, 4.9)",OK
+probe,CiteSeer GCN GraphDINO adam100 / regularized,"(-3.3, 3.0)","(-3.28, 2.98)",OK
+probe,"liblinear vs L-BFGS: sign disagreements of 144 [('AmazonComputers', 'gin', 'bgrl', np.float64(-0.81), np.float64(0.92)), ('AmazonPhoto', 'gcn', 'barlow_twins', np.float64(-0.08), np.float64(0.01))]",2.0,2.0,OK
+probe,both within one point of zero (max |gain|),1.0,1.0,OK
+probe,"CiteSeer GCN unregularized probes range {'adam100': np.float64(58.3203749563545), 'adam5000': np.float64(60.61041670540969), 'adam100_std': np.float64(57.64806248433888), 'adam5000_std': np.float64(59.21583328396082), 'graphssl_weakl2': np.float64(55.73750030249357)}","(55.7, 60.6)","(55.74, 60.61)",OK
+probe,CiteSeer GCN regularized probes,"(66.3, 66.7)","(66.33, 66.74)",OK
+probe,CiteSeer GCN adam100 final train loss (fits averaged),0.03,0.029,OK
+probe,CiteSeer GCN 80 models: L2 in the two strongest of the grid,80.0,80.0,OK
+probe,scale ratio Amazon graphs,"(5.0, 11.0)","(5.4, 11.5)",OK
+probe,"scale ratio Cora, CiteSeer, CS","(18.0, 42.0)","(18.3, 41.6)",OK
+probe,scale ratio PubMed,"(140.0, 290.0)","(139.0, 290.0)",OK
+probe,"Coauthor CS untrained GCN, adam100 / regularized / adam100 std","(82.3, 90.7, 89.2)","(82.3, 90.75, 89.21)",OK
+probe,Coauthor CS gain adam100 std,2.3,2.28,OK
+probe,Computers gain adam100 std,1.2,1.2,OK
+probe,CiteSeer untrained adam100 raw / std,"(56.8, 51.8)","(56.8, 51.78)",OK
+probe,CiteSeer gain adam100 std,5.9,5.86,OK
+probe,liblinear vs regularized: max difference of mean gain in 18 cells (paper: within 2.0),1.0,2.01,OK
+robust,"tau vs regularized, other linear probes: median, min","(0.93, 0.43)","(0.929, 0.429)",OK
+robust,"tau vs regularized, kNN: median, min","(0.79, 0.57)","(0.786, 0.571)",OK
+robust,tau between backbones over 18 pairs: range,"(0.21, 0.93)","(0.214, 0.929)",OK
+robust,Amazon Photo GCN vs Transformer,0.21,0.214,OK
+robust,Coauthor CS GCN vs GIN,0.29,0.286,OK
+robust,backbone tau on Amazon/CS range,"(0.21, 0.71)","(0.214, 0.714)",OK
+robust,backbone tau on Cora/CiteSeer range,"(0.36, 0.86)","(0.357, 0.857)",OK
+scale,GCN regularized: min afgrl max graphmae,"(-5.6, 0.3)","(-5.6, 0.29)",OK
+scale,"untrained GCN, minus raw","(69.2, 16.7)","(69.17, 16.66)",OK
+scale,"kNN GCN models range, untrained","(60.0, 66.6, 66.8)","(60.05, 66.56, 66.78)",OK
+scale,"adam100: untrained, gain range","(46.6, 14.0, 22.1)","(46.56, 13.99, 22.09)",OK
+scale,(info) GCN gain adam5000,-,"(-5.3, 0.74)",INFO
+scale,"untrained GIN, minus raw","(55.3, 2.8)","(55.29, 2.78)",OK
+scale,"GIN: 7 gain, range; order ['graphcl', 'bgrl']","(7.0, 2.6, 8.4)","(7.0, 2.64, 8.45)",OK
+scale,GIN: DGI,-7.7,-7.73,OK
+scale,"untrained Transformer, minus raw","(66.4, 13.9)","(66.43, 13.92)",OK
+scale,Transformer: AFGRL; other seven,"(2.6, -1.3, -4.6)","(2.62, -1.29, -4.62)",OK
+scale,GraphMAE gains GCN/GIN/Transformer,"(0.3, 3.4, -1.7)","(0.29, 3.35, -1.72)",OK
+scale,BGRL GCN shared protocol,-0.6,-0.63,OK
+scale,tau gcn vs gin,0.07,0.071,OK
+scale,tau gcn vs transformer,-0.14,-0.143,OK
+scale,tau gin vs transformer,-0.79,-0.786,OK
+scale,tau adam5000 vs regularized range,"(0.93, 1.0)","(0.929, 1.0)",OK
+scale,"tau adam100 vs regularized, Transformer",0.21,0.214,OK
+scale,"tau kNN vs regularized, GIN",0.07,0.071,OK
+scale,year: GCN gain range,"(2.0, 2.6)","(2.04, 2.63)",OK
+scale,year: untrained minus raw GCN/Transformer/GIN,"(4.9, 3.6, 5.7)","(4.86, 3.61, 5.66)",OK
+scale,year: GCN at least 1.9 under every other linear probe,1.0,min 2.11,OK
+scale,year: GCN kNN objectives not gaining ['afgrl'],1.0,1.0,OK
+scale,"year: GIN all below, range","(8.0, 0.2, 3.0)","(8.0, 0.24, 3.02)",OK
+scale,"year: Transformer above ['afgrl', 'dgi', 'graphmae'] range","(3.0, 0.2, 1.8)","(3.0, 0.22, 1.75)",OK
+scale,"(info) subject labels, gin, min gain by probe",-,"{'adam100': np.float64(-9.44), 'adam5000': np.float64(-1.88), 'graphssl': np.float64(-7.73)}",INFO
+scale,"(info) subject labels, transformer, min gain by probe",-,"{'adam100': np.float64(-19.71), 'adam5000': np.float64(-3.92), 'graphssl': np.float64(-4.62)}",INFO
+backbone,"CKA same backbone, range over 6","(0.43, 0.81)","(0.429, 0.806)",OK
+backbone,"CKA same objective, range over 6","(0.25, 0.45)","(0.251, 0.446)",OK
+backbone,"CKA neither, range over 6","(0.21, 0.4)","(0.208, 0.4)",OK
+backbone,same backbone > same objective on every dataset,6.0,6.0,OK
+scale,arxiv CKA same backbone / same objective,"(0.59, 0.25)","(0.593, 0.249)",OK
+backbone,"Cora GraphCL+GCN vs DGI+GCN, vs GraphCL+GIN","(0.73, 0.6)","(0.726, 0.605)",OK
+backbone,"GraphMAE+GCN to other GCN models, across datasets","(0.5, 0.9)","(0.497, 0.902)",OK
+backbone,"GraphMAE+GCN to GraphMAE on other backbones, mean of the two","(0.42, 0.67)","(0.422, 0.674)",OK
+backbone,per dataset: closer to the other GCN models than to GraphMAE elsewhere,6.0,6.0,OK
+backbone,"backbone's share of eff_rank, 6 datasets (%)","(52.0, 76.0)","(51.6, 75.8)",OK
+backbone,"backbone's share of uniformity, 6 datasets (%)","(57.0, 69.0)","(57.2, 68.9)",OK
+backbone,"backbone's share of pair_cos, 6 datasets (%)","(57.0, 64.0)","(56.8, 63.5)",OK
+backbone,objective's share of rank/uniformity/pair (%),"(9.0, 30.0)","(8.5, 30.2)",OK
+backbone,objective's share of CKA distance on citation graphs (%),"(41.0, 54.0)","(40.6, 53.7)",OK
+scale,"arxiv: backbone's share of rank, uniformity, pair (%)","(76.0, 20.0, 16.0)","(75.8, 19.9, 16.0)",OK
+backbone,BGRL rank on Cora GCN / GIN,"(3.0, 7.0)","(3.0, 7.0)",OK
+backbone,BGRL effective rank on Cora GIN / GCN / Transformer,"(9.0, 172.0, 172.0)","(8.9, 171.6, 172.4)",OK
+synthesis,accuracy: objective share range (%),"(24.0, 54.0)","(24.1, 53.5)",OK
+synthesis,accuracy: backbone share range (%),"(12.0, 60.0)","(11.9, 60.1)",OK
+synthesis,accuracy: interaction range (%),"(9.0, 32.0)","(8.9, 31.7)",OK
+synthesis,"accuracy: split share, not PubMed, max (%)",3.0,3.3,OK
+synthesis,"accuracy: split share, PubMed (%)",32.0,32.0,OK
+synthesis,accuracy: 'seeds 2 to 6%' (the residual column),"(2.0, 6.0)","(2.2, 5.6)",OK
+synthesis,"(info) what the residual holds: within-cell seed variance vs backbone x split etc., accuracy, by dataset",-,"{'Cora': (np.float64(5.2), np.float64(4.4), np.float64(0.4)), 'CiteSeer': (np.float64(4.4), np.float64(3.5), np.float64(0.5)), 'PubMed': (np.float64(5.6), np.float64(3.8), np.float64(0.6)), 'AmazonComputers': (np.float64(2.2), np.float64(1.9), np.float64(0.2)), 'AmazonPhoto': (np.float64(3.6), np.float64(2.8), np.float64(0.5)), 'CoauthorCS': (np.float64(2.3), np.float64(2.0), np.float64(0.1))}",INFO
+synthesis,(info) same for gain,-,"{'Cora': (np.float64(4.0), np.float64(3.6), np.float64(0.2)), 'CiteSeer': (np.float64(5.9), np.float64(5.3), np.float64(0.3)), 'PubMed': (np.float64(15.0), np.float64(7.1), np.float64(6.9)), 'AmazonComputers': (np.float64(3.3), np.float64(3.0), np.float64(0.2)), 'AmazonPhoto': (np.float64(4.1), np.float64(3.6), np.float64(0.3)), 'CoauthorCS': (np.float64(2.1), np.float64(2.0), np.float64(0.1))}",INFO
+backbone,"gain: backbone share, Cora (%)",76.0,75.7,OK
+backbone,"gain: backbone share, Amazon + CS range (%)","(68.0, 82.0)","(67.5, 82.0)",OK
+backbone,gain: objective share in those four (%),"(10.0, 20.0)","(9.9, 19.5)",OK
+backbone,"gain: CiteSeer backbone, objective (%)","(40.0, 38.0)","(40.0, 38.5)",OK
+backbone,"gain: PubMed split share, 'a quarter' (%), within 2",1.0,1.0,OK
+backbone,"without GraphDINO, Cora: backbone, objective (%)","(83.0, 6.0)","(82.7, 5.8)",OK
+backbone,"without GraphDINO, CiteSeer: backbone, objective (%)","(54.0, 23.0)","(54.3, 22.9)",OK
+backbone,"(info) PubMed backbone share with / without GraphDINO, paper: unchanged",-,"(np.float64(28.1), np.float64(28.7))",INFO
+synthesis,"probe share of accuracy, 4 probes, range (%)","(2.0, 12.0)","(2.0, 11.9)",OK
+synthesis,"probe share of gain, CS, Computers (%)","(35.0, 25.0)","(35.1, 24.7)",OK
+synthesis,'up to 35' is the max over six (%),35.0,35.1,OK
+scale,"arxiv gain: probe, backbone, objective (%)","(36.0, 22.0, 11.0)","(35.6, 21.6, 11.4)",OK
+predict,CKA distance: rho,0.26,0.264,OK
+predict,"CKA distance: interval excludes 0, within 0.01 of the paper's bounds (bootstrap noise)",1.0,1.0,OK
+predict,CKA distance: groups positive of 15,13.0,13.0,OK
+predict,"CKA distance: regret, random","(2.9, 2.99)","(2.898, 2.986)",OK
+predict,"CKA distance without ogbn-arxiv: regret, random","(3.29, 2.89)","(3.294, 2.894)",OK
+predict,"CKA distance without AmazonPhoto: regret, random","(3.24, 3.17)","(3.24, 3.168)",OK
+predict,"leave-one-out verdict keeps for the other three {'PubMed': np.True_, 'AmazonComputers': np.True_, 'AmazonPhoto': np.False_, 'CoauthorCS': np.True_, 'ogbn-arxiv': np.False_}",3.0,3.0,OK
+predict,"smoothing: rho, regret","(0.27, 3.27)","(0.271, 3.266)",OK
+predict,"smoothing: interval within 0.011 of (0.22, 0.34)",1.0,1.0,OK
+predict,uniformity: rho,-0.1,-0.105,OK
+predict,"uniformity: interval within 0.011 of (-0.15, -0.05)",1.0,1.0,OK
+predict,rank: rho test,-0.16,-0.162,OK
+predict,"rank: interval within 0.011 of (-0.19, -0.10)",1.0,1.0,OK
+predict,rank: rho dev,-0.51,-0.512,OK
+predict,"kNN gain: regret distance, smoothing, random","(3.88, 3.58, 4.6)","(3.883, 3.577, 4.599)",OK
+backbone,"same backbone, other objective, other seed","(0.38, 0.8)","(0.377, 0.801)",OK
+backbone,"same backbone, other objective, same seed","(0.43, 0.8)","(0.43, 0.805)",OK
+backbone,"untrained, same backbone, other seed","(0.45, 0.97)","(0.447, 0.972)",OK
+backbone,"same backbone, same objective, other seed","(0.6, 0.96)","(0.595, 0.964)",OK
+backbone,"other backbone, same objective, other seed","(0.25, 0.44)","(0.248, 0.441)",OK
+backbone,same objective on other backbone above unrelated models,"(0.01, 0.05)","(0.01, 0.045)",OK
+backbone,(info) 'two untrained encoders more similar than two trained of that backbone': untrained vs trained other-seed,-,"{'AmazonComputers': (np.float64(0.97), np.float64(0.8)), 'AmazonPhoto': (np.float64(0.97), np.float64(0.78)), 'CiteSeer': (np.float64(0.45), np.float64(0.38)), 'CoauthorCS': (np.float64(0.74), np.float64(0.57)), 'Cora': (np.float64(0.57), np.float64(0.46)), 'PubMed': (np.float64(0.71), np.float64(0.62))}",INFO
+robust,"E3 mean lift on Cora and CiteSeer, range","(1.0, 7.6)","(0.99, 7.64)",OK
+robust,E3 CiteSeer GCN lifts range,"(1.7, 5.4)","(1.68, 5.44)",OK
+robust,every objective gains there,8.0,8.0,OK
+robust,E3 BGRL Transformer CiteSeer,13.3,13.28,OK
+robust,"E3 choices at the grid edge on Cora/CiteSeer, of 48","(16.0, 48.0)","(16.0, 48.0)",OK
+robust,"E3 tau shared vs tuned, Cora/CiteSeer range","(0.43, 0.86)","(0.429, 0.857)",OK
+robust,"E3 tau shared vs tuned, AmazonComputers",1.0,1.0,OK
+robust,"E3 mean lift, AmazonComputers",0.1,0.1,OK
+robust,"E3 tau shared vs tuned, AmazonPhoto",0.5,0.5,OK
+robust,"E3 mean lift, AmazonPhoto",0.1,0.1,OK
+robust,"E3 tau shared vs tuned, CoauthorCS",0.79,0.786,OK
+robust,"E3 mean lift, CoauthorCS",0.2,0.18,OK
+robust,E3 Amazon/CS: max lift of one objective,0.5,0.47,OK
+robust,GraphMAE picks lowest AdamW in N of 6 groups,5.0,5.0,OK
+robust,"GraphMAE Transformer Cora: shared rank, tuned rank","(7.0, 2.0)","(7.0, 2.0)",OK
+robust,Amazon Photo shared cell: spread among eight (E3 cell),0.8,0.84,OK
+app,E3 CiteSeer gin: spread shrinks by,4.5,4.5,OK
+app,E3 CiteSeer transformer: spread shrinks by,6.0,6.0,OK
+app,(info) Amazon/CS choices at or beyond edges,DGI AdamW 1e-4 on both Amazon; GraphCL SGD 5e-1 on CS (+0.3),"[{'ds': 'AmazonComputers', 'm': 'dgi', 'cell': 'adamw_lr1e-4', 'lift': -0.03}, {'ds': 'AmazonPhoto', 'm': 'dgi', 'cell': 'adamw_lr1e-4', 'lift': -0.22}, {'ds': 'CoauthorCS', 'm': 'graphcl', 'cell': 'sgd_lr5e-1', 'lift': 0.32}]",INFO
+app,(info) diverged cells,see appendix E3,"[{'ds': 'AmazonComputers', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 3, 'n': 5}, {'ds': 'AmazonComputers', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr5e-2', 'dv': 1, 'n': 5}, {'ds': 'AmazonComputers', 'bb': 'gcn', 'm': 'vicreg', 'cell': 'sgd_lr1e-1', 'dv': 4, 'n': 5}, {'ds': 'AmazonPhoto', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 3, 'n': 5}, {'ds': 'AmazonPhoto', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr5e-2', 'dv': 1, 'n': 5}, {'ds': 'AmazonPhoto', 'bb': 'gcn', 'm': 'vicreg', 'cell': 'sgd_lr1e-1', 'dv': 4, 'n': 5}, {'ds': 'CiteSeer', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 2, 'n': 5}, {'ds': 'CiteSeer', 'bb': 'gin', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 5, 'n': 5}, {'ds': 'CiteSeer', 'bb': 'gin', 'm': 'dgi', 'cell': 'sgd_lr5e-2', 'dv': 5, 'n': 5}, {'ds': 'CiteSeer', 'bb': 'gin', 'm': 'vicreg', 'cell': 'sgd_lr1e-1', 'dv': 5, 'n': 5}, {'ds': 'CiteSeer', 'bb': 'gin', 'm': 'vicreg', 'cell': 'sgd_lr5e-2', 'dv': 5, 'n': 5}, {'ds': 'CoauthorCS', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 5, 'n': 5}, {'ds': 'CoauthorCS', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr5e-2', 'dv': 5, 'n': 5}, {'ds': 'CoauthorCS', 'bb': 'gcn', 'm': 'vicreg', 'cell': 'sgd_lr1e-1', 'dv': 3, 'n': 5}, {'ds': 'Cora', 'bb': 'gcn', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 2, 'n': 5}, {'ds': 'Cora', 'bb': 'gin', 'm': 'dgi', 'cell': 'sgd_lr1e-1', 'dv': 5, 'n': 5}, {'ds': 'Cora', 'bb': 'gin', 'm': 'dgi', 'cell': 'sgd_lr5e-2', 'dv': 5, 'n': 5}, {'ds': 'Cora', 'bb': 'gin', 'm': 'vicreg', 'cell': 'sgd_lr1e-1', 'dv': 5, 'n': 5}, {'ds': 'Cora', 'bb': 'gin', 'm': 'vicreg', 'cell': 'sgd_lr5e-2', 'dv': 5, 'n': 5}]",INFO
+closing,GraphDINO lift Cora/CiteSeer range,"(0.8, 9.7)","(0.82, 9.66)",OK
+closing,GraphDINO lift Amazon/CS max,0.5,0.47,OK
+closing,GraphDINO tuned: among the three weakest in all nine E3 groups,0.0,0.0,OK
+closing,"(info) GraphDINO at the shared protocol, cells where it ranks above the weakest three",-,"[['AmazonComputers', 'gin', 5.0], ['AmazonPhoto', 'gcn', 5.0], ['AmazonPhoto', 'gin', 4.0]]",INFO
+setup,"E3 shared cell vs E1 same seed, AmazonComputers: max |diff| within the stated bound 0.07, n=40",1.0,0.009,OK
+setup,"E3 shared cell vs E1 same seed, AmazonPhoto: max |diff| within the stated bound 0.07, n=40",1.0,0.065,OK
+setup,"E3 shared cell vs E1 same seed, CoauthorCS: max |diff| within the stated bound 0.16, n=40",1.0,0.164,OK
+robust,"E4 shared cell: late decline 15 of 48, within 1 (one curve sits on the bootstrap boundary)",1.0,14,OK
+robust,E4 AdamW 1e-2: late decline of 48,30.0,30.0,OK
+robust,"E4 AdamW 1e-2, GIN: collapse in N of 16",16.0,16.0,OK
+robust,"BGRL GIN Cora AdamW 1e-2: at best val, end","(58.1, 33.8)","(58.14, 33.76)",OK
+robust,...and its best step,2.0,2.0,OK
+robust,GraphMAE Transformer peak step Cora/CiteSeer,"(75.0, 50.0)","(75.0, 50.0)",OK
+robust,GraphMAE Transformer decline,"(10.6, 11.9)","(10.6, 11.9)",OK
+robust,"early stop vs step 300, shared, GCN/GIN range","(0.79, 1.0)","(0.786, 1.0)",OK
+robust,"early stop vs step 300, shared, Transformer Cora, CiteSeer","(0.5, 0.64)","(0.5, 0.643)",OK
+robust,"early stop, AdamW 1e-2: min tau",0.21,0.214,OK
+intro,tau over lr and stopping: 0.43 to 1.00,"(0.43, 1.0)","(0.429, 1.0)",OK
+robust,E5 mean delta AmazonComputers,0.37,0.375,OK
+robust,E5 mean delta AmazonPhoto,0.18,0.176,OK
+robust,E5 mean delta CoauthorCS,0.03,0.033,OK
+robust,E5 mean delta Cora gcn,-0.27,-0.272,OK
+robust,E5 mean delta Cora transformer,-0.13,-0.128,OK
+robust,E5 mean delta Cora gin,1.43,1.43,OK
+robust,E5 BGRL GIN Cora delta,8.9,8.9,OK
+robust,E5 no objective gains more than,0.72,0.716,OK
+robust,"E5 Cora pairs best at the first evaluation, of 24",18.0,18.0,OK
+robust,"E5 largest drop at the endpoint: ['transformer', 'graphdino']",27.0,27.1,OK
+app,"E5 Computers: best at >= 1000, of 8",7.0,7.0,OK
+app,E5 Computers largest delta graphdino,0.72,0.716,OK
+app,"E5 CS: stop at 300, of 8",6.0,6.0,OK
+app,"E5 CS below untrained at 3000 ['afgrl', 'graphcl', 'graphdino']",3.0,3.0,OK
+robust,"E5 CKA 300 steps: same backbone, same objective","(0.45, 0.3)","(0.445, 0.295)",OK
+robust,"E5 CKA 3000 steps: same backbone, same objective","(0.27, 0.23)","(0.271, 0.227)",OK
+robust,"E5 margin, centered, standardized","(0.04, 0.05)","(0.044, 0.055)",OK
+robust,"E5 CKA to untrained, gcn: 300, 3000","(0.64, 0.44)","(0.638, 0.44)",OK
+robust,"E5 CKA to untrained, gin: 300, 3000","(0.45, 0.29)","(0.445, 0.291)",OK
+robust,"E5 CKA to untrained, transformer: 300, 3000","(0.35, 0.14)","(0.349, 0.142)",OK
+robust,"E5 same objective between seeds, 3000 ('0.61')",0.61,0.61,OK
+probe,"100-step probe inflates the gain in all 12 cells with many labels, range","(12.0, 0.5, 22.8)","(12.0, 0.51, 22.82)",OK
+probe,"20 per class: deflates in 6 of 9, range","(6.0, 1.3, 7.1)","(6.0, 1.26, 7.11)",OK
+probe,"exceptions Cora GIN, PubMed GCN, PubMed GIN","(0.7, 0.5, 11.6)","(0.73, 0.51, 11.6)",OK
+probe,"Spearman, scale ratio vs net effect over the nine cells",0.78,0.783,OK
+probe,untrained GIN on Amazon: scale ratio,"(0.8, 1.4)","(0.84, 1.41)",OK
+probe,"AmazonComputers, GIN: untrained, regularized minus std 100-step; gain std 100-step","(12.7, 8.0)","(12.7, 7.99)",OK
+probe,"AmazonPhoto, GIN: untrained, regularized minus std 100-step; gain std 100-step","(6.4, 5.9)","(6.43, 5.95)",OK
+probe,gain regularized on those two,"(1.4, 2.1)","(1.38, 2.14)",OK
+backbone,"Cora: span of the backbones, untrained, trained","(31.4, 9.8)","(31.43, 9.79)",OK
+backbone,"CoauthorCS: span of the backbones, untrained, trained","(10.6, 1.3)","(10.57, 1.33)",OK
+backbone,"training narrows the span on every dataset, of 7",7.0,7.0,OK
+backbone,objective's share larger on CiteSeer and CS,"(1.0, 1.0)","(1.0, 1.0)",OK
+backbone,backbone's share larger on both Amazon graphs,"(1.0, 1.0)","(1.0, 1.0)",OK
+synthesis,"seeds (within-cell) range (%), 'seeds 2 to 4'","(2.0, 4.0)","(1.9, 4.4)",OK
+synthesis,"other interactions, at most 2 (%)",2.0,1.8,OK
+robust,"GraphCL: lead over the runner-up, interval above zero, of its first places; with a GCN","(8.0, 13.0, 0.0)","(8.0, 13.0, 0.0)",OK
+robust,"GraphCL tuned: first, top three, of 9 groups","(3.0, 9.0, 9.0)","(3.0, 9.0, 9.0)",OK
+predict,"collapsed endpoints: comparisons, low cell lower, mean difference","(13.0, 13.0, 18.2)","(13.0, 13.0, 18.16)",OK
+predict,"collapsed endpoints, above the untrained encoder, of","(15.0, 21.0)","(15.0, 21.0)",OK
+setup,"supervised recipe, head, GCN, Cora/CiteSeer/PubMed","(81.4, 69.5, 78.4)","(81.39, 69.48, 78.37)",OK
+closing,GraphMAE + GCN on Cora,79.8,79.83,OK
+synthesis,every interval of a share at most 7 points wide,1.0,1.0,OK
+app,reruns GCN: mean |diff| range,"(0.59, 0.89)","(0.586, 0.89)",OK
+app,reruns GIN: mean |diff| range,"(1.63, 1.88)","(1.63, 1.879)",OK
+app,reruns: tau range,"(0.71, 1.0)","(0.714, 1.0)",OK
+setup,edge homophily year / subject labels,"(0.22, 0.65)","(0.218, 0.654)",OK
+scale,training labels: fifty times the largest other,50.0,49.6,OK
+e6,"raw features Cora/CiteSeer/PubMed, our probe","(52.6, 47.5, 67.0)","(52.6, 47.5, 67.0)",OK
+e6,"raw features Cora/CiteSeer/PubMed, liblinear","(60.2, 62.4, 72.9)","(60.2, 62.4, 72.9)",OK
+backbone,"A2X minus raw features, six datasets (valsel)","(21.8, 9.9, 6.8, 9.6, 6.0, 0.9)","(21.8, 9.9, 6.8, 9.6, 6.03, 0.94)",OK
+backbone,CiteSeer raw: ours vs valsel,"(47.5, 62.4)","(47.5, 62.4)",OK
+backbone,CiteSeer untrained GCN minus raw: ours vs valsel,"(10.2, -3.3)","(10.19, -3.26)",OK
+backbone,"untrained GCN below A2X on every dataset, by (min, max)","(0.9, 13.2)","(0.87, 13.16)",OK
+backbone,untrained GCN below A2X on N of 6,6.0,6.0,OK
+backbone,"untrained GCN above raw on Cora, PubMed, Amazon: range","(1.0, 13.0)","(1.02, 13.05)",OK
+backbone,"untrained GIN/Transformer below raw, citation + CS: range","(5.3, 26.1)","(5.27, 26.14)",OK
+backbone,"untrained GIN minus raw, Amazon (level)","(0.3, 0.0)","(0.33, 0.02)",OK
+backbone,"untrained Transformer minus raw, Amazon (3 below)","(-3.0, -3.0)","(-3.0, -3.0)",OK
+backbone,"average GCN objective below A2X by (min, max)","(0.2, 5.5)","(0.17, 5.55)",OK
+backbone,"GCN objective-dataset pairs above A2X (of 48), PubMed","(5.0, 3.0)","(5.0, 3.0)",OK
+backbone,"models of any backbone above A2X (of 144), CS + Photo","(16.0, 10.0)","(16.0, 10.0)",OK
+backbone,"Coauthor CS: mean trained model minus raw, any backbone (valsel)","(-0.7, 0.3)","(-0.71, 0.27)",OK
+backbone,"Coauthor CS: mean trained model below A2X, any backbone (valsel)","(0.7, 1.6)","(0.67, 1.65)",OK
+intro,"Cora: untrained GCN, best GCN objective, A2X (valsel)","(73.2, 82.1, 82.0)","(73.25, 82.1, 82.0)",OK
+e6,WikiCS: D and its 95% seed-bootstrap interval,"(-0.8, -0.9, -0.8)","(-0.82, -0.88, -0.75)",OK
+e6,WikiCS: GCN objectives above A2X,0.0,0.0,OK
+e6,WikiCS: models of any backbone above A2X (of 24),"(0.0, 24.0)","(0.0, 24.0)",OK
+e6,"WikiCS: best gin objective is graphcl, and its accuracy (valsel)","(1.0, 78.7)","(1.0, 78.66)",OK
+e6,"WikiCS: best transformer objective is afgrl, and its accuracy (valsel)","(1.0, 79.2)","(1.0, 79.19)",OK
+e6,WikiCS: GraphCL minus A2X,-0.1,-0.11,OK
+e6,WikiCS: GraphMAE below the untrained GCN,1.0,1.0,OK
+e6,"WikiCS: D under ours, liblinear, ours on the random splits","(-0.6, -0.8, -0.5)","(-0.59, -0.81, -0.5)",OK
+e6,WikiCS: supervised (std. recipe) minus A2X,-0.2,-0.19,OK
+e6,WikiCS: average GCN objective minus untrained GCN,0.6,0.62,OK
+e6,"WikiCS: raw features, ours and liblinear","(71.9, 72.2)","(71.92, 72.19)",OK
+e6,"WikiCS: A2X under adam100, and D under adam100","(74.4, 4.3)","(74.36, 4.26)",OK
+backbone,ogbn-arxiv: average GCN objective minus A2X,-1.0,-1.04,OK
+backbone,"arxiv-year: untrained GCN minus A2X; GCN objectives minus A2X (min, max)","(0.7, 2.8, 3.4)","(0.75, 2.79, 3.38)",OK
+intro,arxiv-year: GCN objectives above A2X (of 8),8.0,8.0,OK
+scale,"A2X minus raw features: arxiv-year, ogbn-arxiv","(4.1, 16.7)","(4.1, 16.72)",OK
+scale,label sets where the untrained GCN is above A2X (only arxiv-year),1.0,1.0,OK
+limits,"valsel minus ours on the models: max per dataset/backbone, GCN max","(2.2, 0.4)","(2.24, 0.43)",OK
+robust,split-half tau within a backbone: range of means,"(0.76, 0.96)","(0.758, 0.965)",OK
+robust,backbone pairs below the seed ceiling (of 18),15.0,15.0,OK
