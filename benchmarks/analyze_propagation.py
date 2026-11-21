@@ -139,6 +139,29 @@ def bootstrap_d(models: pd.DataFrame, ref: float, rng: np.random.Generator) -> t
     return point, float(lo), float(hi)
 
 
+def paired_gcn_contrasts(
+    group: pd.DataFrame, untrained: pd.Series, propagated: float
+) -> dict[str, float]:
+    """Resample matched seeds jointly across the fixed set of objectives and their reference."""
+    trained = group.pivot(index="seed", columns="method", values="test")
+    baseline = untrained.reindex(trained.index)
+    if trained.isna().any().any() or baseline.isna().any():
+        raise ValueError("Paired gain requires a complete objective-by-seed grid")
+    seed_means = trained.mean(axis=1).to_numpy()
+    gain = seed_means - baseline.to_numpy()
+    n = len(seed_means)
+    indices = np.random.default_rng(0).integers(n, size=(N_BOOT, n))
+    gain_lo, gain_hi = np.percentile(gain[indices].mean(axis=1), [2.5, 97.5])
+    d_lo, d_hi = np.percentile(seed_means[indices].mean(axis=1) - propagated, [2.5, 97.5])
+    return {
+        "gain": gain.mean(),
+        "gain_lo": gain_lo,
+        "gain_hi": gain_hi,
+        "D_block_lo": d_lo,
+        "D_block_hi": d_hi,
+    }
+
+
 def main() -> None:
     args = parse_args()
     out = Path(args.out_dir)
@@ -171,7 +194,7 @@ def main() -> None:
         d, lo, hi = bootstrap_d(gcn, a2x, rng)
         means = gcn.groupby("method").test.mean()
         every = ssl.groupby(["backbone", "method"]).test.mean()
-        untrained = g[(g.method == "untrained") & (g.backbone == "gcn")].test.mean()
+        untrained = g[(g.method == "untrained") & (g.backbone == "gcn")].set_index("seed").test
         rows.append(
             {
                 "dataset": dataset,
@@ -180,7 +203,8 @@ def main() -> None:
                 "A1X": _input(df, dataset, "A1X", probe),
                 "A2X": a2x,
                 "PCA": _input(df, dataset, "PCA", probe),
-                "untrained_gcn": untrained,
+                "untrained_gcn": untrained.mean(),
+                **paired_gcn_contrasts(gcn, untrained, a2x),
                 "gcn_min": means.min(),
                 "gcn_mean": means.mean(),
                 "gcn_max": means.max(),
@@ -324,7 +348,7 @@ def _table(ref: pd.DataFrame) -> str:
     lines = [
         r"\begin{tabular}{@{}lrrrrrrr@{}}",
         r"\toprule",
-        r" & \multicolumn{3}{c}{No training} & \multicolumn{3}{c}{GCN} & Any backbone \\",
+        r" & \multicolumn{3}{c}{Fixed features} & \multicolumn{3}{c}{GCN} & Any backbone \\",
         r"\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(l){8-8}",
         r"Dataset & Raw & $\hat A^2X$ & PCA-256 & Untrained & Objectives & $D$ [95\% CI] "
         r"& Above $\hat A^2X$ \\",

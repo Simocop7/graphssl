@@ -15,6 +15,10 @@ fig_propagation  each GCN objective and the untrained GCN minus logistic regress
 fig_probe_scatter  average gain under the 100-step probe against the regularized probe, one point
                  per dataset and backbone
 fig_rankings     rank of each objective under each backbone, per dataset
+fig_gcn_baselines  paired training gain and difference from fixed propagation
+fig_probe_calibration  the change in probe discrepancy for each dataset and backbone
+fig_rank_transfer  exact split-half variation for the three architecture pairs
+tab_arxiv_tasks.tex  subject and year gains before and after normalization recalibration
 tab_datasets.tex, tab_main_v2.tex, tab_probe_gains.tex, tab_e3.tex, tab_predict_v2.tex,
 tab_arxiv.tex    LaTeX tables for paper_tmlr/ (tab_arxiv only once its probe files exist)
 
@@ -205,28 +209,36 @@ def fig_cka(analysis: Path, out: Path) -> None:
     cka = pd.read_csv(analysis / "cka_grouping.csv")
     shares = pd.read_csv(analysis / "metrics_variance.csv")
     fig, (left, right) = plt.subplots(1, 2, figsize=(6.8, 2.5), width_ratios=[1, 1.25])
-    pairs = [("same backbone", FACTOR_COLORS["backbone"], "Same backbone"),
-             ("same method", FACTOR_COLORS["method"], "Same objective"),
-             ("neither", MUTED, "Neither")]  # fmt: skip
+    pairs = [
+        ("same backbone", FACTOR_COLORS["backbone"], "Same backbone", "o", 0.18),
+        ("same method", FACTOR_COLORS["method"], "Same objective", "D", 0.0),
+        ("neither", MUTED, "Neither", "s", -0.18),
+    ]
     ys = np.arange(len(DATASETS))[::-1]
-    for pair, color, _ in pairs:
-        g = cka[cka.pair == pair].set_index("dataset")
-        for y, d in zip(ys, DATASETS, strict=True):
-            r = g.loc[d]
-            left.plot([r.lo, r.hi], [y, y], color=color, lw=1.2)
-            left.plot(r.cka, y, "o", ms=5, color=color, mec="white", mew=0.6)
+    for pair, color, _, shape, offset in pairs:
+        group = cka[cka.pair == pair].set_index("dataset").loc[DATASETS]
+        left.errorbar(
+            group.cka,
+            ys + offset,
+            xerr=[group.cka - group.lo, group.hi - group.cka],
+            fmt=shape,
+            ms=3.6,
+            capsize=1.7,
+            color=color,
+            elinewidth=1,
+        )
     left.set_yticks(ys, [DATASET_NAMES[d] for d in DATASETS])
     left.set_xlim(0, 1)
     left.set_xlabel("Linear CKA between two models")
     left.grid(axis="y", visible=False)
-    left.legend([dot(c) for _, c, _ in pairs], [n for _, _, n in pairs], loc="upper center",
+    left.legend([dot(c, shape) for _, c, _, shape, _ in pairs], [p[2] for p in pairs], loc="upper center",
                 bbox_to_anchor=(0.5, -0.25), ncol=3, frameon=False, fontsize=7,
                 handletextpad=0.3)  # fmt: skip
     metrics = [("eff_rank", "Effective rank"), ("neg_uniformity", "Uniformity"),
                ("pair_cos", "Mean pair cosine"), ("distance", "CKA distance from untrained"),
                ("smoothing_gain", "Smoothing gained")]  # fmt: skip
     components = ["backbone", "method", "method x backbone", "residual (seed)"]
-    mean = shares.groupby(["metric", "component"]).share.mean()
+    mean = shares[shares.dataset.isin(DATASETS)].groupby(["metric", "component"]).share.mean()
     ys = np.arange(len(metrics))[::-1]
     for y, (metric, _) in zip(ys, metrics, strict=True):
         x0 = 0.0
@@ -239,7 +251,8 @@ def fig_cka(analysis: Path, out: Path) -> None:
             x0 += w
     right.set_yticks(ys, [n for _, n in metrics])
     right.set_xlim(0, 1)
-    right.set_xlabel("Share of variance, mean over datasets")
+    right.set_xticks([0, 0.25, 0.5, 0.75, 1], [0, 25, 50, 75, 100])
+    right.set_xlabel("Mean share of variance (%)")
     right.grid(axis="y", visible=False)
     handles = [plt.Rectangle((0, 0), 1, 1, color=FACTOR_COLORS[c]) for c in components]
     right.legend(handles, [FACTOR_NAMES[c] for c in components], loc="upper center",
@@ -511,10 +524,159 @@ def fig_rankings(analysis: Path, out: Path) -> None:
     save(fig, out / "fig_rankings")
 
 
+def fig_gcn_baselines(analysis: Path, out: Path) -> None:
+    """Two estimates for the same eight trained GCNs under the E6 probe-selection rule."""
+    datasets = [*DATASETS, "WikiCS", "ogbn-arxiv", "arxiv-year"]
+    ref = pd.read_csv(analysis / "e6" / "reference.csv")
+    rows = ref[ref.probe == "valsel"].set_index("dataset").loc[datasets]
+    labels = [DATASET_NAMES[d] for d in DATASETS] + [
+        "WikiCS (prespecified)",
+        "ogbn-arxiv · subject",
+        "ogbn-arxiv · year",
+    ]
+    y = np.array([0, 1, 2, 3, 4, 5, 6.55, 8.1, 9.1])
+    fig, axes = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(7.05, 3.45))
+    panels = [
+        ("gain", "Relative to the untrained GCN", SERIES[0], "o"),
+        ("D", "Relative to propagated features", INK, "D"),
+    ]
+    for ax, (key, title, col, shape) in zip(axes, panels, strict=True):
+        values = rows[key]
+        interval = "D_block" if key == "D" else key
+        low, high = rows[f"{interval}_lo"], rows[f"{interval}_hi"]
+        ax.axvline(0, color=MUTED, lw=1)
+        for split in (5.8, 7.3):
+            ax.axhline(split, color=GRID, lw=0.7)
+        ax.errorbar(
+            values,
+            y,
+            xerr=[values - low, high - values],
+            fmt=shape,
+            ms=4.4,
+            color=col,
+            elinewidth=1.3,
+            capsize=2.4,
+        )
+        for yy, val, end in zip(y, values, high, strict=True):
+            ax.annotate(
+                f"{val:+.1f}".replace("-", "−"),
+                (end, yy),
+                xytext=(5, 0),
+                textcoords="offset points",
+                va="center",
+                fontsize=8,
+                bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.3},
+            )
+        ax.set(title=title, xlim=(-7, 11), xticks=[-6, -3, 0, 3, 6, 9])
+        ax.grid(axis="y", visible=False)
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+    axes[0].set_yticks(y, labels)
+    axes[0].set_ylim(y[-1] + 0.65, -0.65)
+    fig.supxlabel("Mean pretrained GCN accuracy minus reference (percentage points)", fontsize=9)
+    fig.tight_layout()
+    save(fig, out / "fig_gcn_baselines")
+
+
+def fig_probe_calibration(analysis: Path, out: Path) -> None:
+    """Paired E7 conditions for every cell entering the prespecified probe comparison."""
+    scores = pd.read_csv(analysis / "e7" / "rule3_inflation.csv")
+    cells = scores.pivot(index=["dataset", "backbone"], columns="condition", values="inflation")
+    fig, axes = plt.subplots(1, 2, sharex=True, figsize=(7.05, 3.8))
+    y = np.array([0, 1, 2, 3.7, 4.7, 5.7, 7.4, 8.4, 9.4])
+    groups = [
+        (DATASETS[:3], "20 training labels per class"),
+        (DATASETS[3:], "765–1,833 training labels"),
+    ]
+    handles = []
+    for ax, (datasets, title) in zip(axes, groups, strict=True):
+        idx = pd.MultiIndex.from_product([datasets, BACKBONES], names=cells.index.names)
+        rows = cells.loc[idx]
+        ax.axvline(0, color=MUTED, lw=1)
+        ax.hlines(y, rows.running, rows.graph, color=MUTED, lw=1.2)
+        (before,) = ax.plot(
+            rows.running, y, "o", mfc="white", mec=INK, ms=6, label="Stored statistics"
+        )
+        (after,) = ax.plot(rows.graph, y, "D", color=SERIES[0], ms=3.8, label="Graph statistics")
+        handles = [before, after]
+        labels = [
+            f"{DATASET_NAMES[d]} · {BACKBONE_NAMES[b]}" if b == "gcn" else BACKBONE_NAMES[b]
+            for d, b in idx
+        ]
+        ax.set_yticks(y, labels)
+        ax.axhline(2.85, color=GRID, lw=0.6)
+        ax.axhline(6.55, color=GRID, lw=0.6)
+        ax.set(xlim=(-9, 25), xticks=[-5, 0, 5, 10, 15, 20], ylim=(10.1, -0.8))
+        ax.set_title(title, fontsize=9, fontweight="bold", pad=17)
+        if datasets == DATASETS[:3]:
+            summary = f"Smaller gain with short probe   {(rows.running < 0).sum()}/9 → {(rows.graph < 0).sum()}/9"
+        else:
+            summary = (
+                f"Mean excess gain   {rows.running.mean():+.1f} → {rows.graph.mean():+.1f} points"
+            )
+        ax.text(
+            0.5,
+            1.012,
+            summary.replace("-", "−"),
+            transform=ax.transAxes,
+            ha="center",
+            fontsize=8,
+            color=INK_2,
+        )
+        ax.grid(axis="y", visible=False)
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+    fig.supxlabel(
+        "Gain under the 100-step probe minus gain under the regularized probe (points)",
+        fontsize=9,
+        y=0.09,
+    )
+    legend_below(fig, handles, [line.get_label() for line in handles], ncol=2)
+    fig.tight_layout(rect=(0, 0.10, 1, 1))
+    save(fig, out / "fig_probe_calibration")
+
+
+def fig_rank_transfer(analysis: Path, out: Path) -> None:
+    """Agreement between backbones at matched sample size, relative to within-backbone means."""
+    splits = pd.read_csv(analysis / "e6" / "tau_ceiling.csv")
+    within = splits[splits.kind == "within"].groupby("dataset").tau_mean.min().loc[DATASETS]
+    across = splits[splits.kind == "across"].set_index(["comparison", "dataset"])
+    pairs = [
+        ("gcn vs gin", "GCN and GIN"),
+        ("gcn vs transformer", "GCN and Transformer"),
+        ("gin vs transformer", "GIN and Transformer"),
+    ]
+    fig, axes = plt.subplots(1, 3, figsize=(7.05, 2.8), sharex=True, sharey=True)
+    y = np.arange(len(DATASETS))
+    for ax, (pair, title) in zip(axes, pairs, strict=True):
+        rows = across.loc[pair].loc[DATASETS]
+        ax.hlines(y, rows.tau_p5, rows.tau_p95, lw=1.6, color=SERIES[0])
+        ax.plot(rows.tau_mean, y, "o", color=SERIES[0], ms=4)
+        ax.plot(within, y, "|", color=INK, ms=11, mew=1.6)
+        ax.set(xlim=(0, 1.02), xticks=[0, 0.5, 1], ylim=(5.6, -0.6))
+        ax.set_title(title, fontsize=9)
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+    axes[0].set_yticks(y, [DATASET_NAMES[d] for d in DATASETS])
+    handles = [
+        plt.Line2D([], [], marker="o", ms=4, color=SERIES[0]),
+        plt.Line2D([], [], marker="|", ls="", ms=10, mew=1.6, color=INK),
+    ]
+    legend_below(
+        fig,
+        handles,
+        ["Across backbones (mean and 5th–95th percentiles)", "Lowest within-backbone mean"],
+        ncol=2,
+    )
+    fig.supxlabel("Kendall’s τ between rankings on disjoint sets of five seeds", fontsize=9, y=0.11)
+    fig.tight_layout(rect=(0, 0.12, 1, 1))
+    save(fig, out / "fig_rank_transfer")
+
+
 SHARE_DESIGNS = [
-    ("graphssl probe, all splits", "acc", "Accuracy"),
-    ("graphssl probe, all splits", "gain", "Gain"),
-    ("public split, linear probes", "gain", "Gain, 4 probes"),
+    ("graphssl probe, all splits", "acc", "Accuracy across splits"),
+    ("graphssl probe, all splits", "gain", "Gain across splits"),
+    ("public split, linear probes", "gain", "Gain across probes"),
 ]
 SHARE_ORDER = ["backbone", "method", "method x backbone", "probe", "split", "other interactions",
                "residual (seed)"]  # fmt: skip
@@ -525,31 +687,33 @@ def fig_shares(analysis: Path, out: Path) -> None:
     v["component"] = v.component.replace({"method x probe": "other interactions",
                                           "method x split": "other interactions"})  # fmt: skip
     v = v.groupby(["dataset", "design", "value", "component"]).share.sum()
-    labels, bars = [], []
-    for d in DATASETS:
-        for design, value, name in SHARE_DESIGNS:
-            labels.append(f"{DATASET_NAMES[d]}: {name}" if name == "Accuracy" else name)
-            bars.append(v.loc[(d, design, value)])
-    fig, ax = plt.subplots(figsize=(6.8, 4.6))
-    ys = np.arange(len(bars))[::-1] + np.repeat(np.arange(len(DATASETS))[::-1] * 0.6, 3)
-    for y, shares in zip(ys, bars, strict=True):
-        x0 = 0.0
-        for c in SHARE_ORDER:
-            w = float(shares.get(c, 0.0))
-            if w <= 0:
+    fig, axes = plt.subplots(1, 3, figsize=(7.05, 3.05), sharey=True, sharex=True)
+    y = np.arange(len(DATASETS))
+    for ax, (design, value, title) in zip(axes, SHARE_DESIGNS, strict=True):
+        segments = v.xs((design, value), level=["design", "value"]).unstack().loc[DATASETS]
+        left = np.zeros(len(y))
+        for component in SHARE_ORDER:
+            if component not in segments:
                 continue
-            ax.barh(y, w, left=x0, height=0.78, color=FACTOR_COLORS[c], edgecolor="white", lw=1)
-            if w >= 0.1:
-                ax.text(x0 + w / 2, y, f"{100 * w:.0f}", ha="center", va="center", fontsize=6.3,
-                        color=INK if c in {"residual (seed)", "probe"} else "white")  # fmt: skip
-            x0 += w
-    ax.set_yticks(ys, labels, fontsize=7)
-    ax.set_xlim(0, 1)
-    ax.set_xlabel("Share of variance (η²)")
-    ax.grid(axis="y", visible=False)
+            widths = 100 * segments[component].to_numpy()
+            ax.barh(
+                y,
+                widths,
+                left=left,
+                height=0.64,
+                color=FACTOR_COLORS[component],
+                edgecolor="white",
+                linewidth=0.5,
+            )
+            left += widths
+        ax.set(title=title, xlim=(0, 100), xticks=[0, 50, 100], ylim=(5.6, -0.6))
+        ax.grid(axis="y", visible=False)
+        ax.tick_params(axis="y", length=0)
+    axes[0].set_yticks(y, [DATASET_NAMES[d] for d in DATASETS])
     handles = [plt.Rectangle((0, 0), 1, 1, color=FACTOR_COLORS[c]) for c in SHARE_ORDER]
     legend_below(fig, handles, [FACTOR_NAMES[c] for c in SHARE_ORDER], ncol=4)
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.supxlabel("Share of variance within each dataset (%)", fontsize=9, y=0.17)
+    fig.tight_layout(rect=(0, 0.18, 1, 1))
     save(fig, out / "fig_shares")
 
 
@@ -818,6 +982,33 @@ def tab_arxiv(probes: Path, out: Path) -> None:
     write_table(out, "tab_arxiv.tex", lines)
 
 
+def tab_arxiv_tasks(analysis: Path, out: Path) -> None:
+    """Keep both E7 conditions on the same device and use the same probe in every column."""
+    cells = pd.read_csv(analysis / "e7" / "cells.csv")
+    cells = cells[cells.probe == REFERENCE].set_index(["dataset", "backbone", "condition"])
+    lines = [
+        r"\begin{tabular}{@{}llrrr@{\hspace{1.5em}}rrr@{}}",
+        r"\toprule",
+        r" & & \multicolumn{3}{c}{Stored statistics} & \multicolumn{3}{c}{Graph statistics} \\",
+        r"\cmidrule(lr){3-5}\cmidrule(l){6-8}",
+        r"Task & Backbone & Untrained & Trained & Gain & Untrained & Trained & Gain \\",
+        r"\midrule",
+    ]
+    for dataset, task in (("ogbn-arxiv", "Subject"), ("arxiv-year", "Year")):
+        if dataset == "arxiv-year":
+            lines.append(r"\addlinespace")
+        for b in BACKBONES:
+            values = [task if b == "gcn" else "", BACKBONE_NAMES[b]]
+            for condition in ("running", "graph"):
+                row = cells.loc[(dataset, b, condition)]
+                values.extend(
+                    [number(row.untrained), number(row.objectives), signed(row.mean_gain)]
+                )
+            lines.append(" & ".join(values) + r" \\")
+    lines += [r"\bottomrule", r"\end{tabular}"]
+    write_table(out, "tab_arxiv_tasks.tex", lines)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -834,12 +1025,16 @@ def main() -> None:
     fig_propagation(args.analysis, args.out)
     fig_probe_scatter(args.analysis, args.out)
     fig_rankings(args.analysis, args.out)
+    fig_gcn_baselines(args.analysis, args.out)
+    fig_probe_calibration(args.analysis, args.out)
+    fig_rank_transfer(args.analysis, args.out)
     tab_datasets(args.analysis, args.out)
     tab_main(args.analysis, args.out)
     tab_probe_gains(args.analysis, args.out)
     tab_e3(args.analysis, args.out)
     tab_predict(args.analysis, args.out)
     tab_arxiv(args.probes, args.out)
+    tab_arxiv_tasks(args.analysis, args.out)
 
 
 if __name__ == "__main__":

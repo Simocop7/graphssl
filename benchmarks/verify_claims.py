@@ -2406,11 +2406,39 @@ chk(
     (max(abs(v) for v in dd.values()), max(abs(v) for (ds, b), v in dd.items() if b == "gcn")),
     (2.2, 0.4),
 )
+# Check the two new contrasts against independently parsed checkpoint records.
+figure_refs = (
+    pd.read_csv(P + "analysis/e6/reference.csv").query("probe == 'valsel'").set_index("dataset")
+)
+for dataset in [*SIX, W, "ogbn-arxiv", "arxiv-year"]:
+    selected = E6[(E6.ds == dataset) & (E6.probe == "valsel")]
+    scores = dict(zip(selected.key, selected.test, strict=True))
+    seeds = sorted(k[2] for k in scores if isinstance(k, tuple) and k[:2] == ("gcn", "untrained"))
+    deltas = np.array(
+        [
+            np.mean([scores["gcn", m, seed] - scores["gcn", "untrained", seed] for m in SSL])
+            for seed in seeds
+        ]
+    )
+    sampled = np.random.default_rng(0).integers(len(seeds), size=(10_000, len(seeds)))
+    interval = np.percentile(deltas[sampled].mean(axis=1), [2.5, 97.5])
+    trained_block = deltas + [scores["gcn", "untrained", seed] for seed in seeds]
+    d_interval = np.percentile(
+        trained_block[sampled].mean(axis=1) - e6_in(dataset, "A2X"), [2.5, 97.5]
+    )
+    chk(
+        "figures",
+        f"{dataset}: paired gain and both seed-block intervals in baseline figure",
+        [deltas.mean(), *interval, *d_interval],
+        figure_refs.loc[dataset, ["gain", "gain_lo", "gain_hi", "D_block_lo", "D_block_hi"]],
+        3,
+    )
+
 tc = pd.read_csv(P + "analysis/e6/tau_ceiling.csv")
 w = tc[tc.kind == "within"]
 a = tc[tc.kind == "across"].copy()
 a["ceil"] = a.dataset.map(w.groupby("dataset").tau_mean.min())
-chk("robust", "split-half tau within a backbone: range of means", rng(w.tau_mean), (0.76, 0.96), 2)
+chk("robust", "split-half tau within a backbone: range of means", rng(w.tau_mean), (0.77, 0.96), 2)
 chk(
     "robust",
     "backbone pairs below the seed ceiling (of 18)",
@@ -2638,10 +2666,13 @@ chk(
     0.1,
 )
 chk("e7", "R2: D graph below 1 on every dataset (count)", sum(dg[d] < 1 for d in SIX), 6, 0)
+
+
 # R3
-infl = lambda rows, ds, bb: (
-    mean_gain7(rows, ds, bb, "adam100") - mean_gain7(rows, ds, bb, "graphssl")
-)
+def infl(rows, ds, bb):
+    return mean_gain7(rows, ds, bb, "adam100") - mean_gain7(rows, ds, bb, "graphssl")
+
+
 Ir = np.mean([infl(R7, d, b) for d in MANY for b in BB])
 Ig = np.mean([infl(G7, d, b) for d in MANY for b in BB])
 MIX = {
@@ -2820,9 +2851,14 @@ chk(
     (1.00, 0.86, 0.89, 0.71),
     2,
 )
-span = lambda rows, d: (
-    max(unt7(rows, d, b, "graphssl") for b in BB) - min(unt7(rows, d, b, "graphssl") for b in BB)
-)
+
+
+def span(rows, d):
+    return max(unt7(rows, d, b, "graphssl") for b in BB) - min(
+        unt7(rows, d, b, "graphssl") for b in BB
+    )
+
+
 chk(
     "e7",
     "Cora span of the untrained backbones: running, graph",
@@ -2893,12 +2929,7 @@ for ds, (dd, lo_, hi_, ab, a2, d1) in {
         (sum(v.mean() > a2r for v in per), a2r),
         (ab, a2),
     )
-    raw5 = (
-        np.mean(
-            [np.mean([e6_cell_seed for e6_cell_seed in e6_seeds(ds, "gcn", m)[:5]]) for m in SSL]
-        )
-        - a2v[ds]
-    )
+    raw5 = np.mean([np.mean(list(e6_seeds(ds, "gcn", m)[:5])) for m in SSL]) - a2v[ds]
     chk("e8", f"{ds}: E1 seeds 0-4 raw D", raw5, d1)
 
 
@@ -2983,6 +3014,59 @@ chk(
     (0.03, 0.04),
     2,
 )
+
+# Every displayed E7 cell must come from paired evaluations on the same device.
+calibration = pd.read_csv(P + "analysis/e7/rule3_inflation.csv").set_index(
+    ["condition", "dataset", "backbone"]
+)
+task_cells = (
+    pd.read_csv(P + "analysis/e7/cells.csv")
+    .query("probe == 'graphssl'")
+    .set_index(["condition", "dataset", "backbone"])
+)
+for condition, small, arxiv in [("running", R7, RX), ("graph", G7, GX)]:
+    differences = [infl(small, ds, bb) for ds in SIX for bb in BB]
+    displayed = [calibration.at[(condition, ds, bb), "inflation"] for ds in SIX for bb in BB]
+    chk("figures", f"probe discrepancy in all 18 cells, {condition}", differences, displayed, 3)
+    for ds, bb in itertools.product(ARX, BB):
+        actual = [
+            unt7(arxiv, ds, bb, "graphssl"),
+            objs7(arxiv, ds, bb, "graphssl"),
+            mean_gain7(arxiv, ds, bb, "graphssl"),
+        ]
+        shown = task_cells.loc[(condition, ds, bb), ["untrained", "objectives", "mean_gain"]]
+        chk("figures", f"{ds}, {bb}, {condition}: task table", actual, shown, 3)
+
+# ZINC scores are errors. Compare each trained encoder with its own pretraining baseline.
+zinc_expected = {
+    "graphcl": (0.578, 7),
+    "graphdino": (0.579, 9),
+    "barlow_twins": (0.585, 6),
+    "vicreg": (0.585, 7),
+    "bgrl": (0.692, 0),
+    "afgrl": (0.641, 0),
+    "dgi": (0.903, 0),
+}
+for method, (expected_mae, improved) in zinc_expected.items():
+    [result_file] = glob.glob(f"benchmarks/zinc_seeds10/{method}__*.json")
+    with open(result_file) as source:
+        runs = json.load(source)["per_seed"]
+    baseline = np.array([r["untrained"]["test_mae"] for r in runs])
+    trained = np.array([r["test_mae"] for r in runs])
+    chk(
+        "zinc",
+        f"{method}: untrained mean, SD and trained mean MAE",
+        (baseline.mean(), baseline.std(ddof=1), trained.mean()),
+        (0.589, 0.011, expected_mae),
+        3,
+    )
+    chk(
+        "zinc",
+        f"{method}: distinct seeds and strictly lower/higher MAE than at initialization",
+        (len({r["seed"] for r in runs}), sum(trained < baseline), sum(trained > baseline)),
+        (10, improved, 10 - improved),
+        0,
+    )
 
 out = pd.DataFrame(R)
 out.to_csv("benchmarks/paper/analysis/claims_check.csv", index=False)
