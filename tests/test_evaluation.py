@@ -209,6 +209,83 @@ class TestExtractEmbeddings:
         assert torch.equal(z, data.x) and torch.equal(y, data.y)
 
 
+def _untrained_bgrl(norm_type="batch", encoder="gcn", seed=0):
+    from graphssl.config.load import build_model
+
+    torch.manual_seed(seed)
+    cfg = {
+        "name": "bgrl",
+        "encoder": {
+            "name": encoder,
+            "hidden_dim": 16,
+            "num_layers": 2,
+            "norm_type": norm_type,
+            "pool": False,
+        },
+    }
+    return build_model(cfg, in_channels=8)
+
+
+def _random_graph(n=400, seed=0):
+    g = torch.Generator().manual_seed(seed)
+    edge_index = torch.randint(0, n, (2, 4 * n), generator=g)
+    return Data(x=torch.rand(n, 8, generator=g), edge_index=edge_index, y=torch.zeros(n).long())
+
+
+class TestGraphNormStatistics:
+    """``norm_stats="graph"``: BatchNorm statistics recomputed from the graph before extraction."""
+
+    def test_untrained_encoder_starts_from_identity_statistics(self):
+        """The reason for the option: at initialization BatchNorm in eval mode changes nothing,
+        so an untrained encoder's embeddings are not normalized at all."""
+        model = _untrained_bgrl()
+        bn = next(m for m in model.modules() if isinstance(m, torch.nn.BatchNorm1d))
+        assert torch.equal(bn.running_mean, torch.zeros_like(bn.running_mean))
+        assert torch.equal(bn.running_var, torch.ones_like(bn.running_var))
+
+    def test_graph_statistics_equal_the_batch_statistics_of_the_graph(self):
+        """With no dropout, eval mode with graph statistics computes what train mode computes on
+        the full graph (up to the unbiased variance BatchNorm stores: n / (n - 1))."""
+        data = _random_graph()
+        dm = DataModule(data=data, is_graph_level=False)
+        model = _untrained_bgrl()
+        z_graph, _ = extract_embeddings(model, dm, norm_stats="graph")
+        model.train()
+        with torch.no_grad():
+            z_batch = model(data)
+        assert torch.allclose(z_graph, z_batch, rtol=1e-2, atol=1e-3)
+        z_running, _ = extract_embeddings(model, dm)
+        assert not torch.allclose(z_graph, z_running, rtol=1e-2, atol=1e-3)
+        # the untrained GCN's embeddings are far smaller without normalization
+        assert z_running.std(0).mean() < 0.5 * z_graph.std(0).mean()
+
+    def test_the_callers_model_keeps_its_statistics(self):
+        data = _random_graph()
+        dm = DataModule(data=data, is_graph_level=False)
+        model = _untrained_bgrl()
+        before = {k: v.clone() for k, v in model.state_dict().items()}
+        z1, _ = extract_embeddings(model, dm)
+        extract_embeddings(model, dm, norm_stats="graph")
+        z2, _ = extract_embeddings(model, dm)
+        after = model.state_dict()
+        assert all(torch.equal(before[k], after[k]) for k in before)
+        assert torch.equal(z1, z2)
+
+    @pytest.mark.parametrize("encoder", ["gcn", "gin", "transformer"])
+    def test_without_batchnorm_nothing_changes(self, encoder):
+        data = _random_graph(n=120)
+        dm = DataModule(data=data, is_graph_level=False)
+        model = _untrained_bgrl(norm_type="layer", encoder=encoder)
+        z_running, _ = extract_embeddings(model, dm)
+        z_graph, _ = extract_embeddings(model, dm, norm_stats="graph")
+        assert torch.equal(z_running, z_graph)
+
+    def test_unknown_value_raises(self):
+        dm = DataModule(data=_random_graph(n=20), is_graph_level=False)
+        with pytest.raises(ValueError, match="norm_stats"):
+            extract_embeddings(_untrained_bgrl(), dm, norm_stats="batch")  # type: ignore[arg-type]
+
+
 class TestEffectiveRank:
     def test_isotropic_embeddings_use_every_dimension(self):
         z = torch.randn(4000, 16, generator=torch.Generator().manual_seed(0))

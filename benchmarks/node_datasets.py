@@ -97,8 +97,28 @@ def _ogb(name: str, data_dir: str):
     return PygNodePropPredDataset(name=name, root=f"{data_dir}/{name}")
 
 
-def load_node_dataset(name: str, data_dir: str = "data"):
-    """(data, num_classes, train_idx, val_idx, test_idx) of one dataset of the study."""
+FEATURES = ["raw", "rownorm"]
+
+
+def load_node_dataset(name: str, data_dir: str = "data", features: str = "raw"):
+    """(data, num_classes, train_idx, val_idx, test_idx) of one dataset of the study.
+
+    ``features="raw"`` (the study) keeps the node features as PyG distributes them;
+    ``"rownorm"`` divides each node's features by their sum (PyG's ``NormalizeFeatures``, the
+    preprocessing of DGI, GRACE and the PyGCL examples on Planetoid; E8 of the study).
+    """
+    if features not in FEATURES:
+        raise ValueError(f"features must be one of {FEATURES}, got {features!r}")
+    loaded = _load_node_dataset(name, data_dir)
+    if features == "rownorm":
+        from torch_geometric.transforms import NormalizeFeatures
+
+        data = NormalizeFeatures()(loaded[0])
+        loaded = (data, *loaded[1:])
+    return loaded
+
+
+def _load_node_dataset(name: str, data_dir: str):
     if name in PLANETOID:
         from torch_geometric.datasets import Planetoid
 

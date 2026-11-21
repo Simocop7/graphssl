@@ -1,0 +1,148 @@
+{
+  "dataset": "PubMed",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "features": "rownorm"
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8259999752044678,
+      "test_acc_linear": 0.8119999766349792,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7680000066757202,
+      "test_acc_knn": 0.746999979019165,
+      "eff_rank": 152.69993591308594,
+      "wall_time_s": 124.67349767684937,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8130000233650208,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7720000147819519,
+      "test_acc_knn": 0.7459999918937683,
+      "eff_rank": 153.3582763671875,
+      "wall_time_s": 115.73068594932556,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8259999752044678,
+      "test_acc_linear": 0.8130000233650208,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.8059999942779541,
+      "test_acc_knn": 0.753000020980835,
+      "eff_rank": 152.6690673828125,
+      "wall_time_s": 124.37607598304749,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8220000267028809,
+      "test_acc_linear": 0.7919999957084656,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.777999997138977,
+      "test_acc_knn": 0.7480000257492065,
+      "eff_rank": 152.36195373535156,
+      "wall_time_s": 124.74317169189453,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8199999928474426,
+      "test_acc_linear": 0.7979999780654907,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7860000133514404,
+      "test_acc_knn": 0.7450000047683716,
+      "eff_rank": 152.70408630371094,
+      "wall_time_s": 118.2591769695282,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/barlow_twins_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8055999994277954,
+      "std": 0.009914646270401704
+    },
+    "test_acc_knn": {
+      "mean": 0.7478000044822692,
+      "std": 0.0031144929182286953
+    },
+    "eff_rank": {
+      "mean": 152.7586639404297,
+      "std": 0.36447540791453376
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261119T173504Z",
+    "git": {
+      "commit": "f0fb47d01ce713641c083d3ecc7a279abfe2b57b",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

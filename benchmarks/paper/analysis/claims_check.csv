@@ -263,3 +263,56 @@ scale,label sets where the untrained GCN is above A2X (only arxiv-year),1.0,1.0,
 limits,"valsel minus ours on the models: max per dataset/backbone, GCN max","(2.2, 0.4)","(2.24, 0.43)",OK
 robust,split-half tau within a backbone: range of means,"(0.76, 0.96)","(0.758, 0.965)",OK
 robust,backbone pairs below the seed ceiling (of 18),15.0,15.0,OK
+graph,D below A2X on the five datasets other than PubMed: range of -D,"(0.6, 5.5)","(0.56, 5.55)",OK
+graph,D on PubMed,-0.2,-0.17,OK
+graph,without GraphDINO: PubMed D,0.2,0.24,OK
+graph,without GraphDINO: the other five still below,5.0,5.0,OK
+graph,highest GCN objective minus A2X on PubMed,1.6,1.6,OK
+graph,"supervised GCN (std. recipe) minus A2X: min, max","(-2.8, 0.1)","(-2.83, 0.07)",OK
+graph,"E3 tuned: average GCN objective minus A2X, range of -D","(0.7, 2.7)","(0.67, 2.67)",OK
+graph,E3 tuned: highest objective minus A2X on Cora,1.5,1.5,OK
+graph,"E5 best step: average GCN objective minus A2X, range of -D","(0.6, 2.5)","(0.58, 2.55)",OK
+graph,"valsel minus ours on the GCN objectives: min, max","(-0.2, 0.4)","(-0.19, 0.43)",OK
+e7,"running rows identical to E2: checkpoints, all probes","(1620.0, 1620.0)","(1620.0, 1620.0)",OK
+e7,R1 Amazon Computers change [CI],"(-0.2, -0.5, 0.1)","(-0.17, -0.51, 0.12)",OK
+e7,R1 Amazon Photo change [CI],"(0.3, 0.1, 0.5)","(0.29, 0.1, 0.51)",OK
+e7,R1 Coauthor CS change [CI],"(0.0, -0.2, 0.2)","(0.01, -0.19, 0.19)",OK
+e7,R2: max |D graph - D running| over the six datasets,0.1,0.09,OK
+e7,R2: D graph below 1 on every dataset (count),6.0,6.0,OK
+e7,"R3 mean inflation, many labels: running, graph, only reference","(6.4, 0.6, 0.4)","(6.45, 0.57, 0.41)",OK
+e7,"R3 deflated cells (20 labels): running, graph","(6.0, 5.0)","(6.0, 5.0)",OK
+e7,"CiteSeer GCN graph: gain under adam100, ours","(5.8, 8.5)","(5.75, 8.53)",OK
+e7,"Coauthor CS GCN graph: untrained under adam100, gain under adam100","(90.1, 1.8)","(90.11, 1.75)",OK
+e7,"Amazon Computers GCN graph: gain adam100, ours","(0.6, 1.2)","(0.56, 1.22)",OK
+e7,untrained GCN under ours: max |graph - running| over datasets,0.6,0.56,OK
+e7,GCN mean gain under ours: max |graph - running|,0.5,0.54,OK
+e7,Cora untrained GIN / Transformer change under ours,"(8.6, 5.8)","(8.62, 5.78)",OK
+e7,Cora GIN gain running->graph; Transformer,"(30.1, 21.6, 20.6, 14.7)","(30.12, 21.62, 20.59, 14.74)",OK
+e7,"GIN/Transformer gain changes elsewhere: min, max","(-3.3, 2.9)","(-3.27, 2.86)",OK
+e7,"graph-statistics gain ranges: GIN citation, GIN others, Transformer all","(15.5, 21.6, 3.3, 11.5, 5.4, 15.8)","(15.53, 21.62, 3.3, 11.52, 5.43, 15.82)",OK
+e7,"untrained GIN rank on Amazon: running, graph","(4.0, 8.0, 55.0, 62.0)","(4.1, 7.6, 54.8, 62.0)",OK
+e7,"Cora GIN kNN gain running, graph","(39.5, 19.0)","(39.48, 19.01)",OK
+e7,"kNN GCN Amazon, (above, below): running C, P; graph C, P","(2.0, 5.0, 3.0, 5.0, 8.0, 0.0, 7.0, 0.0)","(2.0, 5.0, 3.0, 5.0, 8.0, 0.0, 7.0, 0.0)",OK
+e7,"graph statistics: trained/untrained scale ratio, GCN, max",1.07,1.074,OK
+e7,"tau running vs graph: ours median, min; knn median, min","(1.0, 0.86, 0.89, 0.71)","(1.0, 0.857, 0.893, 0.714)",OK
+e7,"Cora span of the untrained backbones: running, graph","(31.4, 22.3)","(31.43, 22.25)",OK
+e7,"backbone share of gain (std split) Cora, Computers, Photo, CS: running then graph","(73.0, 68.0, 78.0, 82.0, 49.0, 35.0, 55.0, 85.0)","(73.0, 68.0, 78.0, 82.0, 49.0, 35.0, 55.0, 85.0)",OK
+e7,"objective share of gain, Amazon Computers: running, graph","(19.0, 40.0)","(19.0, 40.0)",OK
+e7,backbone share falls on five of six datasets,5.0,5.0,OK
+e8,Cora: D_rn [CI],"(-1.0, -1.3, -0.7)","(-1.02, -1.32, -0.74)",OK
+e8,"Cora: objectives above, A2X row-normalized","(3.0, 80.4)","(3.0, 80.4)",OK
+e8,Cora: E1 seeds 0-4 raw D,-1.9,-1.92,OK
+e8,CiteSeer: D_rn [CI],"(-5.0, -5.4, -4.6)","(-5.01, -5.39, -4.63)",OK
+e8,"CiteSeer: objectives above, A2X row-normalized","(0.0, 71.6)","(0.0, 71.6)",OK
+e8,CiteSeer: E1 seeds 0-4 raw D,-5.6,-5.61,OK
+e8,PubMed: D_rn [CI],"(-0.3, -0.5, 0.0)","(-0.27, -0.53, -0.0)",OK
+e8,"PubMed: objectives above, A2X row-normalized","(3.0, 79.9)","(3.0, 79.9)",OK
+e8,PubMed: E1 seeds 0-4 raw D,-0.2,-0.15,OK
+scale,"ogbn-arxiv GCN graph: untrained adam100; gains adam100 min, max","(67.9, -3.1, 1.1)","(67.87, -3.08, 1.15)",OK
+scale,"ogbn-arxiv GCN adam100 mean gain: running (this device), reference only","(19.6, -1.7)","(19.62, -1.74)",OK
+scale,"ogbn-arxiv GCN graph, ours: gains min, max","(-1.9, 1.2)","(-1.88, 1.23)",OK
+scale,"ogbn-arxiv GIN ours mean gain: graph, running, reference only","(8.6, 4.7, 6.1)","(8.59, 4.7, 6.12)",OK
+scale,"arxiv-year GCN: untrained ours running, graph; graph gains min, max, mean","(39.8, 41.8, -0.0, 0.6, 0.3)","(39.76, 41.82, -0.01, 0.59, 0.33)",OK
+graph,arxiv-year: untrained GCN (graph statistics) minus A2X,2.8,2.83,OK
+e7,"arxiv device check (Mac GPU vs A2): ours max; adam100 mean, max","(0.6, 0.2, 4.4)","(0.6, 0.21, 4.36)",OK
+e7,"arxiv device check: ours mean, knn max","(0.03, 0.04)","(0.025, 0.043)",OK

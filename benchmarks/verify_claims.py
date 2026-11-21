@@ -2419,6 +2419,571 @@ chk(
     0,
 )
 
+
+# --- Checks of C10 on results in hand (19 Nov, descriptive): Table "checks" and Section 4.
+# Valsel per seed from E6's table; A2X from the E6 input rows; E3 tuned cells re-selected above
+# (sel); E5 stop step chosen on mean validation over seeds. Written without analyze_e7_e8.py.
+a2 = {ds: e6_in(ds, "A2X") for ds in SIX}
+dd_main = {ds: np.mean([e6_cell(ds, "gcn", m) for m in SSL]) - a2[ds] for ds in SIX}
+five = [ds for ds in SIX if ds != "PubMed"]
+chk(
+    "graph",
+    "D below A2X on the five datasets other than PubMed: range of -D",
+    rng([-dd_main[ds] for ds in five]),
+    (0.6, 5.5),
+)
+chk("graph", "D on PubMed", dd_main["PubMed"], -0.2)
+nd = {ds: np.mean([e6_cell(ds, "gcn", m) for m in SSL if m != "graphdino"]) - a2[ds] for ds in SIX}
+chk("graph", "without GraphDINO: PubMed D", nd["PubMed"], 0.2)
+chk("graph", "without GraphDINO: the other five still below", sum(nd[ds] < 0 for ds in five), 5, 0)
+best = {ds: max(e6_cell(ds, "gcn", m) for m in SSL) - a2[ds] for ds in SIX}
+chk("graph", "highest GCN objective minus A2X on PubMed", best["PubMed"], 1.6)
+sup = {ds: e6_cell(ds, "gcn", "supervised_reg") - a2[ds] for ds in SIX}
+chk(
+    "graph",
+    "supervised GCN (std. recipe) minus A2X: min, max",
+    (min(sup.values()), max(sup.values())),
+    (-2.8, 0.1),
+)
+e3d = {}
+e3best = {}
+for ds in ["Cora", "CiteSeer", "AmazonComputers", "AmazonPhoto", "CoauthorCS"]:
+    t = sel.loc[ds, "gcn"].test
+    e3d[ds] = t.mean() - a2[ds]
+    e3best[ds] = t.max() - a2[ds]
+chk(
+    "graph",
+    "E3 tuned: average GCN objective minus A2X, range of -D",
+    rng([-v for v in e3d.values()]),
+    (0.7, 2.7),
+)
+chk("graph", "E3 tuned: highest objective minus A2X on Cora", e3best["Cora"], 1.5)
+e5d = {}
+for ds in ["Cora", "AmazonComputers", "AmazonPhoto", "CoauthorCS"]:
+    b = e5(3000, ds)
+    b = b[b.bb == "gcn"]
+    accs = []
+    for m in SSL:
+        y = b[b.m == m].set_index("seed")
+        tv = pd.DataFrame(
+            [
+                {
+                    t_["step"]: t_["val_acc_linear"] * 100
+                    for t_ in y.loc[s_].traj
+                    if t_["step"] >= 300
+                }
+                for s_ in y.index
+            ],
+            index=y.index,
+        )
+        tt = pd.DataFrame(
+            [
+                {
+                    t_["step"]: t_["test_acc_linear"] * 100
+                    for t_ in y.loc[s_].traj
+                    if t_["step"] >= 300
+                }
+                for s_ in y.index
+            ],
+            index=y.index,
+        )
+        accs.append(tt[tv.mean().idxmax()].mean())
+    e5d[ds] = np.mean(accs) - a2[ds]
+chk(
+    "graph",
+    "E5 best step: average GCN objective minus A2X, range of -D",
+    rng([-v for v in e5d.values()]),
+    (0.6, 2.5),
+)
+off = {
+    ds: np.mean([e6_cell(ds, "gcn", m) - e6_cell(ds, "gcn", m, "graphssl") for m in SSL])
+    for ds in SIX
+}
+chk(
+    "graph",
+    "valsel minus ours on the GCN objectives: min, max",
+    (min(off.values()), max(off.values())),
+    (-0.2, 0.4),
+)
+
+
+# --- E7 and E8 (rules fixed at f0fb47d, before their runs), recomputed from the probe files with a
+# loader written here (no code shared with analyze_e7_e8.py).
+CK8 = re.compile(
+    r"(?P<root>models_e8_untrained|models_e8|models_untrained|models)/(?P<ds>[^/]+)/(?P<bb>\w+)/"
+    r"(?P<m>\w+)_seed(?P<seed>\d+)\.pt"
+)
+
+
+def probe_rows(folder, datasets):
+    """{(ds, bb, method, seed): {probe: test %, ...}} plus the input rows under key (ds, name);
+    newest file wins per checkpoint. valsel: liblinear if its validation accuracy is higher."""
+    out = {}
+    for ds in datasets:
+        for f in sorted(glob.glob(P + f"{folder}/{ds}/probes__*.json"), key=os.path.basename):
+            for r in json.load(open(f))["rows"]:
+                tests, vals = {}, {}
+                for p, v in r["protocols"].items():
+                    fits = v.get("fits") or []
+                    if fits:
+                        tests[p] = 100 * np.mean([x["test_acc"] for x in fits])
+                        vals[p] = 100 * np.mean([x.get("val_acc", np.nan) for x in fits])
+                    else:
+                        t_ = v["test_acc"]
+                        tests[p] = 100 * (t_["mean"] if isinstance(t_, dict) else t_)
+                        vals[p] = np.nan
+                tests["knn"] = 100 * r["test_acc_knn"]
+                if "liblinear" in tests and "graphssl" in tests:
+                    tests["valsel"] = (
+                        tests["liblinear"]
+                        if vals["liblinear"] > vals["graphssl"]
+                        else tests["graphssl"]
+                    )
+                tests["rank"] = r.get("eff_rank", np.nan)
+                tests["scale"] = r.get("feature_std_mean", np.nan)
+                ck = r.get("checkpoint")
+                if ck in (None, "None"):
+                    out[(ds, r["name"])] = tests
+                    continue
+                m = CK8.search(ck)
+                kind = "untrained" if "untrained" in m["root"] else m["m"]
+                out[(ds, m["bb"], kind, int(m["seed"]))] = tests
+    return out
+
+
+def mean_gain7(rows, ds, bb, probe, methods=SSL):
+    u = {k[3]: v[probe] for k, v in rows.items() if len(k) == 4 and k[:3] == (ds, bb, "untrained")}
+    per = []
+    for m in methods:
+        g = [v[probe] - u[k[3]] for k, v in rows.items() if len(k) == 4 and k[:3] == (ds, bb, m)]
+        per.append(np.mean(g))
+    return float(np.mean(per))
+
+
+def unt7(rows, ds, bb, probe):
+    return float(
+        np.mean(
+            [v[probe] for k, v in rows.items() if len(k) == 4 and k[:3] == (ds, bb, "untrained")]
+        )
+    )
+
+
+def objs7(rows, ds, bb, probe, methods=SSL):
+    return float(
+        np.mean(
+            [
+                np.mean([v[probe] for k, v in rows.items() if len(k) == 4 and k[:3] == (ds, bb, m)])
+                for m in methods
+            ]
+        )
+    )
+
+
+SIXR = SIX
+R7 = probe_rows("e7/probes_running", SIXR)
+G7 = probe_rows("e7/probes_graph", SIXR)
+E2r = probe_rows("probes", SIXR)
+same = [k for k in R7 if len(k) == 4 and k in E2r]
+chk(
+    "e7",
+    "running rows identical to E2: checkpoints, all probes",
+    (
+        len(same),
+        sum(
+            all(
+                abs(R7[k][p] - E2r[k][p]) < 1e-9
+                for p in ["adam100", "adam5000", "liblinear", "graphssl", "knn"]
+            )
+            for k in same
+        ),
+    ),
+    (1620, 1620),
+    0,
+)
+MANY = ["AmazonComputers", "AmazonPhoto", "CoauthorCS"]
+PLAN = ["Cora", "CiteSeer", "PubMed"]
+# R1
+bt = np.random.default_rng(7)
+r1 = []
+for ds in MANY:
+    per_seed = []
+    for s_ in range(10):
+        ga = np.mean(
+            [
+                G7[(ds, "gcn", m, s_)]["graphssl"] - G7[(ds, "gcn", "untrained", s_)]["graphssl"]
+                for m in SSL
+            ]
+        )
+        ra = np.mean(
+            [
+                R7[(ds, "gcn", m, s_)]["graphssl"] - R7[(ds, "gcn", "untrained", s_)]["graphssl"]
+                for m in SSL
+            ]
+        )
+        per_seed.append(ga - ra)
+    v = np.array(per_seed)
+    d_ = [v[bt.integers(0, 10, 10)].mean() for _ in range(10_000)]
+    r1.append((v.mean(), *np.percentile(d_, [2.5, 97.5])))
+chk("e7", "R1 Amazon Computers change [CI]", r1[0], (-0.2, -0.5, 0.1))
+chk("e7", "R1 Amazon Photo change [CI]", r1[1], (0.3, 0.1, 0.5))
+chk("e7", "R1 Coauthor CS change [CI]", r1[2], (0.0, -0.2, 0.2))
+# R2: D under graph statistics (valsel), against A2X of E6
+a2v = {ds: e6_in(ds, "A2X") for ds in SIX}
+dg = {ds: objs7(G7, ds, "gcn", "valsel") - a2v[ds] for ds in SIX}
+dr = {ds: objs7(R7, ds, "gcn", "valsel") - a2v[ds] for ds in SIX}
+chk(
+    "e7",
+    "R2: max |D graph - D running| over the six datasets",
+    max(abs(dg[d] - dr[d]) for d in SIX),
+    0.1,
+)
+chk("e7", "R2: D graph below 1 on every dataset (count)", sum(dg[d] < 1 for d in SIX), 6, 0)
+# R3
+infl = lambda rows, ds, bb: (
+    mean_gain7(rows, ds, bb, "adam100") - mean_gain7(rows, ds, bb, "graphssl")
+)
+Ir = np.mean([infl(R7, d, b) for d in MANY for b in BB])
+Ig = np.mean([infl(G7, d, b) for d in MANY for b in BB])
+MIX = {
+    **{k: v for k, v in R7.items() if len(k) == 4 and k[2] != "untrained"},
+    **{k: v for k, v in G7.items() if len(k) == 4 and k[2] == "untrained"},
+}
+Im = np.mean([infl(MIX, d, b) for d in MANY for b in BB])
+chk(
+    "e7",
+    "R3 mean inflation, many labels: running, graph, only reference",
+    (Ir, Ig, Im),
+    (6.4, 0.6, 0.4),
+)
+chk(
+    "e7",
+    "R3 deflated cells (20 labels): running, graph",
+    (
+        sum(infl(R7, d, b) < 0 for d in PLAN for b in BB),
+        sum(infl(G7, d, b) < 0 for d in PLAN for b in BB),
+    ),
+    (6, 5),
+    0,
+)
+chk(
+    "e7",
+    "CiteSeer GCN graph: gain under adam100, ours",
+    (mean_gain7(G7, "CiteSeer", "gcn", "adam100"), mean_gain7(G7, "CiteSeer", "gcn", "graphssl")),
+    (5.8, 8.5),
+)
+chk(
+    "e7",
+    "Coauthor CS GCN graph: untrained under adam100, gain under adam100",
+    (unt7(G7, "CoauthorCS", "gcn", "adam100"), mean_gain7(G7, "CoauthorCS", "gcn", "adam100")),
+    (90.1, 1.8),
+)
+chk(
+    "e7",
+    "Amazon Computers GCN graph: gain adam100, ours",
+    (
+        mean_gain7(G7, "AmazonComputers", "gcn", "adam100"),
+        mean_gain7(G7, "AmazonComputers", "gcn", "graphssl"),
+    ),
+    (0.6, 1.2),
+)
+chk(
+    "e7",
+    "untrained GCN under ours: max |graph - running| over datasets",
+    max(abs(unt7(G7, d, "gcn", "graphssl") - unt7(R7, d, "gcn", "graphssl")) for d in SIX),
+    0.6,
+)
+chk(
+    "e7",
+    "GCN mean gain under ours: max |graph - running|",
+    max(
+        abs(mean_gain7(G7, d, "gcn", "graphssl") - mean_gain7(R7, d, "gcn", "graphssl"))
+        for d in SIX
+    ),
+    0.5,
+)
+chk(
+    "e7",
+    "Cora untrained GIN / Transformer change under ours",
+    (
+        unt7(G7, "Cora", "gin", "graphssl") - unt7(R7, "Cora", "gin", "graphssl"),
+        unt7(G7, "Cora", "transformer", "graphssl") - unt7(R7, "Cora", "transformer", "graphssl"),
+    ),
+    (8.6, 5.8),
+)
+chk(
+    "e7",
+    "Cora GIN gain running->graph; Transformer",
+    (
+        mean_gain7(R7, "Cora", "gin", "graphssl"),
+        mean_gain7(G7, "Cora", "gin", "graphssl"),
+        mean_gain7(R7, "Cora", "transformer", "graphssl"),
+        mean_gain7(G7, "Cora", "transformer", "graphssl"),
+    ),
+    (30.1, 21.6, 20.6, 14.7),
+)
+other = [
+    mean_gain7(G7, d, b, "graphssl") - mean_gain7(R7, d, b, "graphssl")
+    for d in SIX
+    if d != "Cora"
+    for b in ["gin", "transformer"]
+]
+chk("e7", "GIN/Transformer gain changes elsewhere: min, max", (min(other), max(other)), (-3.3, 2.9))
+chk(
+    "e7",
+    "graph-statistics gain ranges: GIN citation, GIN others, Transformer all",
+    (
+        min(mean_gain7(G7, d, "gin", "graphssl") for d in PLAN),
+        max(mean_gain7(G7, d, "gin", "graphssl") for d in PLAN),
+        min(mean_gain7(G7, d, "gin", "graphssl") for d in MANY),
+        max(mean_gain7(G7, d, "gin", "graphssl") for d in MANY),
+        min(mean_gain7(G7, d, "transformer", "graphssl") for d in SIX),
+        max(mean_gain7(G7, d, "transformer", "graphssl") for d in SIX),
+    ),
+    (15.5, 21.6, 3.3, 11.5, 5.4, 15.8),
+)
+chk(
+    "e7",
+    "untrained GIN rank on Amazon: running, graph",
+    tuple(
+        np.mean(
+            [v["rank"] for k, v in rows.items() if len(k) == 4 and k[:3] == (d, "gin", "untrained")]
+        )
+        for rows in (R7, G7)
+        for d in ["AmazonComputers", "AmazonPhoto"]
+    ),
+    (4, 8, 55, 62),
+    0,
+)
+chk(
+    "e7",
+    "Cora GIN kNN gain running, graph",
+    (mean_gain7(R7, "Cora", "gin", "knn"), mean_gain7(G7, "Cora", "gin", "knn")),
+    (39.5, 19.0),
+)
+
+
+def knn_sig(rows, ds):
+    a = b = 0
+    for m in SSL:
+        v = np.array(
+            [
+                rows[(ds, "gcn", m, s_)]["knn"] - rows[(ds, "gcn", "untrained", s_)]["knn"]
+                for s_ in range(10)
+            ]
+        )
+        d_ = [v[bt.integers(0, 10, 10)].mean() for _ in range(10_000)]
+        lo, hi = np.percentile(d_, [2.5, 97.5])
+        a += lo > 0
+        b += hi < 0
+    return a, b
+
+
+chk(
+    "e7",
+    "kNN GCN Amazon, (above, below): running C, P; graph C, P",
+    (
+        *knn_sig(R7, "AmazonComputers"),
+        *knn_sig(R7, "AmazonPhoto"),
+        *knn_sig(G7, "AmazonComputers"),
+        *knn_sig(G7, "AmazonPhoto"),
+    ),
+    (2, 5, 3, 5, 8, 0, 7, 0),
+    0,
+)
+sc = [
+    np.mean(
+        [v["scale"] for k, v in G7.items() if len(k) == 4 and k[:2] == (d, "gcn") and k[2] in SSL]
+    )
+    / unt7(G7, d, "gcn", "scale")
+    for d in SIX
+]
+chk("e7", "graph statistics: trained/untrained scale ratio, GCN, max", max(sc), 1.07, 2)
+taus7 = {
+    p: [
+        kendalltau(
+            [objs7(R7, d, b, p, [m]) for m in SSL], [objs7(G7, d, b, p, [m]) for m in SSL]
+        ).statistic
+        for d in SIX
+        for b in BB
+    ]
+    for p in ["graphssl", "knn"]
+}
+chk(
+    "e7",
+    "tau running vs graph: ours median, min; knn median, min",
+    (
+        np.median(taus7["graphssl"]),
+        min(taus7["graphssl"]),
+        np.median(taus7["knn"]),
+        min(taus7["knn"]),
+    ),
+    (1.00, 0.86, 0.89, 0.71),
+    2,
+)
+span = lambda rows, d: (
+    max(unt7(rows, d, b, "graphssl") for b in BB) - min(unt7(rows, d, b, "graphssl") for b in BB)
+)
+chk(
+    "e7",
+    "Cora span of the untrained backbones: running, graph",
+    (span(R7, "Cora"), span(G7, "Cora")),
+    (31.4, 22.3),
+)
+
+
+def sh(rows, d):
+    g = pd.DataFrame(
+        [
+            {
+                "m": m,
+                "b": b,
+                "g": rows[(d, b, m, s_)]["graphssl"] - rows[(d, b, "untrained", s_)]["graphssl"],
+            }
+            for m in SSL
+            for b in BB
+            for s_ in range(10)
+        ]
+    )
+    tot = ((g.g - g.g.mean()) ** 2).sum()
+    ssb = ((g.groupby("b").g.transform("mean") - g.g.mean()) ** 2).sum()
+    ssm = ((g.groupby("m").g.transform("mean") - g.g.mean()) ** 2).sum()
+    return 100 * ssb / tot, 100 * ssm / tot
+
+
+chk(
+    "e7",
+    "backbone share of gain (std split) Cora, Computers, Photo, CS: running then graph",
+    tuple(
+        round(sh(rows, d)[0])
+        for rows in (R7, G7)
+        for d in ["Cora", "AmazonComputers", "AmazonPhoto", "CoauthorCS"]
+    ),
+    (73, 68, 78, 82, 49, 35, 55, 85),
+    0,
+)
+chk(
+    "e7",
+    "objective share of gain, Amazon Computers: running, graph",
+    (sh(R7, "AmazonComputers")[1], sh(G7, "AmazonComputers")[1]),
+    (19, 40),
+    0,
+)
+chk(
+    "e7",
+    "backbone share falls on five of six datasets",
+    sum(sh(G7, d)[0] < sh(R7, d)[0] for d in SIX),
+    5,
+    0,
+)
+# E8
+E8 = probe_rows("e8/probes", PLAN)
+for ds, (dd, lo_, hi_, ab, a2, d1) in {
+    "Cora": (-1.0, -1.3, -0.7, 3, 80.4, -1.9),
+    "CiteSeer": (-5.0, -5.4, -4.6, 0, 71.6, -5.6),
+    "PubMed": (-0.3, -0.5, 0.0, 3, 79.9, -0.2),
+}.items():
+    a2r = E8[(ds, "propagated A^2X")]["valsel"]
+    per = [np.array([E8[(ds, "gcn", m, s_)]["valsel"] for s_ in range(5)]) for m in SSL]
+    d8 = np.mean([v.mean() for v in per]) - a2r
+    draws = [np.mean([v[bt.integers(0, 5, 5)].mean() for v in per]) - a2r for _ in range(10_000)]
+    chk("e8", f"{ds}: D_rn [CI]", (d8, *np.percentile(draws, [2.5, 97.5])), (dd, lo_, hi_))
+    chk(
+        "e8",
+        f"{ds}: objectives above, A2X row-normalized",
+        (sum(v.mean() > a2r for v in per), a2r),
+        (ab, a2),
+    )
+    raw5 = (
+        np.mean(
+            [np.mean([e6_cell_seed for e6_cell_seed in e6_seeds(ds, "gcn", m)[:5]]) for m in SSL]
+        )
+        - a2v[ds]
+    )
+    chk("e8", f"{ds}: E1 seeds 0-4 raw D", raw5, d1)
+
+
+# --- E7 on ogbn-arxiv and arxiv-year (descriptive, Mac GPU)
+ARX = ["ogbn-arxiv", "arxiv-year"]
+RX = probe_rows("e7/probes_running", ARX)
+GX = probe_rows("e7/probes_graph", ARX)
+MX = {
+    **{k: v for k, v in RX.items() if len(k) == 4 and k[2] != "untrained"},
+    **{k: v for k, v in GX.items() if len(k) == 4 and k[2] == "untrained"},
+}
+
+
+def per_obj(rows, ds, bb, probe):
+    seeds = sorted({k[3] for k in rows if len(k) == 4 and k[:3] == (ds, bb, "untrained")})
+    return [
+        np.mean(
+            [rows[(ds, bb, m, s_)][probe] - rows[(ds, bb, "untrained", s_)][probe] for s_ in seeds]
+        )
+        for m in SSL
+    ]
+
+
+g100 = per_obj(GX, "ogbn-arxiv", "gcn", "adam100")
+chk(
+    "scale",
+    "ogbn-arxiv GCN graph: untrained adam100; gains adam100 min, max",
+    (unt7(GX, "ogbn-arxiv", "gcn", "adam100"), min(g100), max(g100)),
+    (67.9, -3.1, 1.1),
+)
+chk(
+    "scale",
+    "ogbn-arxiv GCN adam100 mean gain: running (this device), reference only",
+    (
+        np.mean(per_obj(RX, "ogbn-arxiv", "gcn", "adam100")),
+        np.mean(per_obj(MX, "ogbn-arxiv", "gcn", "adam100")),
+    ),
+    (19.6, -1.7),
+)
+go = per_obj(GX, "ogbn-arxiv", "gcn", "graphssl")
+chk("scale", "ogbn-arxiv GCN graph, ours: gains min, max", (min(go), max(go)), (-1.9, 1.2))
+chk(
+    "scale",
+    "ogbn-arxiv GIN ours mean gain: graph, running, reference only",
+    tuple(np.mean(per_obj(r_, "ogbn-arxiv", "gin", "graphssl")) for r_ in (GX, RX, MX)),
+    (8.6, 4.7, 6.1),
+)
+gy = per_obj(GX, "arxiv-year", "gcn", "graphssl")
+chk(
+    "scale",
+    "arxiv-year GCN: untrained ours running, graph; graph gains min, max, mean",
+    (
+        unt7(RX, "arxiv-year", "gcn", "graphssl"),
+        unt7(GX, "arxiv-year", "gcn", "graphssl"),
+        min(gy),
+        max(gy),
+        np.mean(gy),
+    ),
+    (39.8, 41.8, -0.0, 0.6, 0.3),
+)
+chk(
+    "graph",
+    "arxiv-year: untrained GCN (graph statistics) minus A2X",
+    unt7(GX, "arxiv-year", "gcn", "graphssl") - e6_in("arxiv-year", "A2X", "graphssl"),
+    2.8,
+)
+E2x = probe_rows("probes", ARX)
+dev = {
+    p_: [abs(RX[k][p_] - E2x[k][p_]) for k in RX if len(k) == 4 and k in E2x]
+    for p_ in ["graphssl", "knn", "adam100"]
+}
+chk(
+    "e7",
+    "arxiv device check (Mac GPU vs A2): ours max; adam100 mean, max",
+    (max(dev["graphssl"]), np.mean(dev["adam100"]), max(dev["adam100"])),
+    (0.6, 0.2, 4.4),
+)
+chk(
+    "e7",
+    "arxiv device check: ours mean, knn max",
+    (np.mean(dev["graphssl"]), max(dev["knn"])),
+    (0.03, 0.04),
+    2,
+)
+
 out = pd.DataFrame(R)
 out.to_csv("benchmarks/paper/analysis/claims_check.csv", index=False)
 print(out.status.value_counts())

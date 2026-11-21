@@ -1,0 +1,219 @@
+{
+  "dataset": "PubMed",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "features": "rownorm"
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "ema_tau_base": 0.996,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 256,
+      "bottleneck_dim": 64,
+      "n_prototypes": 128,
+      "teacher_temp": 0.04,
+      "warmup_teacher_temp_epochs": 30
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7620000243186951,
+      "test_acc_linear": 0.7680000066757202,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7020000219345093,
+      "test_acc_knn": 0.7020000219345093,
+      "eff_rank": 165.66065979003906,
+      "wall_time_s": 87.35034275054932,
+      "val_acc_linear_alt": 0.7860000133514404,
+      "test_acc_linear_alt": 0.796999990940094,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7379999756813049,
+      "test_acc_knn_alt": 0.7319999933242798,
+      "eff_rank_alt": 179.134521484375,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/graphdino_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7900000214576721,
+      "test_acc_linear": 0.7839999794960022,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7360000014305115,
+      "test_acc_knn": 0.7139999866485596,
+      "eff_rank": 168.02537536621094,
+      "wall_time_s": 78.63159203529358,
+      "val_acc_linear_alt": 0.8240000009536743,
+      "test_acc_linear_alt": 0.7950000166893005,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7519999742507935,
+      "test_acc_knn_alt": 0.7250000238418579,
+      "eff_rank_alt": 178.5673828125,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/graphdino_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.777999997138977,
+      "test_acc_linear": 0.7649999856948853,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6660000085830688,
+      "test_acc_knn": 0.6520000100135803,
+      "eff_rank": 163.61865234375,
+      "wall_time_s": 82.22103691101074,
+      "val_acc_linear_alt": 0.8119999766349792,
+      "test_acc_linear_alt": 0.8100000023841858,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7459999918937683,
+      "test_acc_knn_alt": 0.7250000238418579,
+      "eff_rank_alt": 179.41558837890625,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/graphdino_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7680000066757202,
+      "test_acc_linear": 0.746999979019165,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6759999990463257,
+      "test_acc_knn": 0.6779999732971191,
+      "eff_rank": 165.33473205566406,
+      "wall_time_s": 73.80826997756958,
+      "val_acc_linear_alt": 0.8059999942779541,
+      "test_acc_linear_alt": 0.765999972820282,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7360000014305115,
+      "test_acc_knn_alt": 0.7200000286102295,
+      "eff_rank_alt": 178.904296875,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/graphdino_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7919999957084656,
+      "test_acc_linear": 0.7680000066757202,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7160000205039978,
+      "test_acc_knn": 0.7120000123977661,
+      "eff_rank": 168.41842651367188,
+      "wall_time_s": 72.62871193885803,
+      "val_acc_linear_alt": 0.7960000038146973,
+      "test_acc_linear_alt": 0.7820000052452087,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7419999837875366,
+      "test_acc_knn_alt": 0.7250000238418579,
+      "eff_rank_alt": 178.9605255126953,
+      "checkpoint": "benchmarks/paper/models_e8/PubMed/gcn/graphdino_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7663999915122985,
+      "std": 0.013164347449602265
+    },
+    "test_acc_knn": {
+      "mean": 0.6916000008583069,
+      "std": 0.02635906057301047
+    },
+    "eff_rank": {
+      "mean": 166.2115692138672,
+      "std": 1.9972277280387905
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.7899999976158142,
+      "std": 0.01668832942602391
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.7254000186920166,
+      "std": 0.004277836651579193
+    },
+    "eff_rank_alt": {
+      "mean": 178.9964630126953,
+      "std": 0.31169782372016747
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261119T181000Z",
+    "git": {
+      "commit": "f0fb47d01ce713641c083d3ecc7a279abfe2b57b",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

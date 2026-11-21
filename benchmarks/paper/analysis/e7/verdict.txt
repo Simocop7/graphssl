@@ -1,0 +1,55 @@
+E7 rules (benchmarks/paper/PLAN.md), fixed at f0fb47d before the runs
+
+R1 (C3): mean GCN gain, ours, graph minus running statistics
+  Amazon Computers: running +1.39, graph +1.22, change -0.17 [-0.51, +0.14]
+  Amazon Photo: running +0.23, graph +0.52, change +0.29 [+0.10, +0.50]
+  Coauthor CS: running +1.48, graph +1.49, change +0.01 [-0.19, +0.20]
+  VERDICT: C3 stands under both
+
+R2 (C10): D (valsel) with the GCN objectives under graph statistics
+  Cora: D running -1.90, graph -1.91 [-2.12, -1.68], objectives above A2X 1 of 8
+  CiteSeer: D running -5.55, graph -5.64 [-5.96, -5.31], objectives above A2X 0 of 8
+  PubMed: D running -0.17, graph -0.15 [-0.36, +0.06], objectives above A2X 4 of 8
+  Amazon Computers: D running -1.03, graph -1.06 [-1.11, -1.01], objectives above A2X 0 of 8
+  Amazon Photo: D running -0.56, graph -0.60 [-0.65, -0.55], objectives above A2X 0 of 8
+  Coauthor CS: D running -0.68, graph -0.68 [-0.71, -0.65], objectives above A2X 1 of 8
+  VERDICT: C10 stands under both
+
+R3 (C4/C5): inflation = mean gain under adam100 minus under ours
+  many labels (9 cells): I_run +6.45, I_graph +0.57 (cells inflated under graph statistics: 6 of 9); descriptive, only the reference recomputed: +0.41
+  VERDICT (inflation): attributed mainly to the untrained encoder's initial normalization statistics
+  20 labels per class (9 cells): deflated in 6 (running), 5 (graph)
+  VERDICT (deflation): reported as dependent on the statistics
+
+Descriptive: kNN, GCN, Amazon: objectives significantly above / below untrained
+  running Amazon Computers: above 2, below 5
+  running Amazon Photo: above 3, below 5
+  graph Amazon Computers: above 8, below 0
+  graph Amazon Photo: above 7, below 0
+
+Descriptive: Kendall tau between the rankings under running and graph statistics
+  graphssl: median 1.00, min 0.86 over 18 cells
+  knn: median 0.89, min 0.71 over 18 cells
+
+Descriptive: backbone share of the variance of the gain (ours, standard split)
+  Cora: backbone 73% -> 49%, objective 14% -> 26%
+  CiteSeer: backbone 29% -> 21%, objective 48% -> 49%
+  PubMed: backbone 59% -> 49%, objective 21% -> 23%
+  Amazon Computers: backbone 68% -> 35%, objective 19% -> 40%
+  Amazon Photo: backbone 78% -> 55%, objective 10% -> 24%
+  Coauthor CS: backbone 82% -> 85%, objective 10% -> 9%
+
+Descriptive: spread of the untrained backbones (ours), running -> graph
+  Cora: 31.4 -> 22.3
+  CiteSeer: 21.6 -> 19.9
+  PubMed: 17.5 -> 15.5
+  Amazon Computers: 11.1 -> 9.1
+  Amazon Photo: 8.7 -> 6.5
+  Coauthor CS: 10.6 -> 11.2
+
+Reproduction of E2 by the running rows (same checkpoints, same probes):
+  adam100: 1620 of 1620 identical, max difference 0.0000
+  adam5000: 1620 of 1620 identical, max difference 0.0000
+  liblinear: 1620 of 1620 identical, max difference 0.0000
+  graphssl: 1620 of 1620 identical, max difference 0.0000
+  knn: 1620 of 1620 identical, max difference 0.0000

@@ -61,7 +61,13 @@ from typing import Any, Callable, Dict, List, Optional
 import torch
 import torch.nn.functional as F
 import torch_geometric
-from node_datasets import ALL_DATASETS, load_node_dataset, random_split, split_fractions
+from node_datasets import (
+    ALL_DATASETS,
+    FEATURES,
+    load_node_dataset,
+    random_split,
+    split_fractions,
+)
 from torch import Tensor
 from torch.optim import Adam
 
@@ -170,6 +176,20 @@ def parse_args() -> argparse.Namespace:
         default=["graphssl"],
         choices=PROTOCOLS,
         help="protocols scored on the random splits (default: graphssl only)",
+    )
+    p.add_argument(
+        "--norm-stats",
+        default="running",
+        choices=["running", "graph"],
+        help="running: evaluate every model with the BatchNorm statistics it holds (an "
+        "untrained encoder: the initial ones). graph: recompute them first from one pass over "
+        "the clean graph, no gradient, no label (E7)",
+    )
+    p.add_argument(
+        "--features",
+        default="raw",
+        choices=FEATURES,
+        help="node features: raw (the study) or rownorm (E8); must match the models' training",
     )
     p.add_argument("--data-dir", default="data")
     p.add_argument("--out-dir", default="benchmarks/probes/run")
@@ -454,7 +474,9 @@ def main() -> None:
     args = parse_args()
     device = torch.device(args.device)
     # Datasets without an official split use random split 0 as their "public" one.
-    data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(args.dataset, args.data_dir)
+    data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(
+        args.dataset, args.data_dir, features=args.features
+    )
     dm = DataModule(
         data=data, is_graph_level=False, train_idx=train_idx, val_idx=val_idx, test_idx=test_idx
     )
@@ -473,7 +495,7 @@ def main() -> None:
                 continue
             z, y = input_features(name, data, args), data.y
         else:
-            z, y = extract_embeddings(build(), dm, device=str(device))
+            z, y = extract_embeddings(build(), dm, device=str(device), norm_stats=args.norm_stats)
         assert y is not None
         if not torch.isfinite(z).all():
             raise FloatingPointError(f"non-finite values in the embeddings of {name}")
