@@ -39,11 +39,13 @@ preparation; this page summarizes the design and the findings.
 | E4 | training step | 14 evaluations between step 0 and 300, in three optimizer cells (Cora, CiteSeer) |
 | E5 | training budget | 300 against 3,000 steps (GCN on Cora and the Amazon and Coauthor graphs; GIN and Transformer on Cora) |
 | E6 | reference without parameters | raw X, ÂX, Â²X and the first 256 principal components of Â²X, under the probes of E2, on every dataset; WikiCS, used nowhere else, as an out-of-sample test (E1 and E2 there) |
+| E7 | normalization statistics | every model of E1 on the six datasets and ogbn-arxiv evaluated with the statistics its batch-norm layers hold and with statistics recomputed from one pass over the graph |
+| E8 | input features | row-normalized instead of raw features; GCN, Cora, CiteSeer, PubMed, 5 seeds |
 | M | — | label-free metrics of every saved model: CKA between models, effective rank, uniformity, smoothing |
 
-Five analyses had their decision rules committed before the results they apply to: the label-free
+Seven analyses had their decision rules committed before the results they apply to: the label-free
 prediction test, the definitions summarizing the trajectories of E4, the rules of E3 and E5 on
-the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `benchmarks/paper/PREREG.md`, verbatim.
+the Amazon and Coauthor graphs, the test of E6 on WikiCS, and the rules of E7 and E8. The rules are in `benchmarks/paper/PREREG.md`, verbatim.
 
 ## Representations resemble their backbone more than their objective
 
@@ -65,9 +67,11 @@ the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `
   share neither. It holds across random initializations, and the masked autoencoder is no
   exception. With ten times the training budget the grouping weakens below the margin fixed in
   advance: it is a property of the shared budget.
-- **The backbone explains most of the gain**: 68 to 82% of the variance of the gain over the
-  untrained encoder on four of the six datasets, much of it the distance between the untrained
-  encoders, which training narrows. On accuracy the objective weighs more than the backbone on
+- **The backbone's share of the gain depends on the reference.** It explains 68 to 82% of the
+  variance of the gain over the untrained encoder on four of the six datasets, much of it the
+  distance between the untrained encoders. With the untrained encoder's normalization statistics
+  recomputed from the graph (E7) that share falls on five of the six datasets (Amazon Computers 68
+  → 35% on the standard split). On accuracy the objective weighs more than the backbone on
   CiteSeer and Coauthor CS.
 
 ![CKA between models that share a backbone, an objective, or neither](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_cka.png)
@@ -77,8 +81,15 @@ the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `
 ![Each GCN objective and the untrained GCN minus logistic regression on Â²X, per dataset](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_propagation.png)
 
 - **On the six datasets.** Logistic regression on Â²X, which has no parameters, is above the
-  average GCN objective by 0.2 to 5.5 points, and by 1.0 on ogbn-arxiv. Over the three backbones,
-  16 of the 144 trained models are above it, ten of them on Coauthor CS and Amazon Photo.
+  average GCN objective by 0.6 to 5.5 points on five datasets and level with it on PubMed (−0.2,
+  interval −0.4 to 0.0), and 1.0 above on ogbn-arxiv. Over the three backbones, 16 of the 144
+  trained models are above it, ten of them on Coauthor CS and Amazon Photo.
+- **Under every check.** The average GCN objective stays below Â²X after tuning (E3: 0.7 to 2.7
+  points), with ten times the budget (E5: 0.6 to 2.5), with normalization statistics recomputed from
+  the graph (E7: D moves by at most 0.1) and with row-normalized features (E8: 1.0, 5.0 and 0.3
+  below on Cora, CiteSeer and PubMed); E7 and E8 have rules fixed before their runs. Without
+  GraphDINO it is level on PubMed (+0.2). A GCN trained on the labels does no better (2.8 below to
+  0.1 above), as SGC found with labels.
 - **Tested out of sample.** This comparison was made after the results of the six datasets were
   known, so it was tested on WikiCS, a seventh dataset with dense features, under a rule fixed
   before its runs: the comparison would be restricted to the six datasets if the average GCN
@@ -89,20 +100,30 @@ the Amazon and Coauthor graphs, and the test of E6 on WikiCS. The rules are in `
 - **Not on labels that neighbors share less often.** On the publication years of ogbn-arxiv the
   untrained GCN is 0.7 points above Â²X and every GCN objective 2.8 to 3.4 points above it.
 
-## The probe decides how large the gain looks
+## How the gain is measured changes its size
 
 ![Mean gain under the 100-step probe against the regularized probe, per dataset and backbone](https://raw.githubusercontent.com/Simocop7/graphssl/main/benchmarks/paper/figures/fig_probe_scatter.png)
 
 - **In both directions.** With a GCN, the 100-step probe of DGI and PyG-SSL measures an average
   gain of 1.5 points on CiteSeer, where the regularized probe measures 8.6, and 9.5 on Coauthor
   CS, where it measures 1.5. On ogbn-arxiv it finds gains of up to 22 points for GCN objectives
-  that the regularized probe places at most 0.3 points above the untrained encoder.
-- **Two biases.** An unregularized probe overfits trained embeddings when labels are few, which
-  deflates the gain; and it underfits the untrained encoder, whose raw embeddings are 5 to 290
-  times smaller with a GCN, which inflates it. Which one wins depends on the number of labels.
-- **The fix is two settings**: standardize the embeddings with the statistics of the training
-  rows, and choose the L2 penalty on the validation split. `LogRegEvaluator` does both;
-  liblinear with its penalty chosen on validation agrees with it.
+  that the regularized probe places at most 0.3 points above the untrained encoder; with the
+  untrained encoder's normalization statistics recomputed from the graph, those gains are −3.1 to
+  +1.1.
+- **With few labels, unregularized probes overfit.** The 100-step probe fits the CiteSeer
+  embeddings (training loss 0.03) and still scores them lower: it shrinks the gain.
+- **With many labels, the inflation comes from the reference.** In eval mode an untrained encoder
+  still holds the initial statistics of its batch-norm layers, so its embeddings are 5 to 290 times
+  smaller than a trained model's with a GCN, and a short probe underfits them. One forward pass
+  over the graph, with no gradient and no label, sets those statistics
+  (`extract_embeddings(..., norm_stats="graph")`): the short probe's average excess over the
+  regularized one, over the nine cells with many labels, falls from 6.4 to 0.6 points (E7, rule
+  fixed in advance). The same statistics account for part of the gains of the GIN and the
+  Transformer (Cora: 30.1 → 21.6 and 20.6 → 14.7 points) and for much of the kNN gains (Cora with a
+  GIN: 39.5 → 19.0); with a GCN under the regularized probe nothing moves by more than 0.6.
+- **The fix is three settings**: standardize the embeddings with the statistics of the training
+  rows, choose the L2 penalty on the validation split, and evaluate the untrained encoder with
+  normalization statistics from the graph. `LogRegEvaluator` does the first two.
 
 ## What survives: the order within one backbone
 
@@ -135,9 +156,12 @@ and CiteSeer it lifts the average objective by 1.0 to 7.6 points.
   regularized probe (from 5.6 points below to 0.3 above), although a supervised GCN reaches
   71.74% in the OGB benchmark, about 2.5 points more. With a GIN seven of eight objectives gain,
   by up to 8.4 points; with the
-  Transformer only AFGRL does. The probe is the largest factor of the gain on this graph.
+  Transformer only AFGRL does. With the statistics the models hold, the probe is the largest
+  factor of the gain on this graph; most of that is the untrained encoder's statistics (E7).
 - On the year labels every GCN objective gains 2.0 to 2.6 points, while every GIN objective
-  loses: the effect belongs to the backbone as much as to the objectives.
+  loses. Most of the GCN gain is the untrained encoder's normalization statistics: recomputed from
+  the graph (E7), the objectives gain 0.3 points on average. A GCN beats Â²X on these labels even
+  untrained.
 
 ## Label-free metrics barely tell which objective helped
 
@@ -171,16 +195,18 @@ of experiments; they are not causal estimates.
 
 1. Report the untrained encoder, the raw features and the propagated features (ÂᴷX, with K the
    depth of the encoder), scored in the same way, and the gain over the untrained encoder.
-2. Regularize the probe on validation data: choose the L2 penalty, and the feature normalization
+2. Evaluate the untrained encoder with normalization statistics computed on the graph (one forward
+   pass), or say that it holds its initial ones.
+3. Regularize the probe on validation data: choose the L2 penalty, and the feature normalization
    too, on the validation split. Standardizing removes the difference in scale between trained
    and untrained embeddings but understates sparse input features. Report the solver, the grid
    and whether the fit converged.
-3. Select nothing on the test split, neither the pretraining epoch nor a probe setting.
-4. Use more than one backbone, or say why one is enough, and report the ranking under each.
-5. Use ten seeds or more, report intervals, and compare means over seeds, not seeds across
+4. Select nothing on the test split, neither the pretraining epoch nor a probe setting.
+5. Use more than one backbone, or say why one is enough, and report the ranking under each.
+6. Use ten seeds or more, report intervals, and compare means over seeds, not seeds across
    machines.
-6. Report the trajectory, or at least whether accuracy declines after its best validation step.
-7. Do not choose an objective by effective rank.
+7. Report the trajectory, or at least whether accuracy declines after its best validation step.
+8. Do not choose an objective by effective rank.
 
 ## What this does not show
 
@@ -192,7 +218,10 @@ of experiments; they are not causal estimates.
   runs of those codebases' own pipelines.
 - The device is fixed within a dataset and experiment but differs between datasets.
 - The comparison with Â²X was made after the results of the six datasets were known; WikiCS is
-  its only out-of-sample test.
+  its only out-of-sample test, E7 and E8 its only checks with rules fixed in advance.
+- Every main table evaluates the untrained encoder with its initial normalization statistics, as
+  the analyses fixed in advance were defined; E7 gives the same numbers with statistics from the
+  graph.
 
 ## Reproduce
 
@@ -211,6 +240,7 @@ python benchmarks/analyze_e3.py           # E3: shared vs tuned, the decision ru
 python benchmarks/analyze_trajectories.py # E4
 python benchmarks/analyze_e5.py           # E5: training budget, the decision rule
 python benchmarks/analyze_propagation.py  # E6: the propagated features, the test on WikiCS
+python benchmarks/analyze_e7_e8.py        # E7, E8 and the checks of the comparison with Â²X
 python benchmarks/paper_figures_v2.py     # the figures on this page
 ```
 

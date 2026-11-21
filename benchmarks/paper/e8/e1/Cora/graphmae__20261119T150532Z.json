@@ -1,0 +1,138 @@
+{
+  "dataset": "Cora",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "features": "rownorm"
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    }
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7760000228881836,
+      "test_acc_linear": 0.8080000281333923,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7080000042915344,
+      "test_acc_knn": 0.7319999933242798,
+      "eff_rank": 187.52667236328125,
+      "wall_time_s": 12.891035079956055,
+      "checkpoint": "benchmarks/paper/models_e8/Cora/gcn/graphmae_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7839999794960022,
+      "test_acc_linear": 0.8059999942779541,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6959999799728394,
+      "test_acc_knn": 0.7279999852180481,
+      "eff_rank": 187.21029663085938,
+      "wall_time_s": 11.801941156387329,
+      "checkpoint": "benchmarks/paper/models_e8/Cora/gcn/graphmae_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7639999985694885,
+      "test_acc_linear": 0.7879999876022339,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7080000042915344,
+      "test_acc_knn": 0.7419999837875366,
+      "eff_rank": 187.56494140625,
+      "wall_time_s": 11.98711609840393,
+      "checkpoint": "benchmarks/paper/models_e8/Cora/gcn/graphmae_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7900000214576721,
+      "test_acc_linear": 0.8059999942779541,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7279999852180481,
+      "test_acc_knn": 0.7440000176429749,
+      "eff_rank": 188.33694458007812,
+      "wall_time_s": 12.28168511390686,
+      "checkpoint": "benchmarks/paper/models_e8/Cora/gcn/graphmae_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7699999809265137,
+      "test_acc_linear": 0.7870000004768372,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.7099999785423279,
+      "test_acc_knn": 0.7419999837875366,
+      "eff_rank": 187.4967041015625,
+      "wall_time_s": 11.690498113632202,
+      "checkpoint": "benchmarks/paper/models_e8/Cora/gcn/graphmae_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7990000009536743,
+      "std": 0.0105356609604185
+    },
+    "test_acc_knn": {
+      "mean": 0.7375999927520752,
+      "std": 0.007127417117601281
+    },
+    "eff_rank": {
+      "mean": 187.62711181640626,
+      "std": 0.42087909992607797
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261119T150532Z",
+    "git": {
+      "commit": "f0fb47d01ce713641c083d3ecc7a279abfe2b57b",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

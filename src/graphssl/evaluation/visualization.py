@@ -27,6 +27,7 @@ def extract_embeddings(
     device: str = "cpu",
     mini_batch: bool = False,
     num_neighbors: Optional[List[int]] = None,
+    norm_stats: Literal["running", "graph"] = "running",
 ) -> Tuple[Tensor, Optional[Tensor]]:
     """Extract embeddings from a model using a DataModule.
 
@@ -61,12 +62,23 @@ def extract_embeddings(
         num_neighbors: Neighbours per hop for ``NeighborLoader``. Defaults to
             ``[-1, -1]`` (all neighbours, 2 hops). Used only when
             ``mini_batch=True``.
+        norm_stats: ``"running"`` (default) evaluates with the running statistics
+            the BatchNorm layers hold. ``"graph"`` first recomputes them from the
+            inputs of this extraction (one pass, no gradient, no label) on a copy of
+            the model, then extracts in eval mode. An untrained encoder holds the
+            initial statistics (mean 0, variance 1: its BatchNorm layers leave their
+            input unchanged), a trained one the statistics of its training passes;
+            ``"graph"`` evaluates both with statistics of the same graph.
 
     Returns:
         ``(embeddings, labels)`` — embeddings tensor and optional labels tensor.
         Labels are ``None`` when the dataset has no ``y`` attribute.
     """
+    if norm_stats not in ("running", "graph"):
+        raise ValueError(f"norm_stats must be 'running' or 'graph', got {norm_stats!r}")
     _device = torch.device(device)
+    if norm_stats == "graph":
+        model = copy.deepcopy(model)  # the caller's model keeps its own statistics
     model = model.to(_device)
     model.eval()
 
@@ -78,6 +90,18 @@ def extract_embeddings(
         if use_model_forward:
             return model(batch)
         return encode(_enc, batch)
+
+    if norm_stats == "graph":
+
+        def _passes() -> None:
+            if datamodule.is_graph_level:
+                _extract_graph_level(datamodule, _extract, _device)
+            elif mini_batch:
+                _extract_node_mini_batch(datamodule, _extract, _device, num_neighbors)
+            else:
+                _extract_node_full_batch(datamodule, _extract, _device)
+
+        _recompute_batchnorm_statistics(model, _passes)
 
     with torch.no_grad():
         if datamodule.is_graph_level:
@@ -146,6 +170,33 @@ def _extract_node_mini_batch(
     embeddings = store if store is not None else torch.empty(0)
     labels = data.y.cpu() if hasattr(data, "y") and data.y is not None else None
     return embeddings, labels
+
+
+def _recompute_batchnorm_statistics(model: "torch.nn.Module", run_passes) -> None:
+    """Reset the running statistics of every BatchNorm layer and recompute them from the
+    forward passes of ``run_passes`` (cumulative average: after one full-graph pass they are
+    exactly that pass's batch statistics). Only the BatchNorm layers run in train mode; dropout
+    and every other layer stay in eval mode. No gradient. The model is left in eval mode."""
+    norms = [
+        m
+        for m in model.modules()
+        if isinstance(m, torch.nn.modules.batchnorm._BatchNorm) and m.track_running_stats
+    ]
+    if not norms:
+        return
+    momenta = [m.momentum for m in norms]
+    model.eval()
+    for m in norms:
+        m.reset_running_stats()
+        m.momentum = None
+        m.train()
+    try:
+        with torch.no_grad():
+            run_passes()
+    finally:
+        for m, momentum in zip(norms, momenta, strict=True):
+            m.momentum = momentum
+        model.eval()
 
 
 # ---------------------------------------------------------------------------

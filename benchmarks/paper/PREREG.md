@@ -1,11 +1,11 @@
 # Analyses fixed in advance
 
-The rules of the five analyses of the study that were fixed before the results they apply to,
+The rules of the seven analyses of the study that were fixed before the results they apply to,
 copied verbatim, by script, from the planning file as it stood at the commit that fixed each one.
 Those commits belong to a development history that also holds private notes and is not part of
 this repository. This is the authors' own record, not an external registration. What had been seen
 by then is listed in the appendix of the paper ("Analyses fixed in advance"). In this public copy,
-four personal notes about who asked for an analysis are replaced by "[omitted]"; the rules are otherwise
+five personal notes about who asked for an analysis are replaced by "[omitted]"; the rules are otherwise
 unchanged.
 
 ## Label-free prediction test
@@ -243,3 +243,112 @@ rows replaced the trained BGRL. Keyed by checkpoint (`analyze_propagation.py`), 
 CiteSeer −5.5, PubMed −0.2, Amazon Computers −1.0, Amazon Photo −0.6 and Coauthor CS −0.7, and 16
 of the 144 models of any backbone are above A^2X (not 15). The counts of GCN objectives above
 A^2X are unchanged, and the rule on WikiCS does not use these numbers.
+
+## Normalization statistics at evaluation (E7)
+
+Commit `f0fb47d`, 2026-11-19 14:46 UTC.
+
+> ## E7: normalization statistics at evaluation (added 2026-11-19, fixed before its runs)
+>
+> - *Why.* A review of the draft on 19 Nov ([omitted]) found that the untrained encoder is evaluated with the
+>   initial running statistics of its BatchNorm layers (mean 0, variance 1: in eval mode the layers
+>   leave their input unchanged), while every trained model holds statistics accumulated over its
+>   training passes. The reference therefore differs from a trained model in two ways, its
+>   weights and its normalization statistics, and part of a measured gain can come from the
+>   second. The embedding scale the paper uses to explain the 100-step probe's inflation (5–290×
+>   smaller untrained embeddings) is this difference.
+> - *Definition.* "Graph statistics": the running statistics of every BatchNorm layer are reset
+>   and recomputed as the cumulative average over one forward pass of the model's own `forward()`
+>   on the clean full graph, with only the BatchNorm layers in train mode (dropout and every other
+>   layer in eval mode), no gradient, no label; then the usual eval-mode extraction. Implemented as
+>   `extract_embeddings(..., norm_stats="graph")` (on a copy of the model) and
+>   `compare_probes.py --norm-stats graph`. "Running statistics": the evaluation used so far
+>   (`--norm-stats running`, the default).
+> - *Scope.* Every saved E1 model of the six datasets except the supervised references: the eight
+>   objectives and the untrained encoder, three backbones, 10 seeds (270 checkpoints per dataset).
+>   The supervised references are not ranked and enter no claim tested here (the GCN of the
+>   standard recipe has no normalization layer). E2's probes on the standard split: adam100 (20
+>   initializations), adam5000, liblinear, ours, and kNN; no random splits, no `_std` / `weakl2`
+>   controls. **Both conditions are scored by the same script on the same device and thread count
+>   (Mac CPU, OMP_NUM_THREADS=3, the setting of E2)**, so every comparison is paired, and the
+>   running rows double as a check that E2 reproduces (preflight, 19 Nov: two Cora checkpoints
+>   identical to E2 to the digit under adam100, liblinear, ours and kNN). ogbn-arxiv and arxiv-year
+>   (standard split): the 81 checkpoints with adam100, ours and kNN, both conditions on one device
+>   (the A2 if reachable, otherwise the Mac GPU); they are descriptive and enter no verdict below.
+>   WikiCS is not included (E6: WikiCS enters nothing else). Results in `benchmarks/paper/e7/`.
+> - *What stays as it is.* Every analysis fixed before (label-free test, E4, E5, E3 on Amazon and
+>   Coauthor, E6) and every main table use running statistics, as when they were fixed. E7 is
+>   reported next to them, and the text says where a claim depends on the statistics.
+> - *Rule R1 (C3, small GCN gains).* On Amazon Computers, Amazon Photo and Coauthor CS, the mean
+>   gain of the eight GCN objectives over the untrained GCN, our probe, standard split, with the
+>   objectives and the untrained encoder both under graph statistics, minus the same mean gain under
+>   running statistics; 95% bootstrap over the 10 seeds (a seed's models resampled together, gains
+>   paired by seed). If on any of the three it is ≥ 1.0 point with its interval above 0, C3 is
+>   reported as dependent on the normalization statistics, with both gains side by side. Otherwise
+>   C3 stands under both.
+> - *Rule R2 (C10).* E6's D (valsel probe: ours or liblinear, whichever is better on validation, per
+>   representation; mean over the eight GCN objectives of the seed-mean test accuracy minus that of
+>   Â²X; 95% seed bootstrap) with the objectives under graph statistics, on each of the six
+>   datasets. If D ≥ 1.0 with its interval above 0 on any of them, C10 is stated "with the models'
+>   own statistics" and that dataset is reported. Otherwise C10 stands under both.
+> - *Rule R3 (C4 and C5, the probe's two biases).* Inflation of a cell = mean gain of the eight
+>   objectives under adam100 minus their mean gain under our probe (standard split, both the
+>   objectives and the untrained encoder under the same statistics). I_run and I_graph = the mean
+>   inflation over the 9 cells with many labels (Amazon Computers, Amazon Photo, Coauthor CS × three
+>   backbones) under each condition. If I_graph < I_run / 2, the paper attributes the inflation
+>   mainly to the untrained encoder's initial normalization statistics, not to the probe alone,
+>   in the abstract and in the probe section. Otherwise the inflation is reported as a property of
+>   the probe under both. Deflation: if under graph statistics adam100 still deflates the mean gain
+>   (inflation < 0) in at least 6 of the 9 cells with 20 labels per class (as under running
+>   statistics), the overfitting bias stands; otherwise it is reported as dependent on the
+>   statistics.
+> - *Descriptive, no rule:* the share of the variance of the gain explained by the backbone (our
+>   probe, standard split, both conditions); the spread of the untrained backbones; the untrained
+>   GIN's effective rank on the Amazon graphs; the gains under kNN; ogbn-arxiv and arxiv-year.
+> - *Seen before fixing this rule:* everything of E1–E6 under running statistics; a scratch
+>   diagnostic on 19 Nov of the **untrained encoders only** (Mac CPU, 4 threads; seeds 0–2 on Cora
+>   and CiteSeer, 0–1 on Amazon Computers and Coauthor CS; adam100 with 5 initializations),
+>   running → graph statistics, ours / kNN / adam100: Cora GCN 72.4 → 71.9 / 59.6 → 65.6 / 71.0 →
+>   69.9, GIN 40.7 → 50.2 / 27.3 → 47.2 / 40.1 → 50.9, Transformer 49.4 → 55.4 / 29.7 → 46.1 /
+>   46.3 → 49.1; CiteSeer GCN 58.4 → 58.9 / 50.2 → 50.8 / 58.0 → 54.0, GIN 36.6 → 40.3 / 27.2 →
+>   32.6 / 36.6 → 39.6, Transformer 45.2 → 45.2 / 33.2 → 38.5 / 40.9 → 40.0; Amazon Computers GCN
+>   87.3 → 87.4 / 87.0 → 85.0 / 80.7 → 87.3, GIN 79.7 → 77.7 / 76.9 → 78.6 / 67.4 → 76.5 (rank 4.8
+>   → 62.5), Transformer 76.3 → 79.4 / 50.8 → 61.8 / 74.8 → 76.7; Coauthor CS GCN 91.1 → 90.8 / 89.5
+>   → 89.8 / 82.5 → 90.4, GIN 80.7 → 80.0 / 69.1 → 78.7 / 57.9 → 77.5, Transformer 86.5 → 86.5 /
+>   65.4 → 83.4 / 83.6 → 84.4; and the preflight's graph-statistics row of the untrained GCN, Cora
+>   seed 0. No trained model under graph statistics, and nothing on PubMed, Amazon Photo or
+>   ogbn-arxiv under graph statistics.
+> - *Cost.* From E2's probe times: about 7.7 h of single-stream Mac CPU for both conditions on the
+>   six datasets, in two streams; ogbn-arxiv a few hours on the A2 (about twice that on the Mac
+>   GPU). Preflight first (every dataset, both conditions, two checkpoints).
+
+## Row-normalized features (E8)
+
+Commit `f0fb47d`, 2026-11-19 14:46 UTC.
+
+> ## E8: row-normalized features (added 2026-11-19, fixed before its runs)
+>
+> - *Why.* The study feeds every encoder the node features as PyG distributes them. DGI, GRACE and
+>   the PyGCL examples divide each Planetoid node's features by their sum (PyG's
+>   `NormalizeFeatures`). C10 compares the GCN objectives with Â²X computed from the same raw
+>   features; a reviewer can ask whether it holds with the usual preprocessing.
+> - *Design.* Cora, CiteSeer and PubMed (the bag-of-words graphs where row normalization is the
+>   convention), GCN only (C10 concerns the GCN), the eight objectives and the untrained encoder,
+>   seeds 0–4, the shared protocol otherwise, row-normalized features (`run_benchmark.py
+>   --features rownorm`), models saved in `models_e8*/`, results in `benchmarks/paper/e8/`. Mac
+>   CPU, 3 threads (E1's device for these datasets), one stream. Scored with `compare_probes.py
+>   --features rownorm` with ours and liblinear on the standard split, kNN, and the input rows of
+>   the row-normalized features (raw, Â¹X, Â²X, PCA-256 of Â²X).
+> - *Rule (C10).* D_rn = mean over the eight GCN objectives of (seed-mean test accuracy over seeds
+>   0–4 − test accuracy of Â²X of the row-normalized features), valsel probe as in E6, 95% seed
+>   bootstrap. If D_rn ≥ 1.0 with its interval above 0 on any of the three datasets, C10 is stated
+>   for raw features only and that dataset is reported. Otherwise C10 holds with either
+>   preprocessing. Reported either way: D_rn per objective; the objectives against the better of
+>   the two Â²X (raw or row-normalized); E1's D on seeds 0–4; the untrained GCN.
+> - *Seen before fixing this rule:* nothing with row-normalized features under the shared protocol.
+>   Known from elsewhere: the GraphMAE validation of 28 Oct (CLAUDE.md; its reference recipe, not
+>   the shared protocol, row-normalized features, Cora 81.9 / 80.7 at 1,500 epochs) and SGC's
+>   published accuracies on Â²X of row-normalized features (Wu et al. 2019: 81.0 / 71.9 / 78.9).
+> - *Cost.* From E1's per-seed times on the Mac CPU: about 3.1 h of training (PubMed's GraphCL and
+>   AFGRL most of it), a few minutes of scoring. Preflight first (every objective, 3 steps, each
+>   dataset).

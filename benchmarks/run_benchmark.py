@@ -81,7 +81,12 @@ from pathlib import Path
 import torch
 import torch_geometric
 from embedding_geometry import geometry, linear_cka, random_pairs
-from node_datasets import EXTRA_FULL_BATCH_DATASETS, FULL_BATCH_DATASETS, load_node_dataset
+from node_datasets import (
+    EXTRA_FULL_BATCH_DATASETS,
+    FEATURES,
+    FULL_BATCH_DATASETS,
+    load_node_dataset,
+)
 from torch.optim import SGD, Adam, AdamW
 
 from graphssl.config import schema
@@ -201,6 +206,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seeds", type=int, default=5)
     p.add_argument("--knn-k", type=int, default=5)
     p.add_argument("--data-dir", default="data")
+    p.add_argument(
+        "--features",
+        default="raw",
+        choices=FEATURES,
+        help="raw: the node features as distributed (the study). rownorm: each row divided by "
+        "its sum, PyG's NormalizeFeatures (E8)",
+    )
     p.add_argument(
         "--out-dir",
         default="benchmarks/results",
@@ -697,6 +709,8 @@ def save_result(
         "knn_k": args.knn_k,
         "linear_probe": linear_probe_settings(),
     }
+    if args.features != "raw":  # recorded only when it differs: older JSONs used raw features
+        hyperparameters["features"] = args.features
     if args.optimizer == "sgd":
         hyperparameters.update(momentum=args.momentum, nesterov=True)
     if model_name == "supervised_reg":
@@ -753,7 +767,7 @@ def main() -> None:
 
     for dataset_name in args.dataset:
         data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(
-            dataset_name, args.data_dir
+            dataset_name, args.data_dir, features=args.features
         )
         print(
             f"\n=== {dataset_name} | nodes={data.num_nodes:,} edges={data.num_edges:,} "

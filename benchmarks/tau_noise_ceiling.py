@@ -3,10 +3,10 @@
 The rankings of the objectives under two backbones agree with tau as low as 0.21. Two rankings
 from independent seeds of the *same* backbone also disagree, because the objectives are close
 and the seeds are few. This script measures that ceiling: the seeds of every dataset are split
-at random into two halves of five; within a backbone, tau between the method means of the two
+into two halves of five in every possible way; within a backbone, tau between the method means of the two
 halves; between two backbones, tau between the means of one backbone's first half and the other's
 second half (averaged over both directions), so that both comparisons use five independent seeds
-per side. Repeated over random splits of the seeds.
+per side. Each unordered partition enters once, since the statistics are symmetric in the halves.
 
 Input: ``analysis/long_table.csv`` of ``analyze_factors.py`` (regularized probe, standard split).
 Output: ``analysis/e6/tau_ceiling.csv`` (mean tau and its 5th and 95th percentiles over splits).
@@ -27,13 +27,11 @@ from scipy.stats import kendalltau
 
 P = Path("benchmarks/paper/analysis")
 EXCLUDE = {"supervised", "supervised_reg", "untrained"}
-N_SPLITS = 1000
 
 
 def main() -> None:
     df = pd.read_csv(P / "long_table.csv")
     d = df[(df.probe == "graphssl") & (df.split == "public") & ~df.method.isin(EXCLUDE)]
-    rng = np.random.default_rng(0)
     rows = []
     for dataset, g in d.groupby("dataset"):
         tabs = {
@@ -42,14 +40,17 @@ def main() -> None:
         }
         seeds = sorted(set.intersection(*[set(t.columns) for t in tabs.values()]))
         methods = sorted(set.intersection(*[set(t.dropna().index) for t in tabs.values()]))
-        if len(seeds) < 6:
-            continue  # ogbn-arxiv: 3 seeds, no halves
+        if dataset in {"ogbn-arxiv", "arxiv-year"}:
+            continue  # Three seeds cannot supply two groups of five.
+        if len(seeds) != 10 or len(methods) != 8:
+            raise ValueError(f"Incomplete ten-seed, eight-objective grid for {dataset}")
         half = len(seeds) // 2
         within: dict = {b: [] for b in tabs}
         across: dict = {p: [] for p in combinations(sorted(tabs), 2)}
-        for _ in range(N_SPLITS):
-            perm = rng.permutation(seeds)
-            h1, h2 = perm[:half], perm[half : 2 * half]
+        # Fix one seed in the first half to avoid counting the complementary split twice.
+        for rest in combinations(seeds[1:], half - 1):
+            h1 = [seeds[0], *rest]
+            h2 = sorted(set(seeds) - set(h1))
             m = {
                 b: (t.loc[methods, h1].mean(axis=1), t.loc[methods, h2].mean(axis=1))
                 for b, t in tabs.items()
