@@ -363,3 +363,54 @@ class TestRidgeEvaluator:
         y[0, 0] = float("nan")
         with pytest.raises(ValueError, match="NaN"):
             RidgeEvaluator().evaluate(embeddings, y, *splits)
+
+
+class TestRocAuc:
+    """``LogRegEvaluator(metric="roc_auc")`` and ``roc_auc`` (binary heterophilous graphs, E10)."""
+
+    def test_matches_scikit_learn_with_ties(self):
+        sklearn_metrics = pytest.importorskip("sklearn.metrics")
+        from graphssl.evaluation.linear_probe import roc_auc
+
+        g = torch.Generator().manual_seed(0)
+        labels = torch.randint(0, 2, (500,), generator=g)
+        scores = torch.randint(0, 20, (500,), generator=g).double()  # many ties
+        expected = sklearn_metrics.roc_auc_score(labels.numpy(), scores.numpy())
+        assert roc_auc(scores, labels) == pytest.approx(expected, abs=1e-12)
+
+    def test_extreme_and_degenerate_values(self):
+        from graphssl.evaluation.linear_probe import roc_auc
+
+        labels = torch.tensor([0, 0, 1, 1])
+        assert roc_auc(torch.tensor([0.1, 0.2, 0.8, 0.9]), labels) == 1.0
+        assert roc_auc(torch.tensor([0.9, 0.8, 0.2, 0.1]), labels) == 0.0
+        assert roc_auc(torch.zeros(4), labels) == 0.5
+        assert roc_auc(torch.ones(3), torch.zeros(3, dtype=torch.long)) != roc_auc(
+            torch.ones(3), torch.zeros(3, dtype=torch.long)
+        )  # NaN: one class only
+
+    def test_selection_on_validation_auc(self):
+        x, y, *splits = _make_clusters(num_classes=2, seed=5)
+        grid = (1.0, 1e-2, 1e-4)
+        single = {
+            wd: LogRegEvaluator(weight_decay=wd, metric="roc_auc").evaluate(
+                x, y, *splits, num_classes=2
+            )
+            for wd in grid
+        }
+        expected = max(grid, key=lambda wd: (single[wd]["val_auc"], wd))
+        selected = LogRegEvaluator(weight_decay=grid, metric="roc_auc").evaluate(
+            x, y, *splits, num_classes=2
+        )
+        assert set(selected) == {"val_auc", "test_auc", "weight_decay", "converged"}
+        assert selected["weight_decay"] == expected
+        assert 0.5 < selected["test_auc"] <= 1.0
+
+    def test_refuses_multiclass_and_multilabel(self):
+        x, y, *splits = _make_clusters(num_classes=3)
+        with pytest.raises(ValueError, match="binary"):
+            LogRegEvaluator(metric="roc_auc").evaluate(x, y, *splits, num_classes=3)
+        with pytest.raises(ValueError):
+            LogRegEvaluator(metric="roc_auc", multilabel=True)
+        with pytest.raises(ValueError):
+            LogRegEvaluator(metric="f1")

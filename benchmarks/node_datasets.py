@@ -13,6 +13,10 @@
   publication year cut into 5 classes at its quantiles (their ``even_quantile_labels``), with
   random 50/25/25 splits. SSL training never sees labels, so the models trained on ogbn-arxiv
   are scored on it without retraining.
+- The heterophilous benchmarks of Platonov et al. (ICLR 2023): Roman-empire, Amazon-ratings,
+  Minesweeper, Tolokers, Questions, as PyG distributes them (undirected), with their 10 fixed
+  50/25/25 splits; split 0 is the standard one. Used only by E10 (benchmarks/paper/PLAN.md).
+  The three binary ones are scored by ROC-AUC, as in that paper (``METRICS``).
 """
 
 from __future__ import annotations
@@ -33,11 +37,45 @@ RANDOM_SPLIT = {
 OGB = ["ogbn-arxiv", "ogbn-products"]
 ARXIV_YEAR = "arxiv-year"
 WIKICS = "WikiCS"
+# Name in the results -> name of PyG's HeterophilousGraphDataset (Platonov et al., 2023).
+HETEROPHILOUS = {
+    "RomanEmpire": "Roman-empire",
+    "AmazonRatings": "Amazon-ratings",
+    "Minesweeper": "Minesweeper",
+    "Tolokers": "Tolokers",
+    "Questions": "Questions",
+}
 FULL_BATCH_DATASETS = [*PLANETOID, *RANDOM_SPLIT]
-# Full-batch datasets outside the main study (E6 only): kept out of FULL_BATCH_DATASETS so that
-# the scripts that iterate over the study's datasets do not pick them up.
-EXTRA_FULL_BATCH_DATASETS = [WIKICS]
+# Full-batch datasets outside the main study (E6: WikiCS; E10: the heterophilous graphs): kept
+# out of FULL_BATCH_DATASETS so that the scripts that iterate over the study's datasets do not
+# pick them up.
+EXTRA_FULL_BATCH_DATASETS = [WIKICS, *HETEROPHILOUS]
 ALL_DATASETS = [*FULL_BATCH_DATASETS, *EXTRA_FULL_BATCH_DATASETS, *OGB, ARXIV_YEAR]
+# Evaluation metric per dataset: accuracy unless listed. ROC-AUC for the binary heterophilous
+# graphs (positive class 1), whose classes are imbalanced (Questions: 97% negatives).
+METRICS = {"Minesweeper": "roc_auc", "Tolokers": "roc_auc", "Questions": "roc_auc"}
+
+
+def metric_of(name: str) -> str:
+    """'acc' or 'roc_auc': how ``name`` is scored."""
+    return METRICS.get(name, "acc")
+
+
+def fixed_splits(name: str, data_dir: str = "data") -> List[Tuple[Tensor, Tensor, Tensor]]:
+    """The fixed (train, val, test) index splits a dataset ships with (heterophilous: 10)."""
+    if name not in HETEROPHILOUS:
+        raise ValueError(f"{name!r} has no fixed splits in this study")
+    from torch_geometric.datasets import HeterophilousGraphDataset
+
+    data = HeterophilousGraphDataset(root=f"{data_dir}/heterophilous", name=HETEROPHILOUS[name])[0]
+    return [
+        tuple(
+            m[:, j].nonzero(as_tuple=True)[0]
+            for m in (data.train_mask, data.val_mask, data.test_mask)
+        )
+        for j in range(data.train_mask.size(1))
+    ]
+
 
 DEFAULT_SPLIT_FRACTIONS = (0.1, 0.1)
 # Train and validation fractions of a random split, where a dataset's convention differs.
@@ -151,6 +189,20 @@ def _load_node_dataset(name: str, data_dir: str):
         data.train_mask, data.val_mask, data.test_mask = _masks(data.num_nodes, splits)
         del data.stopping_mask
         return data, int(data.y.max()) + 1, *splits
+
+    if name in HETEROPHILOUS:
+        from torch_geometric.datasets import HeterophilousGraphDataset
+
+        dataset = HeterophilousGraphDataset(
+            root=f"{data_dir}/heterophilous", name=HETEROPHILOUS[name]
+        )
+        data = dataset[0]  # undirected as distributed
+        splits = [
+            m[:, 0].nonzero(as_tuple=True)[0]
+            for m in (data.train_mask, data.val_mask, data.test_mask)
+        ]
+        data.train_mask, data.val_mask, data.test_mask = _masks(data.num_nodes, splits)
+        return data, dataset.num_classes, *splits
 
     from torch_geometric.transforms import ToUndirected
 

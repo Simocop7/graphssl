@@ -15,6 +15,11 @@ the [benchmarks page](https://simocop7.github.io/graphssl/benchmarks/) of the do
   in the same proportion and the loss uses the masked seeds. Categorical node features
   (`node_emb_num_classes`) are refused.
 - **`SCELoss`** (`sce` in the `LOSSES` registry): the scaled cosine error.
+- **`LogRegEvaluator(metric="roc_auc")`**: scores a binary task by ROC-AUC (of the class-1 logit
+  margin) and selects the L2 strength on validation ROC-AUC; returns `val_auc` / `test_auc`.
+  For imbalanced binary labels, where accuracy says little (e.g. the heterophilous benchmarks
+  of Platonov et al., ICLR 2023). `graphssl.evaluation.linear_probe.roc_auc` is the metric
+  itself (pure PyTorch, ties counted as one half). The default, `metric="acc"`, is unchanged.
 
 ## 0.2.0 (2026-10-14)
 
