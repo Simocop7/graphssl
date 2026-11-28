@@ -1,0 +1,165 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0008220617042324935,
+    "weight_decay": 5.746393711689372e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.209
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.15
+        }
+      ],
+      "tau": 0.479,
+      "proj_dim": 128
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.209
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.15
+      }
+    ],
+    "tau": 0.479,
+    "proj_dim": 128
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9054545164108276,
+      "test_acc_linear": 0.8900200128555298,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8734545707702637,
+      "test_acc_knn": 0.8655698895454407,
+      "eff_rank": 144.80604553222656,
+      "wall_time_s": 1222.7957389354706,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9003636240959167,
+      "test_acc_linear": 0.88874751329422,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8741818070411682,
+      "test_acc_knn": 0.8696600794792175,
+      "eff_rank": 144.02610778808594,
+      "wall_time_s": 1065.6394910812378,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9090909361839294,
+      "test_acc_linear": 0.8951099514961243,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8799999952316284,
+      "test_acc_knn": 0.8668423891067505,
+      "eff_rank": 141.6907958984375,
+      "wall_time_s": 1073.7508010864258,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9076363444328308,
+      "test_acc_linear": 0.8943828344345093,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8799999952316284,
+      "test_acc_knn": 0.8709325790405273,
+      "eff_rank": 146.75733947753906,
+      "wall_time_s": 1131.6272361278534,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9054545164108276,
+      "test_acc_linear": 0.8946555256843567,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8836363554000854,
+      "test_acc_knn": 0.8719323873519897,
+      "eff_rank": 146.65206909179688,
+      "wall_time_s": 1090.5101878643036,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/graphcl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.892583167552948,
+      "std": 0.002966484105818416
+    },
+    "test_acc_knn": {
+      "mean": 0.8689874649047852,
+      "std": 0.0027013709067325903
+    },
+    "eff_rank": {
+      "mean": 144.78647155761718,
+      "std": 2.093234250307994
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T062929Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

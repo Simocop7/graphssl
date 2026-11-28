@@ -1,0 +1,217 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.00048047394381950425,
+    "weight_decay": 0.0001725306549293235,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.68
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.259
+        }
+      ],
+      "ema_tau": 0.9,
+      "pred_hidden": 256,
+      "pred_norm": "none"
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.9,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.68
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.259
+      }
+    ],
+    "pred_hidden": 256,
+    "pred_norm": "none"
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9318057894706726,
+      "test_acc_linear": 0.9352287650108337,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9301691055297852,
+      "test_acc_knn": 0.9305242896080017,
+      "eff_rank": 135.79762268066406,
+      "wall_time_s": 315.720251083374,
+      "val_acc_linear_alt": 0.929623544216156,
+      "test_acc_linear_alt": 0.9340696930885315,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9263502359390259,
+      "test_acc_knn_alt": 0.9282743334770203,
+      "eff_rank_alt": 128.80169677734375,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9339879751205444,
+      "test_acc_linear": 0.9346151351928711,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9312602281570435,
+      "test_acc_knn": 0.9287516474723816,
+      "eff_rank": 132.09666442871094,
+      "wall_time_s": 309.7807970046997,
+      "val_acc_linear_alt": 0.9339879751205444,
+      "test_acc_linear_alt": 0.9320924282073975,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9279869198799133,
+      "test_acc_knn_alt": 0.9274562001228333,
+      "eff_rank_alt": 126.62903594970703,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9285324811935425,
+      "test_acc_linear": 0.9327742457389832,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9301691055297852,
+      "test_acc_knn": 0.9282743334770203,
+      "eff_rank": 132.3660888671875,
+      "wall_time_s": 280.6258521080017,
+      "val_acc_linear_alt": 0.9290780425071716,
+      "test_acc_linear_alt": 0.9327060580253601,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9274413585662842,
+      "test_acc_knn_alt": 0.9270471334457397,
+      "eff_rank_alt": 125.65786743164062,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9372613430023193,
+      "test_acc_linear": 0.9342741966247559,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9312602281570435,
+      "test_acc_knn": 0.9273880124092102,
+      "eff_rank": 132.00404357910156,
+      "wall_time_s": 247.33726477622986,
+      "val_acc_linear_alt": 0.9334424734115601,
+      "test_acc_linear_alt": 0.9325697422027588,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9263502359390259,
+      "test_acc_knn_alt": 0.9277288913726807,
+      "eff_rank_alt": 125.18384552001953,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9318057894706726,
+      "test_acc_linear": 0.9348878264427185,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9312602281570435,
+      "test_acc_knn": 0.9291607141494751,
+      "eff_rank": 132.93397521972656,
+      "wall_time_s": 245.1555299758911,
+      "val_acc_linear_alt": 0.9339879751205444,
+      "test_acc_linear_alt": 0.9340015053749084,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9279869198799133,
+      "test_acc_knn_alt": 0.9283425211906433,
+      "eff_rank_alt": 126.09807586669922,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/bgrl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9343560338020325,
+      "std": 0.0009513605397308599
+    },
+    "test_acc_knn": {
+      "mean": 0.9288197994232178,
+      "std": 0.0011590622805687052
+    },
+    "eff_rank": {
+      "mean": 133.03967895507813,
+      "std": 1.583742995926443
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.9330878853797913,
+      "std": 0.0008949647108946714
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.9277698159217834,
+      "std": 0.0005488235002651291
+    },
+    "eff_rank_alt": {
+      "mean": 126.47410430908204,
+      "std": 1.4066003593686982
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T191442Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

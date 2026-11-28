@@ -1,0 +1,165 @@
+{
+  "dataset": "PubMed",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.00010614192581587527,
+    "weight_decay": 1.6720598472123552e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.406
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.331
+        }
+      ],
+      "tau": 0.634,
+      "proj_dim": 128
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.406
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.331
+      }
+    ],
+    "tau": 0.634,
+    "proj_dim": 128
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8299999833106995,
+      "test_acc_linear": 0.8059999942779541,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7900000214576721,
+      "test_acc_knn": 0.7429999709129333,
+      "eff_rank": 62.45582580566406,
+      "wall_time_s": 1388.5819120407104,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8109999895095825,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7879999876022339,
+      "test_acc_knn": 0.7490000128746033,
+      "eff_rank": 62.47211837768555,
+      "wall_time_s": 1388.3639619350433,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8420000076293945,
+      "test_acc_linear": 0.8190000057220459,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.765999972820282,
+      "test_acc_knn": 0.7350000143051147,
+      "eff_rank": 62.57971954345703,
+      "wall_time_s": 1389.1528146266937,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8399999737739563,
+      "test_acc_linear": 0.8109999895095825,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7680000066757202,
+      "test_acc_knn": 0.7490000128746033,
+      "eff_rank": 62.335060119628906,
+      "wall_time_s": 1388.7093086242676,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8299999833106995,
+      "test_acc_linear": 0.7950000166893005,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7639999985694885,
+      "test_acc_knn": 0.7360000014305115,
+      "eff_rank": 62.32566833496094,
+      "wall_time_s": 1388.8806536197662,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/graphcl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8083999991416931,
+      "std": 0.008820425052118486
+    },
+    "test_acc_knn": {
+      "mean": 0.7424000024795532,
+      "std": 0.006767571110822456
+    },
+    "eff_rank": {
+      "mean": 62.433678436279294,
+      "std": 0.10569755722986063
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T145646Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0003770307098019256,
+    "weight_decay": 2.369949732094623e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.514
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.346
+        }
+      ],
+      "tau": 0.158,
+      "proj_dim": 128
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.514
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.346
+      }
+    ],
+    "tau": 0.158,
+    "proj_dim": 128
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9199346303939819,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9137254953384399,
+      "test_acc_knn": 0.9189542531967163,
+      "eff_rank": 44.46791076660156,
+      "wall_time_s": 465.2290868759155,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9277777671813965,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9176470637321472,
+      "test_acc_knn": 0.918790876865387,
+      "eff_rank": 44.41172409057617,
+      "wall_time_s": 489.54941272735596,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9303921461105347,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9137254953384399,
+      "test_acc_knn": 0.9184640645980835,
+      "eff_rank": 44.336769104003906,
+      "wall_time_s": 499.3056421279907,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9137254953384399,
+      "test_acc_linear": 0.9169934391975403,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9176470637321472,
+      "test_acc_knn": 0.9197712540626526,
+      "eff_rank": 43.272335052490234,
+      "wall_time_s": 487.08984565734863,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9202614426612854,
+      "test_acc_linear": 0.9269607663154602,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9163398742675781,
+      "test_acc_knn": 0.9199346303939819,
+      "eff_rank": 43.403526306152344,
+      "wall_time_s": 491.1582787036896,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.9254902005195618,
+      "test_acc_linear": 0.9261437654495239,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.915032684803009,
+      "test_acc_knn": 0.9214052557945251,
+      "eff_rank": 43.4063835144043,
+      "wall_time_s": 556.0147149562836,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9285947680473328,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9124183058738708,
+      "test_acc_knn": 0.921241819858551,
+      "eff_rank": 43.76848220825195,
+      "wall_time_s": 540.6653561592102,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9281045794487,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.915032684803009,
+      "test_acc_knn": 0.9209150075912476,
+      "eff_rank": 43.41460037231445,
+      "wall_time_s": 570.8624448776245,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.9202614426612854,
+      "test_acc_linear": 0.9277777671813965,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9163398742675781,
+      "test_acc_knn": 0.921895444393158,
+      "eff_rank": 43.93560791015625,
+      "wall_time_s": 572.7763020992279,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9284313917160034,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9163398742675781,
+      "test_acc_knn": 0.9204248189926147,
+      "eff_rank": 44.41890335083008,
+      "wall_time_s": 567.7591879367828,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.926111102104187,
+      "std": 0.004234943931134134
+    },
+    "test_acc_knn": {
+      "mean": 0.9201797425746918,
+      "std": 0.0011914261562882228
+    },
+    "eff_rank": {
+      "mean": 43.88362426757813,
+      "std": 0.4921624366593012
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T125505Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

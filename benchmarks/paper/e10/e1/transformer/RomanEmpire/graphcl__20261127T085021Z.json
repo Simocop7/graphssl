@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7270961999893188,
+      "test_acc_linear": 0.7169078588485718,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.633892297744751,
+      "test_acc_knn": 0.6431344747543335,
+      "eff_rank": 68.99530029296875,
+      "wall_time_s": 2601.217983484268,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7179170250892639,
+      "test_acc_linear": 0.7146134972572327,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6317740678787231,
+      "test_acc_knn": 0.637133777141571,
+      "eff_rank": 67.89524841308594,
+      "wall_time_s": 2759.0575199127197,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7187996506690979,
+      "test_acc_linear": 0.7121425867080688,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6326566934585571,
+      "test_acc_knn": 0.6360748410224915,
+      "eff_rank": 68.39781188964844,
+      "wall_time_s": 2553.7737023830414,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7149161696434021,
+      "test_acc_linear": 0.7170843482017517,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6384819149971008,
+      "test_acc_knn": 0.6321920156478882,
+      "eff_rank": 67.43437957763672,
+      "wall_time_s": 2878.7736213207245,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7255074977874756,
+      "test_acc_linear": 0.713731050491333,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6349514722824097,
+      "test_acc_knn": 0.6440169215202332,
+      "eff_rank": 69.18525695800781,
+      "wall_time_s": 1536.201018333435,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.7119152545928955,
+      "test_acc_linear": 0.7080833315849304,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6375992894172668,
+      "test_acc_knn": 0.6420755386352539,
+      "eff_rank": 68.13307189941406,
+      "wall_time_s": 883.5303008556366,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.7239187955856323,
+      "test_acc_linear": 0.7183197736740112,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6397175788879395,
+      "test_acc_knn": 0.6387221813201904,
+      "eff_rank": 67.49665832519531,
+      "wall_time_s": 597.7091906070709,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.7172109484672546,
+      "test_acc_linear": 0.7151429653167725,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.634598433971405,
+      "test_acc_knn": 0.6380162239074707,
+      "eff_rank": 67.93816375732422,
+      "wall_time_s": 597.4825201034546,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.7145631313323975,
+      "test_acc_linear": 0.707024335861206,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6310679316520691,
+      "test_acc_knn": 0.6369572877883911,
+      "eff_rank": 68.17850494384766,
+      "wall_time_s": 597.5179009437561,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.7223300933837891,
+      "test_acc_linear": 0.7144370079040527,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6354809999465942,
+      "test_acc_knn": 0.6376632452011108,
+      "eff_rank": 68.1082534790039,
+      "wall_time_s": 596.9510540962219,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.713748675584793,
+      "std": 0.003727682474635319
+    },
+    "test_acc_knn": {
+      "mean": 0.6385986506938934,
+      "std": 0.00358242759416216
+    },
+    "eff_rank": {
+      "mean": 68.17626495361328,
+      "std": 0.5669003999606005
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T085021Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

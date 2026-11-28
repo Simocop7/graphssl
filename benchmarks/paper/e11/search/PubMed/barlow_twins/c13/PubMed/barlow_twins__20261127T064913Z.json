@@ -1,0 +1,112 @@
+{
+  "dataset": "PubMed",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.0049767579548702905,
+    "weight_decay": 1.124179696003329e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.465
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.153
+        }
+      ],
+      "proj_dim": 256,
+      "lambda_param": 0.005
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.465
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.153
+      }
+    ],
+    "proj_dim": 256,
+    "lambda_param": 0.005
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.8259999752044678,
+      "test_acc_linear": 0.8149999976158142,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.800000011920929,
+      "test_acc_knn": 0.7649999856948853,
+      "eff_rank": 62.64435577392578,
+      "wall_time_s": 33.30428194999695
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8149999976158142,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.7649999856948853,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 62.64435577392578,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T064913Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

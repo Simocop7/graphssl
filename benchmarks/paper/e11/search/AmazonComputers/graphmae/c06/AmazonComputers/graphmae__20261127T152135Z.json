@@ -1,0 +1,94 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 2,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.00022163987144964637,
+    "weight_decay": 0.00023792216368305594,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.71,
+      "replace_rate": 0.1,
+      "alpha": 1.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.71,
+    "replace_rate": 0.1,
+    "alpha": 1.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.8880000114440918,
+      "test_acc_linear": 0.8810216188430786,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8843636512756348,
+      "test_acc_knn": 0.8736593127250671,
+      "eff_rank": 284.0864562988281,
+      "wall_time_s": 111.67090630531311
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8810216188430786,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.8736593127250671,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 284.0864562988281,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T152135Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

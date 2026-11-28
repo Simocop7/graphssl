@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6227713823318481,
+      "test_acc_linear": 0.6166607737541199,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6111209392547607,
+      "test_acc_knn": 0.6127779483795166,
+      "eff_rank": 82.30805969238281,
+      "wall_time_s": 270.30329608917236,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6035304665565491,
+      "test_acc_linear": 0.6152488589286804,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6141217947006226,
+      "test_acc_knn": 0.61630779504776,
+      "eff_rank": 81.63883972167969,
+      "wall_time_s": 270.1433656215668,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6074139475822449,
+      "test_acc_linear": 0.6080127358436584,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.61182701587677,
+      "test_acc_knn": 0.6032474637031555,
+      "eff_rank": 81.6045150756836,
+      "wall_time_s": 265.55385065078735,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6031774282455444,
+      "test_acc_linear": 0.6111895442008972,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6068843603134155,
+      "test_acc_knn": 0.607306718826294,
+      "eff_rank": 79.06050872802734,
+      "wall_time_s": 273.5180721282959,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6082965731620789,
+      "test_acc_linear": 0.6081892251968384,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6079435348510742,
+      "test_acc_knn": 0.6076596975326538,
+      "eff_rank": 73.6378402709961,
+      "wall_time_s": 275.0626561641693,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.6123566031455994,
+      "test_acc_linear": 0.6103070974349976,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6174757480621338,
+      "test_acc_knn": 0.6156018376350403,
+      "eff_rank": 81.33948516845703,
+      "wall_time_s": 270.7926445007324,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6098852753639221,
+      "test_acc_linear": 0.6085422039031982,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6067078709602356,
+      "test_acc_knn": 0.6039534211158752,
+      "eff_rank": 81.56393432617188,
+      "wall_time_s": 268.0614528656006,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.6137687563896179,
+      "test_acc_linear": 0.6087186932563782,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.610944390296936,
+      "test_acc_knn": 0.6115425229072571,
+      "eff_rank": 75.58985900878906,
+      "wall_time_s": 259.99382424354553,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.5996469259262085,
+      "test_acc_linear": 0.6020119786262512,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6114739775657654,
+      "test_acc_knn": 0.6043063998222351,
+      "eff_rank": 77.11647033691406,
+      "wall_time_s": 244.359126329422,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.6042365431785583,
+      "test_acc_linear": 0.6021884679794312,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6151809096336365,
+      "test_acc_knn": 0.6053653359413147,
+      "eff_rank": 78.68099975585938,
+      "wall_time_s": 245.59221267700195,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6091069579124451,
+      "std": 0.004729036408985236
+    },
+    "test_acc_knn": {
+      "mean": 0.6088069140911102,
+      "std": 0.0048968984877643985
+    },
+    "eff_rank": {
+      "mean": 79.2540512084961,
+      "std": 2.9837837219517356
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T013733Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

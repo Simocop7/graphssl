@@ -1,0 +1,94 @@
+{
+  "dataset": "CiteSeer",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.007472591718992833,
+    "weight_decay": 1.4302373632041358e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.628,
+      "replace_rate": 0.05,
+      "alpha": 1.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.628,
+    "replace_rate": 0.05,
+    "alpha": 1.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.7239999771118164,
+      "test_acc_linear": 0.7099999785423279,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6600000262260437,
+      "test_acc_knn": 0.6570000052452087,
+      "eff_rank": 120.29476928710938,
+      "wall_time_s": 46.2333025932312
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7099999785423279,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.6570000052452087,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 120.29476928710938,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T170531Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

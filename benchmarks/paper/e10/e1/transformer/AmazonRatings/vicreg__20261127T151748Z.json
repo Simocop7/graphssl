@@ -1,0 +1,212 @@
+{
+  "dataset": "AmazonRatings",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.40274375677108765,
+      "test_acc_linear": 0.40111055970191956,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.36093416810035706,
+      "test_acc_knn": 0.38510534167289734,
+      "eff_rank": 59.75975799560547,
+      "wall_time_s": 110.05904459953308,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.4024171233177185,
+      "test_acc_linear": 0.3911481201648712,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3648538291454315,
+      "test_acc_knn": 0.38020578026771545,
+      "eff_rank": 62.37261199951172,
+      "wall_time_s": 109.43825221061707,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.3913114368915558,
+      "test_acc_linear": 0.3913114368915558,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3664870262145996,
+      "test_acc_knn": 0.3756328523159027,
+      "eff_rank": 60.07867431640625,
+      "wall_time_s": 109.67827987670898,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.40013065934181213,
+      "test_acc_linear": 0.3927813172340393,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3617507815361023,
+      "test_acc_knn": 0.37171322107315063,
+      "eff_rank": 61.89315414428711,
+      "wall_time_s": 109.74847435951233,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.39735424518585205,
+      "test_acc_linear": 0.3953944146633148,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.36044421792030334,
+      "test_acc_knn": 0.37334638833999634,
+      "eff_rank": 59.52956008911133,
+      "wall_time_s": 109.62913131713867,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.3955577313899994,
+      "test_acc_linear": 0.3911481201648712,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.36207741498947144,
+      "test_acc_knn": 0.3730197548866272,
+      "eff_rank": 59.399044036865234,
+      "wall_time_s": 109.71641325950623,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.3895149528980255,
+      "test_acc_linear": 0.3983341455459595,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3648538291454315,
+      "test_acc_knn": 0.37873589992523193,
+      "eff_rank": 60.51475143432617,
+      "wall_time_s": 109.58337903022766,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.39147475361824036,
+      "test_acc_linear": 0.39457783102989197,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.36844682693481445,
+      "test_acc_knn": 0.38232892751693726,
+      "eff_rank": 61.029083251953125,
+      "wall_time_s": 109.46783900260925,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.3922913670539856,
+      "test_acc_linear": 0.39474114775657654,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3638739287853241,
+      "test_acc_knn": 0.3741630017757416,
+      "eff_rank": 58.94573211669922,
+      "wall_time_s": 109.52400946617126,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.3965376317501068,
+      "test_acc_linear": 0.3826555609703064,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.36632370948791504,
+      "test_acc_knn": 0.37710273265838623,
+      "eff_rank": 59.09187698364258,
+      "wall_time_s": 109.53855037689209,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.3933202654123306,
+      "std": 0.004957915781852006
+    },
+    "test_acc_knn": {
+      "mean": 0.3771353900432587,
+      "std": 0.0044003859630218035
+    },
+    "eff_rank": {
+      "mean": 60.26142463684082,
+      "std": 1.1755097767018858
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T151748Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

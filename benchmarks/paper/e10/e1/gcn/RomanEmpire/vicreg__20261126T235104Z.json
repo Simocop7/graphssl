@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.4718446731567383,
+      "test_acc_linear": 0.4729968309402466,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3242718577384949,
+      "test_acc_knn": 0.32509708404541016,
+      "eff_rank": 150.3357696533203,
+      "wall_time_s": 173.44402313232422,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.4721977114677429,
+      "test_acc_linear": 0.4735262989997864,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.33097970485687256,
+      "test_acc_knn": 0.31574302911758423,
+      "eff_rank": 151.62045288085938,
+      "wall_time_s": 166.38717031478882,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.4690203070640564,
+      "test_acc_linear": 0.47440874576568604,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.32603707909584045,
+      "test_acc_knn": 0.31256619095802307,
+      "eff_rank": 151.7765655517578,
+      "wall_time_s": 181.0079300403595,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.4679611623287201,
+      "test_acc_linear": 0.4661136567592621,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.31403353810310364,
+      "test_acc_knn": 0.3102717995643616,
+      "eff_rank": 150.42153930664062,
+      "wall_time_s": 174.36540913581848,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.4711385667324066,
+      "test_acc_linear": 0.46487823128700256,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.33168578147888184,
+      "test_acc_knn": 0.3185668885707855,
+      "eff_rank": 150.5499725341797,
+      "wall_time_s": 174.91348528862,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.4700794219970703,
+      "test_acc_linear": 0.47793859243392944,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.31915268301963806,
+      "test_acc_knn": 0.3194493353366852,
+      "eff_rank": 150.97750854492188,
+      "wall_time_s": 173.06673622131348,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.4827890694141388,
+      "test_acc_linear": 0.46487823128700256,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.32127097249031067,
+      "test_acc_knn": 0.31715497374534607,
+      "eff_rank": 150.08242797851562,
+      "wall_time_s": 175.40782380104065,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.48155340552330017,
+      "test_acc_linear": 0.4777621030807495,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.32215356826782227,
+      "test_acc_knn": 0.31927284598350525,
+      "eff_rank": 150.2107391357422,
+      "wall_time_s": 178.48316168785095,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.4721977114677429,
+      "test_acc_linear": 0.4691140055656433,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3187996447086334,
+      "test_acc_knn": 0.312742680311203,
+      "eff_rank": 150.00994873046875,
+      "wall_time_s": 174.8319549560547,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.4789055585861206,
+      "test_acc_linear": 0.4742322564125061,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3300970792770386,
+      "test_acc_knn": 0.32439109683036804,
+      "eff_rank": 148.22171020507812,
+      "wall_time_s": 171.9532482624054,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.4715848952531815,
+      "std": 0.005003010846169846
+    },
+    "test_acc_knn": {
+      "mean": 0.3175255924463272,
+      "std": 0.004895632154889893
+    },
+    "eff_rank": {
+      "mean": 150.42066345214843,
+      "std": 0.9873940796562295
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T235104Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

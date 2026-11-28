@@ -1,0 +1,217 @@
+{
+  "dataset": "PubMed",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0006315946996815495,
+    "weight_decay": 0.00029132228825834585,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.55
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.269
+        }
+      ],
+      "ema_tau": 0.9,
+      "pred_hidden": 512,
+      "pred_norm": "none"
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "ema_tau": 0.9,
+    "ema_tau_end": 1.0,
+    "total_steps": 1000,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.55
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.269
+      }
+    ],
+    "pred_hidden": 512,
+    "pred_norm": "none"
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8339999914169312,
+      "test_acc_linear": 0.8309999704360962,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7919999957084656,
+      "test_acc_knn": 0.7459999918937683,
+      "eff_rank": 73.13575744628906,
+      "wall_time_s": 63.50797438621521,
+      "val_acc_linear_alt": 0.8399999737739563,
+      "test_acc_linear_alt": 0.828000009059906,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7760000228881836,
+      "test_acc_knn_alt": 0.7400000095367432,
+      "eff_rank_alt": 70.55583953857422,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8500000238418579,
+      "test_acc_linear": 0.8130000233650208,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7839999794960022,
+      "test_acc_knn": 0.7509999871253967,
+      "eff_rank": 73.58494567871094,
+      "wall_time_s": 62.50083637237549,
+      "val_acc_linear_alt": 0.8460000157356262,
+      "test_acc_linear_alt": 0.8140000104904175,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7760000228881836,
+      "test_acc_knn_alt": 0.7519999742507935,
+      "eff_rank_alt": 71.05135345458984,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8420000076293945,
+      "test_acc_linear": 0.8159999847412109,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7979999780654907,
+      "test_acc_knn": 0.7760000228881836,
+      "eff_rank": 73.12996673583984,
+      "wall_time_s": 62.2829065322876,
+      "val_acc_linear_alt": 0.8519999980926514,
+      "test_acc_linear_alt": 0.8159999847412109,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7900000214576721,
+      "test_acc_knn_alt": 0.7670000195503235,
+      "eff_rank_alt": 70.56364440917969,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8059999942779541,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7839999794960022,
+      "test_acc_knn": 0.7570000290870667,
+      "eff_rank": 71.93335723876953,
+      "wall_time_s": 62.61783814430237,
+      "val_acc_linear_alt": 0.8379999995231628,
+      "test_acc_linear_alt": 0.8069999814033508,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7760000228881836,
+      "test_acc_knn_alt": 0.7440000176429749,
+      "eff_rank_alt": 69.15458679199219,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8339999914169312,
+      "test_acc_linear": 0.8159999847412109,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.777999997138977,
+      "test_acc_knn": 0.75,
+      "eff_rank": 71.9090805053711,
+      "wall_time_s": 62.27037763595581,
+      "val_acc_linear_alt": 0.8360000252723694,
+      "test_acc_linear_alt": 0.8159999847412109,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7680000066757202,
+      "test_acc_knn_alt": 0.746999979019165,
+      "eff_rank_alt": 69.33651733398438,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/bgrl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8163999915122986,
+      "std": 0.009126871332582198
+    },
+    "test_acc_knn": {
+      "mean": 0.7560000061988831,
+      "std": 0.011853282926826147
+    },
+    "eff_rank": {
+      "mean": 72.73862152099609,
+      "std": 0.768719952438006
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8161999940872192,
+      "std": 0.007563076788618334
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.75,
+      "std": 0.0104642281744822
+    },
+    "eff_rank_alt": {
+      "mean": 70.13238830566407,
+      "std": 0.8365548580508892
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T174555Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

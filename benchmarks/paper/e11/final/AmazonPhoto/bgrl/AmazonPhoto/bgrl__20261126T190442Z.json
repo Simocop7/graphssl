@@ -1,0 +1,217 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 1,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.0024214061732983163,
+    "weight_decay": 1.0832637439473404e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.364
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.477
+        }
+      ],
+      "ema_tau": 0.999,
+      "pred_hidden": 256,
+      "pred_norm": "batch"
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 1,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "ema_tau": 0.999,
+    "ema_tau_end": 1.0,
+    "total_steps": 100,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.364
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.477
+      }
+    ],
+    "pred_hidden": 256,
+    "pred_norm": "batch"
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.929411768913269,
+      "test_acc_linear": 0.9259803891181946,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9202614426612854,
+      "test_acc_knn": 0.9183006286621094,
+      "eff_rank": 255.6533203125,
+      "wall_time_s": 76.0984058380127,
+      "val_acc_linear_alt": 0.9202614426612854,
+      "test_acc_linear_alt": 0.918790876865387,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8993464112281799,
+      "test_acc_knn_alt": 0.9107843041419983,
+      "eff_rank_alt": 365.16650390625,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9266340136528015,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9228758215904236,
+      "test_acc_knn": 0.9191176295280457,
+      "eff_rank": 254.6481170654297,
+      "wall_time_s": 74.49595713615417,
+      "val_acc_linear_alt": 0.9215686321258545,
+      "test_acc_linear_alt": 0.9240196347236633,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9137254953384399,
+      "test_acc_knn_alt": 0.9111111164093018,
+      "eff_rank_alt": 363.58282470703125,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9267973899841309,
+      "test_acc_linear": 0.9276143908500671,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9189542531967163,
+      "test_acc_knn": 0.9165032505989075,
+      "eff_rank": 256.9056396484375,
+      "wall_time_s": 75.20800995826721,
+      "val_acc_linear_alt": 0.9241830110549927,
+      "test_acc_linear_alt": 0.9192810654640198,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9111111164093018,
+      "test_acc_knn_alt": 0.9124183058738708,
+      "eff_rank_alt": 364.8702697753906,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9254902005195618,
+      "test_acc_linear": 0.9238561987876892,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9163398742675781,
+      "test_acc_knn": 0.9163398742675781,
+      "eff_rank": 255.1118927001953,
+      "wall_time_s": 75.30029606819153,
+      "val_acc_linear_alt": 0.9215686321258545,
+      "test_acc_linear_alt": 0.9204248189926147,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9045751690864563,
+      "test_acc_knn_alt": 0.9107843041419983,
+      "eff_rank_alt": 365.5935363769531,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9254902005195618,
+      "test_acc_linear": 0.9269607663154602,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9215686321258545,
+      "test_acc_knn": 0.9174836874008179,
+      "eff_rank": 255.51705932617188,
+      "wall_time_s": 75.10756707191467,
+      "val_acc_linear_alt": 0.9215686321258545,
+      "test_acc_linear_alt": 0.9228758215904236,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9098039269447327,
+      "test_acc_knn_alt": 0.9107843041419983,
+      "eff_rank_alt": 364.8622741699219,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/bgrl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9262091517448425,
+      "std": 0.0014412537080940352
+    },
+    "test_acc_knn": {
+      "mean": 0.9175490140914917,
+      "std": 0.0011816711496087072
+    },
+    "eff_rank": {
+      "mean": 255.56720581054688,
+      "std": 0.8445960078066223
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.9210784435272217,
+      "std": 0.002278811517148933
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.9111764669418335,
+      "std": 0.0007084859931483505
+    },
+    "eff_rank_alt": {
+      "mean": 364.81508178710936,
+      "std": 0.7505363749877164
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T190442Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

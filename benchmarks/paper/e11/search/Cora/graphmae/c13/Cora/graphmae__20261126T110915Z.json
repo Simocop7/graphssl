@@ -1,0 +1,94 @@
+{
+  "dataset": "Cora",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0027831749402757147,
+    "weight_decay": 3.4860355199620824e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.635,
+      "replace_rate": 0.1,
+      "alpha": 1.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.635,
+    "replace_rate": 0.1,
+    "alpha": 1.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.7739999890327454,
+      "test_acc_linear": 0.800000011920929,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6679999828338623,
+      "test_acc_knn": 0.7039999961853027,
+      "eff_rank": 109.82365417480469,
+      "wall_time_s": 36.34289288520813
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.800000011920929,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.7039999961853027,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 109.82365417480469,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T110915Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "dataset": "PubMed",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 3,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0023800976348651074,
+    "weight_decay": 0.0005932910429367743,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.3
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.161
+        }
+      ],
+      "proj_dim": 256,
+      "lambda_param": null
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 3,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.3
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.161
+      }
+    ],
+    "proj_dim": 256,
+    "lambda_param": null
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8240000009536743,
+      "test_acc_linear": 0.7929999828338623,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.8019999861717224,
+      "test_acc_knn": 0.7749999761581421,
+      "eff_rank": 206.13893127441406,
+      "wall_time_s": 400.7357850074768,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8169999718666077,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7860000133514404,
+      "test_acc_knn": 0.7519999742507935,
+      "eff_rank": 206.9101104736328,
+      "wall_time_s": 400.3905475139618,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8090000152587891,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7739999890327454,
+      "test_acc_knn": 0.7329999804496765,
+      "eff_rank": 135.95526123046875,
+      "wall_time_s": 400.43509316444397,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8059999942779541,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7900000214576721,
+      "test_acc_knn": 0.7409999966621399,
+      "eff_rank": 139.650146484375,
+      "wall_time_s": 400.5842411518097,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8299999833106995,
+      "test_acc_linear": 0.7919999957084656,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7599999904632568,
+      "test_acc_knn": 0.7260000109672546,
+      "eff_rank": 133.7819366455078,
+      "wall_time_s": 400.27885246276855,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/barlow_twins_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8033999919891357,
+      "std": 0.010737781786980325
+    },
+    "test_acc_knn": {
+      "mean": 0.7453999876976013,
+      "std": 0.019165061553287437
+    },
+    "eff_rank": {
+      "mean": 164.48727722167968,
+      "std": 38.432844046905615
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T173044Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

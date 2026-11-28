@@ -1,0 +1,94 @@
+{
+  "dataset": "PubMed",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 1,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.00019396268778721325,
+    "weight_decay": 1.9714022907790378e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.309,
+      "replace_rate": 0.1,
+      "alpha": 1.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 1,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.309,
+    "replace_rate": 0.1,
+    "alpha": 1.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.7099999785423279,
+      "test_acc_linear": 0.6980000138282776,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6620000004768372,
+      "test_acc_knn": 0.6579999923706055,
+      "eff_rank": 108.23101806640625,
+      "wall_time_s": 14.660947322845459
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6980000138282776,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.6579999923706055,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 108.23101806640625,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T225548Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

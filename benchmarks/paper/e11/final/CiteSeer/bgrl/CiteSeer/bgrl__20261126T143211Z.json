@@ -1,0 +1,217 @@
+{
+  "dataset": "CiteSeer",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.00048047394381950425,
+    "weight_decay": 0.0001725306549293235,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.68
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.259
+        }
+      ],
+      "ema_tau": 0.9,
+      "pred_hidden": 256,
+      "pred_norm": "none"
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.9,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.68
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.259
+      }
+    ],
+    "pred_hidden": 256,
+    "pred_norm": "none"
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6959999799728394,
+      "test_acc_linear": 0.6930000185966492,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.621999979019165,
+      "test_acc_knn": 0.6309999823570251,
+      "eff_rank": 213.20846557617188,
+      "wall_time_s": 41.623615980148315,
+      "val_acc_linear_alt": 0.6800000071525574,
+      "test_acc_linear_alt": 0.6970000267028809,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.628000020980835,
+      "test_acc_knn_alt": 0.6159999966621399,
+      "eff_rank_alt": 209.45773315429688,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6919999718666077,
+      "test_acc_linear": 0.6779999732971191,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5740000009536743,
+      "test_acc_knn": 0.5979999899864197,
+      "eff_rank": 213.26611328125,
+      "wall_time_s": 42.17442584037781,
+      "val_acc_linear_alt": 0.7059999704360962,
+      "test_acc_linear_alt": 0.6850000023841858,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.5759999752044678,
+      "test_acc_knn_alt": 0.6119999885559082,
+      "eff_rank_alt": 209.5010986328125,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6700000166893005,
+      "test_acc_linear": 0.6759999990463257,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6000000238418579,
+      "test_acc_knn": 0.6019999980926514,
+      "eff_rank": 212.81680297851562,
+      "wall_time_s": 40.63539505004883,
+      "val_acc_linear_alt": 0.6700000166893005,
+      "test_acc_linear_alt": 0.6779999732971191,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6100000143051147,
+      "test_acc_knn_alt": 0.597000002861023,
+      "eff_rank_alt": 209.1517333984375,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6800000071525574,
+      "test_acc_linear": 0.6869999766349792,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.578000009059906,
+      "test_acc_knn": 0.6129999756813049,
+      "eff_rank": 212.3843231201172,
+      "wall_time_s": 41.66944074630737,
+      "val_acc_linear_alt": 0.6660000085830688,
+      "test_acc_linear_alt": 0.6880000233650208,
+      "probe_weight_decay_alt": 10.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.5720000267028809,
+      "test_acc_knn_alt": 0.6129999756813049,
+      "eff_rank_alt": 208.43968200683594,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6740000247955322,
+      "test_acc_linear": 0.6669999957084656,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.5699999928474426,
+      "test_acc_knn": 0.5910000205039978,
+      "eff_rank": 213.42318725585938,
+      "wall_time_s": 41.697299003601074,
+      "val_acc_linear_alt": 0.6740000247955322,
+      "test_acc_linear_alt": 0.6710000038146973,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.5640000104904175,
+      "test_acc_knn_alt": 0.5979999899864197,
+      "eff_rank_alt": 209.63690185546875,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/bgrl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6801999926567077,
+      "std": 0.010084646710610885
+    },
+    "test_acc_knn": {
+      "mean": 0.6069999933242798,
+      "std": 0.015604473753575229
+    },
+    "eff_rank": {
+      "mean": 213.0197784423828,
+      "std": 0.41953094749244424
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.6838000059127808,
+      "std": 0.0098843451862435
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.6071999907493592,
+      "std": 0.008983313352807831
+    },
+    "eff_rank_alt": {
+      "mean": 209.2374298095703,
+      "std": 0.4799422254684623
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T143211Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

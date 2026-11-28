@@ -1,0 +1,165 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 3,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0007675882683808348,
+    "weight_decay": 8.612098288383359e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.639
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.233
+        }
+      ],
+      "proj_dim": 512,
+      "invariance": 50.0
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 3,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.639
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.233
+      }
+    ],
+    "proj_dim": 512,
+    "invariance": 50.0
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9254902005195618,
+      "test_acc_linear": 0.9303921461105347,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9124183058738708,
+      "test_acc_knn": 0.926307201385498,
+      "eff_rank": 113.55609130859375,
+      "wall_time_s": 805.8451409339905,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9241830110549927,
+      "test_acc_linear": 0.9302287697792053,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9137254953384399,
+      "test_acc_knn": 0.9248365759849548,
+      "eff_rank": 113.0487289428711,
+      "wall_time_s": 961.5353779792786,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9281045794487,
+      "test_acc_linear": 0.9285947680473328,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9176470637321472,
+      "test_acc_knn": 0.9259803891181946,
+      "eff_rank": 112.41131591796875,
+      "wall_time_s": 939.7775926589966,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9254902005195618,
+      "test_acc_linear": 0.9307189583778381,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9098039269447327,
+      "test_acc_knn": 0.926307201385498,
+      "eff_rank": 107.93014526367188,
+      "wall_time_s": 958.3839061260223,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9202614426612854,
+      "test_acc_linear": 0.929411768913269,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9163398742675781,
+      "test_acc_knn": 0.926307201385498,
+      "eff_rank": 112.80996704101562,
+      "wall_time_s": 1039.766319990158,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/vicreg_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.929869282245636,
+      "std": 0.000859981442912079
+    },
+    "test_acc_knn": {
+      "mean": 0.9259477138519288,
+      "std": 0.0006370613967319193
+    },
+    "eff_rank": {
+      "mean": 111.95124969482421,
+      "std": 2.285733720369754
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T160019Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

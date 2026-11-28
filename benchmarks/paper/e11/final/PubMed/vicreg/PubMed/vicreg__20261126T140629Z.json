@@ -1,0 +1,165 @@
+{
+  "dataset": "PubMed",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 3,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.00167204568413281,
+    "weight_decay": 6.485948302554428e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.652
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.297
+        }
+      ],
+      "proj_dim": 1024,
+      "invariance": 50.0
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 3,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.652
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.297
+      }
+    ],
+    "proj_dim": 1024,
+    "invariance": 50.0
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8379999995231628,
+      "test_acc_linear": 0.8100000023841858,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7720000147819519,
+      "test_acc_knn": 0.7440000176429749,
+      "eff_rank": 96.41039276123047,
+      "wall_time_s": 137.0881118774414,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8460000157356262,
+      "test_acc_linear": 0.8240000009536743,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.8019999861717224,
+      "test_acc_knn": 0.7540000081062317,
+      "eff_rank": 97.58676147460938,
+      "wall_time_s": 122.77776336669922,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8460000157356262,
+      "test_acc_linear": 0.8199999928474426,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7879999876022339,
+      "test_acc_knn": 0.7490000128746033,
+      "eff_rank": 95.2375717163086,
+      "wall_time_s": 135.66975808143616,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8299999833106995,
+      "test_acc_linear": 0.8180000185966492,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7739999890327454,
+      "test_acc_knn": 0.746999979019165,
+      "eff_rank": 91.90573120117188,
+      "wall_time_s": 135.65364909172058,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8360000252723694,
+      "test_acc_linear": 0.8199999928474426,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7760000228881836,
+      "test_acc_knn": 0.7509999871253967,
+      "eff_rank": 92.14703369140625,
+      "wall_time_s": 135.7113585472107,
+      "checkpoint": "benchmarks/paper/models_e11/PubMed/gcn/vicreg_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8184000015258789,
+      "std": 0.005176869468452619
+    },
+    "test_acc_knn": {
+      "mean": 0.7490000009536744,
+      "std": 0.003807884486780004
+    },
+    "eff_rank": {
+      "mean": 94.65749816894531,
+      "std": 2.5428508422554796
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T140629Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "dataset": "Cora",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.007472591718992833,
+    "weight_decay": 1.4302373632041358e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.628,
+      "replace_rate": 0.05,
+      "alpha": 1.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.628,
+    "replace_rate": 0.05,
+    "alpha": 1.0
+  },
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.7879999876022339,
+      "test_acc_linear": 0.7990000247955322,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7279999852180481,
+      "test_acc_knn": 0.7020000219345093,
+      "eff_rank": 114.486572265625,
+      "wall_time_s": 10.405334234237671
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.7799999713897705,
+      "test_acc_linear": 0.8199999928474426,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6919999718666077,
+      "test_acc_knn": 0.7269999980926514,
+      "eff_rank": 114.87740325927734,
+      "wall_time_s": 10.261770009994507
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8095000088214874,
+      "std": 0.014849219814206695
+    },
+    "test_acc_knn": {
+      "mean": 0.7145000100135803,
+      "std": 0.017677652670924283
+    },
+    "eff_rank": {
+      "mean": 114.68198776245117,
+      "std": 0.27635924590944877
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T111224Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

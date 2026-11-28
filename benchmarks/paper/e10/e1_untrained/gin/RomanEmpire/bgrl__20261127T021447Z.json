@@ -1,0 +1,299 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 0,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 0,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.694086492061615,
+      "test_acc_linear": 0.6914930939674377,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6646072268486023,
+      "test_acc_knn": 0.6694316864013672,
+      "eff_rank": 120.57450103759766,
+      "wall_time_s": 0.7781288623809814,
+      "val_acc_linear_alt": 0.6891438364982605,
+      "test_acc_linear_alt": 0.6846099495887756,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6616063714027405,
+      "test_acc_knn_alt": 0.6621955633163452,
+      "eff_rank_alt": 123.7493667602539,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7029126286506653,
+      "test_acc_linear": 0.6830215454101562,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6651368141174316,
+      "test_acc_knn": 0.6655488610267639,
+      "eff_rank": 122.17998504638672,
+      "wall_time_s": 0.16451573371887207,
+      "val_acc_linear_alt": 0.7011473774909973,
+      "test_acc_linear_alt": 0.6992587447166443,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.665666401386261,
+      "test_acc_knn_alt": 0.6676667928695679,
+      "eff_rank_alt": 119.8712158203125,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6937334537506104,
+      "test_acc_linear": 0.6877868175506592,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6582524180412292,
+      "test_acc_knn": 0.6694316864013672,
+      "eff_rank": 123.39082336425781,
+      "wall_time_s": 0.41351890563964844,
+      "val_acc_linear_alt": 0.6870256066322327,
+      "test_acc_linear_alt": 0.6847864389419556,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6757281422615051,
+      "test_acc_knn_alt": 0.6726085543632507,
+      "eff_rank_alt": 124.15530395507812,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6822595000267029,
+      "test_acc_linear": 0.6814330816268921,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6578993797302246,
+      "test_acc_knn": 0.6636074781417847,
+      "eff_rank": 122.64917755126953,
+      "wall_time_s": 0.3304142951965332,
+      "val_acc_linear_alt": 0.7052074074745178,
+      "test_acc_linear_alt": 0.6967878341674805,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6667255163192749,
+      "test_acc_knn_alt": 0.6660783886909485,
+      "eff_rank_alt": 118.80194091796875,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6917917132377625,
+      "test_acc_linear": 0.6842569708824158,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6534863114356995,
+      "test_acc_knn": 0.6597246527671814,
+      "eff_rank": 119.26913452148438,
+      "wall_time_s": 0.32326269149780273,
+      "val_acc_linear_alt": 0.6910856366157532,
+      "test_acc_linear_alt": 0.6807271242141724,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6617828607559204,
+      "test_acc_knn_alt": 0.6676667928695679,
+      "eff_rank_alt": 118.22270202636719,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.6962047815322876,
+      "test_acc_linear": 0.6943169832229614,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6677846312522888,
+      "test_acc_knn": 0.6754323840141296,
+      "eff_rank": 124.32669067382812,
+      "wall_time_s": 0.33123183250427246,
+      "val_acc_linear_alt": 0.6962047815322876,
+      "test_acc_linear_alt": 0.6856688857078552,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6665489673614502,
+      "test_acc_knn_alt": 0.667313814163208,
+      "eff_rank_alt": 123.70269775390625,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6986761093139648,
+      "test_acc_linear": 0.6973173022270203,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6589584946632385,
+      "test_acc_knn": 0.6752558946609497,
+      "eff_rank": 123.02979278564453,
+      "wall_time_s": 0.2441871166229248,
+      "val_acc_linear_alt": 0.7020300030708313,
+      "test_acc_linear_alt": 0.6966113448143005,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6649602651596069,
+      "test_acc_knn_alt": 0.6655488610267639,
+      "eff_rank_alt": 122.35494995117188,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.6910856366157532,
+      "test_acc_linear": 0.6921991109848022,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6577228307723999,
+      "test_acc_knn": 0.6565478444099426,
+      "eff_rank": 125.381103515625,
+      "wall_time_s": 0.3268589973449707,
+      "val_acc_linear_alt": 0.6972638964653015,
+      "test_acc_linear_alt": 0.6911401152610779,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6718446612358093,
+      "test_acc_knn_alt": 0.6650193929672241,
+      "eff_rank_alt": 120.4085693359375,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.7053839564323425,
+      "test_acc_linear": 0.6840804815292358,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6628420352935791,
+      "test_acc_knn": 0.665372371673584,
+      "eff_rank": 122.18267059326172,
+      "wall_time_s": 0.4084744453430176,
+      "val_acc_linear_alt": 0.6963812708854675,
+      "test_acc_linear_alt": 0.6959053874015808,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6665489673614502,
+      "test_acc_knn_alt": 0.6620190739631653,
+      "eff_rank_alt": 122.98527526855469,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.6921447515487671,
+      "test_acc_linear": 0.6828450560569763,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6593115329742432,
+      "test_acc_knn": 0.6620190739631653,
+      "eff_rank": 121.79055786132812,
+      "wall_time_s": 0.07097983360290527,
+      "val_acc_linear_alt": 0.6988525986671448,
+      "test_acc_linear_alt": 0.6932580471038818,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6688438057899475,
+      "test_acc_knn_alt": 0.6634309887886047,
+      "eff_rank_alt": 120.08964538574219,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/RomanEmpire/gin/bgrl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6878750443458557,
+      "std": 0.005580678075628348
+    },
+    "test_acc_knn": {
+      "mean": 0.6662371933460236,
+      "std": 0.006222936028011037
+    },
+    "eff_rank": {
+      "mean": 122.47744369506836,
+      "std": 1.7506006171223976
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.6908753871917724,
+      "std": 0.0064602448535166996
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.6659548223018646,
+      "std": 0.0031451492745216175
+    },
+    "eff_rank_alt": {
+      "mean": 121.4341667175293,
+      "std": 2.2037662937484543
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T021447Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

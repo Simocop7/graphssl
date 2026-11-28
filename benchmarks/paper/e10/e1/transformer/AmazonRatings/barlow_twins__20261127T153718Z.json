@@ -1,0 +1,212 @@
+{
+  "dataset": "AmazonRatings",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.3983341455459595,
+      "test_acc_linear": 0.3944145143032074,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.3772660493850708,
+      "test_acc_knn": 0.3735097050666809,
+      "eff_rank": 63.062686920166016,
+      "wall_time_s": 109.08904695510864,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.40372365713119507,
+      "test_acc_linear": 0.3953944146633148,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.37008002400398254,
+      "test_acc_knn": 0.381675660610199,
+      "eff_rank": 63.08401107788086,
+      "wall_time_s": 108.51728653907776,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.40535685420036316,
+      "test_acc_linear": 0.3918014168739319,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3702433407306671,
+      "test_acc_knn": 0.37383636832237244,
+      "eff_rank": 62.22734451293945,
+      "wall_time_s": 108.63391399383545,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.4024171233177185,
+      "test_acc_linear": 0.40111055970191956,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.37056997418403625,
+      "test_acc_knn": 0.37710273265838623,
+      "eff_rank": 63.43098068237305,
+      "wall_time_s": 108.60654544830322,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.4042136073112488,
+      "test_acc_linear": 0.4045402705669403,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.37481626868247986,
+      "test_acc_knn": 0.38281887769699097,
+      "eff_rank": 64.71326446533203,
+      "wall_time_s": 108.63922214508057,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.39784419536590576,
+      "test_acc_linear": 0.3971909284591675,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.37693941593170166,
+      "test_acc_knn": 0.37481626868247986,
+      "eff_rank": 63.11295700073242,
+      "wall_time_s": 108.66327977180481,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.39474114775657654,
+      "test_acc_linear": 0.39735424518585205,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3767760992050171,
+      "test_acc_knn": 0.38085904717445374,
+      "eff_rank": 60.8201789855957,
+      "wall_time_s": 108.5685133934021,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.4012738764286041,
+      "test_acc_linear": 0.39996734261512756,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.38298219442367554,
+      "test_acc_knn": 0.3795525133609772,
+      "eff_rank": 63.92938995361328,
+      "wall_time_s": 108.61083936691284,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.40209048986434937,
+      "test_acc_linear": 0.39457783102989197,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3810223639011383,
+      "test_acc_knn": 0.37759268283843994,
+      "eff_rank": 63.79774475097656,
+      "wall_time_s": 108.58387780189514,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.40062060952186584,
+      "test_acc_linear": 0.3976808786392212,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.37693941593170166,
+      "test_acc_knn": 0.3831455111503601,
+      "eff_rank": 63.9276237487793,
+      "wall_time_s": 108.6303939819336,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.3974032402038574,
+      "std": 0.0037075272608700725
+    },
+    "test_acc_knn": {
+      "mean": 0.37849093675613404,
+      "std": 0.0036513060991111607
+    },
+    "eff_rank": {
+      "mean": 63.21061820983887,
+      "std": 1.0755066154134383
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T153718Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

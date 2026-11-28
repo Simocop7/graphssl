@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7075021862983704,
+      "test_acc_linear": 0.7086127996444702,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6400706171989441,
+      "test_acc_knn": 0.6392516493797302,
+      "eff_rank": 96.58901977539062,
+      "wall_time_s": 352.35729694366455,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7006178498268127,
+      "test_acc_linear": 0.7036710381507874,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6416593194007874,
+      "test_acc_knn": 0.6410166025161743,
+      "eff_rank": 93.4095458984375,
+      "wall_time_s": 354.5052738189697,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.708737850189209,
+      "test_acc_linear": 0.7064948678016663,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6450132131576538,
+      "test_acc_knn": 0.6341333985328674,
+      "eff_rank": 95.18273162841797,
+      "wall_time_s": 357.7678020000458,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7064430713653564,
+      "test_acc_linear": 0.7056124210357666,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6390115022659302,
+      "test_acc_knn": 0.6422520279884338,
+      "eff_rank": 95.76313018798828,
+      "wall_time_s": 369.0308926105499,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7071491479873657,
+      "test_acc_linear": 0.702612042427063,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.641129732131958,
+      "test_acc_knn": 0.6427814960479736,
+      "eff_rank": 97.90202331542969,
+      "wall_time_s": 364.13582730293274,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.7041482925415039,
+      "test_acc_linear": 0.6951994299888611,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6393645405769348,
+      "test_acc_knn": 0.6427814960479736,
+      "eff_rank": 93.16049194335938,
+      "wall_time_s": 353.88677191734314,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.7045013308525085,
+      "test_acc_linear": 0.7033180594444275,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6423653960227966,
+      "test_acc_knn": 0.6401341557502747,
+      "eff_rank": 92.8750228881836,
+      "wall_time_s": 379.280681848526,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.7043247818946838,
+      "test_acc_linear": 0.7102012038230896,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6395410299301147,
+      "test_acc_knn": 0.6401341557502747,
+      "eff_rank": 94.17211151123047,
+      "wall_time_s": 358.99943375587463,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.7060900330543518,
+      "test_acc_linear": 0.6966113448143005,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6324801445007324,
+      "test_acc_knn": 0.6454288959503174,
+      "eff_rank": 94.81201171875,
+      "wall_time_s": 350.80515909194946,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.7048543691635132,
+      "test_acc_linear": 0.7036710381507874,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.634774923324585,
+      "test_acc_knn": 0.6413695812225342,
+      "eff_rank": 95.76025390625,
+      "wall_time_s": 353.74142360687256,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.703600424528122,
+      "std": 0.0047329890684527295
+    },
+    "test_acc_knn": {
+      "mean": 0.6409283459186554,
+      "std": 0.0029687631307723696
+    },
+    "eff_rank": {
+      "mean": 94.96263427734375,
+      "std": 1.608177247710595
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T031950Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}
