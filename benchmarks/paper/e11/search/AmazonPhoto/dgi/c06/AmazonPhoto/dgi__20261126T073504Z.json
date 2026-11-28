@@ -1,0 +1,88 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "dgi",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0008841242226116288,
+    "weight_decay": 0.00018395154283637165,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.0
+    }
+  },
+  "model_config": {
+    "name": "dgi",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 1,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.0
+    }
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.9111111164093018,
+      "test_acc_linear": 0.9034313559532166,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9071895480155945,
+      "test_acc_knn": 0.9021241664886475,
+      "eff_rank": 88.06624603271484,
+      "wall_time_s": 53.986873149871826
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9034313559532166,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.9021241664886475,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 88.06624603271484,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T073504Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

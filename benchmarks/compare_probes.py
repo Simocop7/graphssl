@@ -27,9 +27,24 @@ The first three are re-implementations written from the sources named above, as 
 
 Reference rows without any encoder, scored by the same protocols: ``--raw-features`` (the
 input features), ``--propagated K ...`` (the features propagated K times over the
-GCN-normalized adjacency, the parameter-free features of SGC) and ``--pca-dim D`` (the first D
+GCN-normalized adjacency, the parameter-free features of SGC), ``--pca-dim D`` (the first D
 principal components of the most propagated ones, a label-free compression to the width of
-the encoders).
+the encoders) and ``--concat-propagated`` ([X, AX, ..., A^K X] side by side, K the largest
+``--propagated``: a linear probe on it can fit any polynomial filter of degree K, low- or
+high-pass; E10's reference on heterophilous graphs).
+
+Binary heterophilous graphs (``node_datasets.METRICS``) are scored by ROC-AUC: there the
+``val_acc`` / ``test_acc`` fields of every fit hold ROC-AUC, and the JSON says so in
+``metric``. kNN stays accuracy.
+
+``--fixed-splits N`` scores every row on the first N fixed splits a dataset ships with (the
+heterophilous graphs: 10). ``--label-budgets K ...`` (E9) refits the probes with K labelled
+nodes per class drawn from the nodes outside the standard validation and test sets (nested
+draws: the first K of one permutation per class), evaluated on the standard test set, with
+the L2 strength chosen on the standard validation set and, with ``--budget-val both``, on a
+validation set of K nodes per class drawn the same way (``small``). A checkpoint whose file
+name ends in ``_seed<N>`` is scored on draw N only (its training seed and the label draw are
+resampled together in the analysis); a row without a seed (input features) on every draw.
 
 Usage::
 
@@ -51,6 +66,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import re
 import statistics
 import subprocess
 import time
@@ -64,7 +80,9 @@ import torch_geometric
 from node_datasets import (
     ALL_DATASETS,
     FEATURES,
+    fixed_splits,
     load_node_dataset,
+    metric_of,
     random_split,
     split_fractions,
 )
@@ -74,6 +92,7 @@ from torch.optim import Adam
 from graphssl.config.load import build_model, load_model
 from graphssl.data import DataModule
 from graphssl.evaluation import KNNEvaluator, LogRegEvaluator, effective_rank, extract_embeddings
+from graphssl.evaluation.linear_probe import DEFAULT_WEIGHT_DECAYS, roc_auc
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RAW_FEATURES = "raw features"  # the name of the --raw-features row
@@ -85,6 +104,7 @@ PROTOCOLS = [
     "liblinear",
     "graphssl",
     "graphssl_weakl2",
+    "graphssl_alln",
 ]
 DEFAULT_PROTOCOLS = ["adam100", "adam5000", "graphssl"]
 # What each protocol stands for, printed under the table.
@@ -96,6 +116,8 @@ SOURCES = {
     "liblinear": "BGRL reference implementation: liblinear on L2-normalised rows, C on validation",
     "graphssl": "GraphSSL: standardized features, L-BFGS to convergence, L2 on validation",
     "graphssl_weakl2": "the GraphSSL probe with the weakest L2 of its grid (1e-6), not selected",
+    "graphssl_alln": "GraphSSL's probe standardizing with every node's statistics (no labels), "
+    "not the training rows': stable with few labels (E9)",
 }
 
 
@@ -139,12 +161,23 @@ def parse_args() -> argparse.Namespace:
         "largest K (exact, label-free; skipped when A^K X has at most D columns)",
     )
     p.add_argument(
+        "--concat-propagated",
+        action="store_true",
+        help="with --propagated, also score [X, AX, ..., A^K X] side by side (K the largest)",
+    )
+    p.add_argument(
         "--untrained",
         action="store_true",
         help="also score each distinct architecture at initialisation (--untrained-seed)",
     )
     p.add_argument("--untrained-seed", type=int, default=0)
-    p.add_argument("--protocols", nargs="+", default=DEFAULT_PROTOCOLS, choices=PROTOCOLS)
+    p.add_argument(
+        "--protocols",
+        nargs="*",
+        default=DEFAULT_PROTOCOLS,
+        choices=PROTOCOLS,
+        help="protocols on the standard split (none: only the other evaluations below)",
+    )
     p.add_argument(
         "--repeats",
         type=int,
@@ -178,6 +211,41 @@ def parse_args() -> argparse.Namespace:
         help="protocols scored on the random splits (default: graphssl only)",
     )
     p.add_argument(
+        "--fixed-splits",
+        type=int,
+        default=0,
+        metavar="N",
+        help="also score every row on the dataset's first N fixed splits (heterophilous graphs) "
+        "with --split-protocols and kNN",
+    )
+    p.add_argument(
+        "--label-budgets",
+        type=int,
+        nargs="+",
+        default=[],
+        metavar="K",
+        help="E9: refit --budget-protocols with K labelled nodes per class (see the docstring)",
+    )
+    p.add_argument("--budget-draws", type=int, default=10, help="label draws per budget (E9)")
+    p.add_argument(
+        "--budget-protocols",
+        nargs="+",
+        default=["graphssl", "graphssl_alln", "liblinear"],
+        choices=["graphssl", "graphssl_alln", "liblinear"],
+    )
+    p.add_argument(
+        "--budget-val",
+        default="standard",
+        choices=["standard", "both"],
+        help="validation set of the budget fits: the standard one, or also K per class (small)",
+    )
+    p.add_argument(
+        "--liblinear-jobs",
+        type=int,
+        default=-1,
+        help="processes of liblinear's one-vs-rest fits (-1: all cores; the result is the same)",
+    )
+    p.add_argument(
         "--norm-stats",
         default="running",
         choices=["running", "graph"],
@@ -197,8 +265,8 @@ def parse_args() -> argparse.Namespace:
     args = p.parse_args()
     if not args.checkpoints and not args.raw_features and not args.propagated:
         p.error("nothing to score: pass --checkpoints, --raw-features and/or --propagated")
-    if args.pca_dim and not args.propagated:
-        p.error("--pca-dim needs --propagated")
+    if (args.pca_dim or args.concat_propagated) and not args.propagated:
+        p.error("--pca-dim and --concat-propagated need --propagated")
     if args.split_fractions is None:
         args.split_fractions = list(split_fractions(args.dataset))
     return args
@@ -209,7 +277,13 @@ def parse_args() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 
 
+METRIC = "acc"  # set in main() from the dataset: "acc" or "roc_auc" (node_datasets.METRICS)
+
+
 def _accuracy(logits: Tensor, y: Tensor) -> float:
+    """The dataset's metric from logits: accuracy, or ROC-AUC of the class-1 logit margin."""
+    if METRIC == "roc_auc":
+        return roc_auc(logits[:, 1] - logits[:, 0], y)
     return (logits.argmax(dim=-1) == y).float().mean().item()
 
 
@@ -258,7 +332,7 @@ def adam_probe(
 
 
 def liblinear_probe(
-    z: Tensor, y: Tensor, train_idx: Tensor, val_idx: Tensor, test_idx: Tensor
+    z: Tensor, y: Tensor, train_idx: Tensor, val_idx: Tensor, test_idx: Tensor, jobs: int = -1
 ) -> Dict[str, float]:
     """One-vs-rest liblinear on L2-normalised rows, C in 2^-10 ... 2^10 selected on validation."""
     try:
@@ -273,15 +347,45 @@ def liblinear_probe(
     labels = y.cpu().numpy()
     tr, va, te = (i.cpu().numpy() for i in (train_idx, val_idx, test_idx))
     best_val, best_test, best_c = 0.0, 0.0, float("nan")
+
+    def score(clf, rows) -> float:
+        proba = clf.predict_proba(x[rows])
+        if METRIC == "roc_auc":
+            positive = list(clf.classes_).index(1)
+            return roc_auc(torch.from_numpy(proba[:, positive]), torch.from_numpy(labels[rows]))
+        return float((clf.classes_[proba.argmax(axis=1)] == labels[rows]).mean())
+
+    best_val, best_test, best_c = -1.0, 0.0, float("nan")
     for c in 2.0 ** np.arange(-10, 11):
-        clf = OneVsRestClassifier(LogisticRegression(solver="liblinear", C=c), n_jobs=-1)
+        clf = OneVsRestClassifier(LogisticRegression(solver="liblinear", C=c), n_jobs=jobs)
         clf.fit(x[tr], labels[tr])
-        classes = clf.classes_
-        val = float((classes[clf.predict_proba(x[va]).argmax(axis=1)] == labels[va]).mean())
+        val = score(clf, va)
         if val > best_val:
-            test = float((classes[clf.predict_proba(x[te]).argmax(axis=1)] == labels[te]).mean())
-            best_val, best_test, best_c = val, test, float(c)
+            best_val, best_test, best_c = val, score(clf, te), float(c)
     return {"val_acc": best_val, "test_acc": best_test, "C": best_c}
+
+
+def graphssl_alln_probe(
+    z: Tensor, y: Tensor, train_idx: Tensor, val_idx: Tensor, test_idx: Tensor, num_classes: int
+) -> Dict[str, Any]:
+    """LogRegEvaluator on features standardized with the statistics of every node (E9).
+
+    The default probe standardizes with the training rows' statistics, which K nodes per class
+    cannot estimate (Cora, one label per class: A^2X 21.5% against 41.5% with liblinear). Every
+    node's statistics use no label, like the SSL training, the propagation and the PCA rows.
+    """
+    std = z.std(0)
+    z = (z - z.mean(0)) / torch.where(std > 0, std, torch.ones_like(std))
+    lin = LogRegEvaluator(metric=METRIC, standardize=False).evaluate(
+        z, y, train_idx, val_idx, test_idx, num_classes=num_classes
+    )
+    key = "auc" if METRIC == "roc_auc" else "acc"
+    return {
+        "val_acc": lin[f"val_{key}"],
+        "test_acc": lin[f"test_{key}"],
+        "weight_decay": lin["weight_decay"],
+        "converged": lin["converged"],
+    }
 
 
 def run_protocol(
@@ -314,18 +418,21 @@ def run_protocol(
             for seed in range(args.repeats_long)
         ]
     elif name == "liblinear":
-        fits = [liblinear_probe(z, y, *splits)]
-    elif name == "graphssl_weakl2":
-        # Converged and standardized like graphssl, but (almost) unregularized: isolates the
-        # L2 selected on validation from the solver and the feature scale.
-        lin = LogRegEvaluator(weight_decay=1e-6).evaluate(z, y, *splits, num_classes=num_classes)
-        fits = [{k: lin[k] for k in ("val_acc", "test_acc", "weight_decay", "converged")}]
+        fits = [liblinear_probe(z, y, *splits, jobs=args.liblinear_jobs)]
+    elif name == "graphssl_alln":
+        fits = [graphssl_alln_probe(z, y, *splits, num_classes)]
     else:
-        lin = LogRegEvaluator().evaluate(z, y, *splits, num_classes=num_classes)
+        # graphssl_weakl2: converged and standardized like graphssl, but (almost)
+        # unregularized: isolates the L2 selected on validation from the solver and the scale.
+        weight_decay = 1e-6 if name == "graphssl_weakl2" else DEFAULT_WEIGHT_DECAYS
+        lin = LogRegEvaluator(weight_decay=weight_decay, metric=METRIC).evaluate(
+            z, y, *splits, num_classes=num_classes
+        )
+        key = "auc" if METRIC == "roc_auc" else "acc"
         fits = [
             {
-                "val_acc": lin["val_acc"],
-                "test_acc": lin["test_acc"],
+                "val_acc": lin[f"val_{key}"],
+                "test_acc": lin[f"test_{key}"],
                 "weight_decay": lin["weight_decay"],
                 "converged": lin["converged"],
             }
@@ -378,6 +485,8 @@ def collect_models(args: argparse.Namespace) -> List[tuple]:
     raw += [(propagated_name(k), None, None) for k in sorted(set(args.propagated))]
     if args.propagated and args.pca_dim:
         raw.append((pca_name(args.pca_dim, max(args.propagated)), None, None))
+    if args.propagated and args.concat_propagated:
+        raw.append((concat_name(max(args.propagated)), None, None))
     return [*raw, *untrained.values(), *rows]
 
 
@@ -387,6 +496,10 @@ def propagated_name(k: int) -> str:
 
 def pca_name(dim: int, k: int) -> str:
     return f"PCA-{dim} of A^{k}X"
+
+
+def concat_name(k: int) -> str:
+    return f"concat X..A^{k}X"
 
 
 def propagate(x: Tensor, edge_index: Tensor, num_nodes: int, k: int) -> Tensor:
@@ -419,6 +532,12 @@ def input_features(name: str, data, args: argparse.Namespace) -> Tensor:
         if name == propagated_name(k):
             return propagate(x, data.edge_index, data.num_nodes, k)
     k = max(args.propagated)
+    if name == concat_name(k):
+        parts, h = [x], x
+        for _ in range(k):
+            h = propagate(h, data.edge_index, data.num_nodes, 1)
+            parts.append(h)
+        return torch.cat(parts, dim=1)
     if name == pca_name(args.pca_dim, k):
         return principal_components(propagate(x, data.edge_index, data.num_nodes, k), args.pca_dim)
     raise ValueError(f"unknown input-feature row {name!r}")
@@ -470,8 +589,86 @@ def render_summary(rows: List[dict], protocols: List[str], args: argparse.Namesp
     return "\n".join(lines) + "\n"
 
 
+SEED_IN_NAME = re.compile(r"_seed(\d+)$")
+
+
+def budget_draws(
+    y: Tensor, pool: Tensor, num_classes: int, draws: int, k_max: int
+) -> List[List[Tensor]]:
+    """Per draw, per class, the pool's nodes of that class in a random order (E9).
+
+    Draw i permutes each class with a generator seeded 10,000 + i (CPU generator: the same
+    on every machine). The first K nodes of each class are the K-per-class training set,
+    nested across budgets; nodes k_max ... k_max + K - 1 are the small validation set.
+    """
+    out = []
+    for draw in range(draws):
+        generator = torch.Generator().manual_seed(10_000 + draw)
+        per_class = []
+        for c in range(num_classes):
+            nodes = pool[y[pool] == c]
+            per_class.append(nodes[torch.randperm(nodes.numel(), generator=generator)])
+        out.append(per_class)
+    return out
+
+
+def budget_fits(
+    z: Tensor,
+    y: Tensor,
+    draws: List[List[Tensor]],
+    row_draws: List[int],
+    val_idx: Tensor,
+    test_idx: Tensor,
+    num_classes: int,
+    args: argparse.Namespace,
+) -> List[Dict[str, Any]]:
+    """The probes refitted on every label budget and draw of one row (E9)."""
+    k_max = max(args.label_budgets)
+    modes = ["standard", "small"] if args.budget_val == "both" else ["standard"]
+    out: List[Dict[str, Any]] = []
+    for k in sorted(set(args.label_budgets)):
+        for draw in row_draws:
+            per_class = draws[draw]
+            train = torch.cat([nodes[:k] for nodes in per_class])
+            for mode in modes:
+                val = (
+                    val_idx
+                    if mode == "standard"
+                    else torch.cat([nodes[k_max : k_max + k] for nodes in per_class])
+                )
+                entry: Dict[str, Any] = {
+                    "k": k,
+                    "draw": draw,
+                    "val": mode,
+                    "n_train": int(train.numel()),
+                    "n_val": int(val.numel()),
+                }
+                for protocol in args.budget_protocols:
+                    if protocol == "liblinear":
+                        entry[protocol] = liblinear_probe(z, y, train, val, test_idx, jobs=1)
+                    elif protocol == "graphssl_alln":
+                        entry[protocol] = graphssl_alln_probe(
+                            z, y, train, val, test_idx, num_classes
+                        )
+                    else:
+                        lin = LogRegEvaluator(metric=METRIC).evaluate(
+                            z, y, train, val, test_idx, num_classes=num_classes
+                        )
+                        key = "auc" if METRIC == "roc_auc" else "acc"
+                        entry[protocol] = {
+                            "val_acc": lin[f"val_{key}"],
+                            "test_acc": lin[f"test_{key}"],
+                            "weight_decay": lin["weight_decay"],
+                            "converged": lin["converged"],
+                        }
+                out.append(entry)
+    return out
+
+
 def main() -> None:
+    global METRIC
     args = parse_args()
+    METRIC = metric_of(args.dataset)
     device = torch.device(args.device)
     # Datasets without an official split use random split 0 as their "public" one.
     data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(
@@ -484,6 +681,19 @@ def main() -> None:
         f"{args.dataset} | nodes={data.num_nodes:,} train={len(train_idx):,} "
         f"classes={num_classes} | {device}",
         flush=True,
+    )
+
+    draws: List[List[Tensor]] = []
+    if args.label_budgets:
+        outside = torch.ones(data.num_nodes, dtype=torch.bool)
+        outside[val_idx] = False
+        outside[test_idx] = False
+        pool = outside.nonzero(as_tuple=True)[0]
+        draws = budget_draws(
+            data.y.view(-1).long(), pool, num_classes, args.budget_draws, max(args.label_budgets)
+        )
+    shipped = (
+        fixed_splits(args.dataset, args.data_dir)[: args.fixed_splits] if args.fixed_splits else []
     )
 
     rows: List[dict] = []
@@ -532,6 +742,34 @@ def main() -> None:
                     },
                 }
             )
+        row["fixed_splits"] = []
+        for split_id, split in enumerate(shipped):
+            knn_split = KNNEvaluator(k=args.knn_k).evaluate(z, y, *split)
+            split_dev = [i.to(device) for i in split]
+            row["fixed_splits"].append(
+                {
+                    "split": split_id,
+                    "test_acc_knn": knn_split["test_acc"],
+                    "protocols": {
+                        p: run_protocol(p, z_dev, y_dev, *split_dev, num_classes, args)
+                        for p in args.split_protocols
+                    },
+                }
+            )
+        if draws:
+            if checkpoint is not None and SEED_IN_NAME.search(Path(checkpoint).stem):
+                seed_match = SEED_IN_NAME.search(Path(checkpoint).stem)
+                assert seed_match is not None
+                row_draws = [int(seed_match.group(1))]
+            elif build is not None:
+                row_draws = [args.untrained_seed]
+            else:
+                row_draws = list(range(args.budget_draws))
+            if max(row_draws) >= args.budget_draws:
+                raise ValueError(f"{name}: seed {max(row_draws)} has no label draw")
+            row["label_budgets"] = budget_fits(
+                z.cpu(), y.cpu(), draws, row_draws, val_idx, test_idx, num_classes, args
+            )
         rows.append(row)
         cells = " | ".join(f"{p} {_cell(row['protocols'][p])}" for p in args.protocols)
         print(f"  {name}: {cells} | knn {100 * knn['test_acc']:.2f}", flush=True)
@@ -541,6 +779,8 @@ def main() -> None:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     result = {
         "dataset": args.dataset,
+        # "roc_auc": every val_acc / test_acc of the probes holds ROC-AUC (kNN: accuracy)
+        "metric": METRIC,
         "protocols": {p: SOURCES[p] for p in args.protocols},
         "hyperparameters": {**vars(args), "linear_probe_graphssl": "LogRegEvaluator() defaults"},
         "rows": rows,

@@ -1,0 +1,155 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0006315946996815495,
+    "weight_decay": 0.00029132228825834585,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.55
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.269
+        }
+      ],
+      "ema_tau": 0.9,
+      "pred_hidden": 512,
+      "pred_norm": "none"
+    }
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "ema_tau": 0.9,
+    "ema_tau_end": 1.0,
+    "total_steps": 1000,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.55
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.269
+      }
+    ],
+    "pred_hidden": 512,
+    "pred_norm": "none"
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.9018181562423706,
+      "test_acc_linear": 0.8875659108161926,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8872727155685425,
+      "test_acc_knn": 0.8782948851585388,
+      "eff_rank": 50.87106704711914,
+      "wall_time_s": 535.6963469982147,
+      "val_acc_linear_alt": 0.8989090919494629,
+      "test_acc_linear_alt": 0.8844755291938782,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.890181839466095,
+      "test_acc_knn_alt": 0.8764770030975342,
+      "eff_rank_alt": 50.18705749511719
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.9003636240959167,
+      "test_acc_linear": 0.8900200128555298,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.890181839466095,
+      "test_acc_knn": 0.877567708492279,
+      "eff_rank": 51.445472717285156,
+      "wall_time_s": 534.0109469890594,
+      "val_acc_linear_alt": 0.9010909199714661,
+      "test_acc_linear_alt": 0.8884748220443726,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8850908875465393,
+      "test_acc_knn_alt": 0.8741137981414795,
+      "eff_rank_alt": 50.14541244506836
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8887929618358612,
+      "std": 0.00173531219373904
+    },
+    "test_acc_knn": {
+      "mean": 0.8779312968254089,
+      "std": 0.0005141915518329072
+    },
+    "eff_rank": {
+      "mean": 51.15826988220215,
+      "std": 0.406166144526393
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8864751756191254,
+      "std": 0.0028279270945354568
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.8752954006195068,
+      "std": 0.0016710382497599266
+    },
+    "eff_rank_alt": {
+      "mean": 50.16623497009277,
+      "std": 0.02944749729237953
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T183000Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

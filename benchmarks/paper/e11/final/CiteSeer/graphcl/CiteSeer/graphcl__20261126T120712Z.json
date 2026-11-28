@@ -1,0 +1,230 @@
+{
+  "dataset": "CiteSeer",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 1,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.00022290831944958044,
+    "weight_decay": 6.88940586308233e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "none",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.648
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.374
+        }
+      ],
+      "tau": 0.254,
+      "proj_dim": 256
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 1,
+      "norm_type": "none",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.648
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.374
+      }
+    ],
+    "tau": 0.254,
+    "proj_dim": 256
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7139999866485596,
+      "test_acc_linear": 0.7020000219345093,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6779999732971191,
+      "test_acc_knn": 0.6499999761581421,
+      "eff_rank": 218.059814453125,
+      "wall_time_s": 22.909510850906372,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7279999852180481,
+      "test_acc_linear": 0.703000009059906,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6579999923706055,
+      "test_acc_knn": 0.6520000100135803,
+      "eff_rank": 217.8085479736328,
+      "wall_time_s": 23.036229848861694,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7200000286102295,
+      "test_acc_linear": 0.7170000076293945,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6600000262260437,
+      "test_acc_knn": 0.6489999890327454,
+      "eff_rank": 217.11172485351562,
+      "wall_time_s": 22.874958038330078,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7319999933242798,
+      "test_acc_linear": 0.722000002861023,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6579999923706055,
+      "test_acc_knn": 0.6549999713897705,
+      "eff_rank": 217.1840057373047,
+      "wall_time_s": 23.158766984939575,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7160000205039978,
+      "test_acc_linear": 0.6990000009536743,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6299999952316284,
+      "test_acc_knn": 0.6330000162124634,
+      "eff_rank": 217.53639221191406,
+      "wall_time_s": 22.874595165252686,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.722000002861023,
+      "test_acc_linear": 0.7149999737739563,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6439999938011169,
+      "test_acc_knn": 0.6600000262260437,
+      "eff_rank": 216.99684143066406,
+      "wall_time_s": 22.970462799072266,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.7039999961853027,
+      "test_acc_linear": 0.6959999799728394,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6299999952316284,
+      "test_acc_knn": 0.6610000133514404,
+      "eff_rank": 217.87481689453125,
+      "wall_time_s": 22.962099075317383,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.7160000205039978,
+      "test_acc_linear": 0.7059999704360962,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6639999747276306,
+      "test_acc_knn": 0.6579999923706055,
+      "eff_rank": 217.7435302734375,
+      "wall_time_s": 22.771053075790405,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.7419999837875366,
+      "test_acc_linear": 0.7210000157356262,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6520000100135803,
+      "test_acc_knn": 0.6439999938011169,
+      "eff_rank": 217.58619689941406,
+      "wall_time_s": 23.67513871192932,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.7080000042915344,
+      "test_acc_linear": 0.7070000171661377,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6380000114440918,
+      "test_acc_knn": 0.640999972820282,
+      "eff_rank": 217.7967071533203,
+      "wall_time_s": 23.47573685646057,
+      "checkpoint": "benchmarks/paper/models_e11/CiteSeer/gcn/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7087999999523162,
+      "std": 0.009307108715393456
+    },
+    "test_acc_knn": {
+      "mean": 0.650299996137619,
+      "std": 0.008944896171338661
+    },
+    "eff_rank": {
+      "mean": 217.56985778808593,
+      "std": 0.3590350663193712
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T120712Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

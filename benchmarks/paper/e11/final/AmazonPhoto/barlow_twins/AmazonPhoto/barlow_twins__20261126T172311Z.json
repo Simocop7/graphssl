@@ -1,0 +1,165 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 3,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.002960679834898638,
+    "weight_decay": 0.00018653013480966987,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.559
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.028
+        }
+      ],
+      "proj_dim": 256,
+      "lambda_param": null
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 3,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.559
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.028
+      }
+    ],
+    "proj_dim": 256,
+    "lambda_param": null
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9124183058738708,
+      "test_acc_linear": 0.9147058725357056,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9019607901573181,
+      "test_acc_knn": 0.9148693084716797,
+      "eff_rank": 66.89747619628906,
+      "wall_time_s": 48.57205295562744,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9163398742675781,
+      "test_acc_linear": 0.921241819858551,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9111111164093018,
+      "test_acc_knn": 0.9163398742675781,
+      "eff_rank": 68.029541015625,
+      "wall_time_s": 49.09992790222168,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9111111164093018,
+      "test_acc_linear": 0.9215686321258545,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9071895480155945,
+      "test_acc_knn": 0.9147058725357056,
+      "eff_rank": 66.12074279785156,
+      "wall_time_s": 52.92657685279846,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9137254953384399,
+      "test_acc_linear": 0.9214052557945251,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9084967374801636,
+      "test_acc_knn": 0.9160130620002747,
+      "eff_rank": 68.05926513671875,
+      "wall_time_s": 54.01856303215027,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9098039269447327,
+      "test_acc_linear": 0.9238561987876892,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9084967374801636,
+      "test_acc_knn": 0.9153594970703125,
+      "eff_rank": 69.9668197631836,
+      "wall_time_s": 54.02686619758606,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonPhoto/gcn/barlow_twins_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9205555558204651,
+      "std": 0.003439924072763457
+    },
+    "test_acc_knn": {
+      "mean": 0.9154575228691101,
+      "std": 0.0007084756832303825
+    },
+    "eff_rank": {
+      "mean": 67.8147689819336,
+      "std": 1.4533047450715935
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T172311Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

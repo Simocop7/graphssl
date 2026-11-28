@@ -1,0 +1,108 @@
+{
+  "dataset": "PubMed",
+  "model": "afgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "afgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.7960000038146973,
+      "test_acc_linear": 0.7820000052452087,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7440000176429749,
+      "test_acc_knn": 0.699999988079071,
+      "eff_rank": 156.71099853515625,
+      "wall_time_s": 756.9351751804352,
+      "val_acc_linear_alt": 0.7940000295639038,
+      "test_acc_linear_alt": 0.7839999794960022,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7519999742507935,
+      "test_acc_knn_alt": 0.722000002861023,
+      "eff_rank_alt": 173.2941131591797
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.7820000052452087,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.699999988079071,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 156.71099853515625,
+      "std": 0.0
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.7839999794960022,
+      "std": 0.0
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.722000002861023,
+      "std": 0.0
+    },
+    "eff_rank_alt": {
+      "mean": 173.2941131591797,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T123348Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

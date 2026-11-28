@@ -1,0 +1,200 @@
+{
+  "dataset": "CoauthorCS",
+  "model": "afgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.00451356899795613,
+    "weight_decay": 3.4565690770985345e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.0,
+      "ema_tau": 0.99,
+      "topk": 8,
+      "num_centroids": 100,
+      "pred_norm": "batch"
+    }
+  },
+  "model_config": {
+    "name": "afgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "pred_hidden": 512,
+    "topk": 8,
+    "num_centroids": 100,
+    "pred_norm": "batch"
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.9274413585662842,
+      "test_acc_linear": 0.9315469861030579,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9219858050346375,
+      "test_acc_knn": 0.9245244264602661,
+      "eff_rank": 243.66197204589844,
+      "wall_time_s": 873.0438981056213,
+      "val_acc_linear_alt": 0.9263502359390259,
+      "test_acc_linear_alt": 0.9307288527488708,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9203491806983948,
+      "test_acc_knn_alt": 0.92350172996521,
+      "eff_rank_alt": 182.22698974609375,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/afgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.9263502359390259,
+      "test_acc_linear": 0.9318879246711731,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9225313663482666,
+      "test_acc_knn": 0.9251380562782288,
+      "eff_rank": 253.58616638183594,
+      "wall_time_s": 856.5209572315216,
+      "val_acc_linear_alt": 0.926895797252655,
+      "test_acc_linear_alt": 0.9318879246711731,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9214402437210083,
+      "test_acc_knn_alt": 0.9247289896011353,
+      "eff_rank_alt": 185.40538024902344,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/afgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.9328969120979309,
+      "test_acc_linear": 0.9319561123847961,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9236224889755249,
+      "test_acc_knn": 0.923569917678833,
+      "eff_rank": 248.7788543701172,
+      "wall_time_s": 857.6378028392792,
+      "val_acc_linear_alt": 0.9290780425071716,
+      "test_acc_linear_alt": 0.9302515983581543,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.924168050289154,
+      "test_acc_knn_alt": 0.9252062439918518,
+      "eff_rank_alt": 184.54452514648438,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/afgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.9285324811935425,
+      "test_acc_linear": 0.9314106702804565,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.917621374130249,
+      "test_acc_knn": 0.9232290387153625,
+      "eff_rank": 250.9254913330078,
+      "wall_time_s": 860.6289100646973,
+      "val_acc_linear_alt": 0.9263502359390259,
+      "test_acc_linear_alt": 0.9302515983581543,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.9181669354438782,
+      "test_acc_knn_alt": 0.9228881001472473,
+      "eff_rank_alt": 187.39857482910156,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/afgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.9301691055297852,
+      "test_acc_linear": 0.9342060685157776,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.9219858050346375,
+      "test_acc_knn": 0.9245244264602661,
+      "eff_rank": 256.1307678222656,
+      "wall_time_s": 843.4419121742249,
+      "val_acc_linear_alt": 0.929623544216156,
+      "test_acc_linear_alt": 0.9306606650352478,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.924168050289154,
+      "test_acc_knn_alt": 0.9243199229240417,
+      "eff_rank_alt": 189.6524200439453,
+      "checkpoint": "benchmarks/paper/models_e11/CoauthorCS/gcn/afgrl_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9322015523910523,
+      "std": 0.001143529577215928
+    },
+    "test_acc_knn": {
+      "mean": 0.9241971731185913,
+      "std": 0.0007794524085512682
+    },
+    "eff_rank": {
+      "mean": 250.616650390625,
+      "std": 4.771371503333065
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.93075612783432,
+      "std": 0.0006708056985528126
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.9241289973258973,
+      "std": 0.0009341030247578806
+    },
+    "eff_rank_alt": {
+      "mean": 185.8455780029297,
+      "std": 2.823319811749259
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T144224Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

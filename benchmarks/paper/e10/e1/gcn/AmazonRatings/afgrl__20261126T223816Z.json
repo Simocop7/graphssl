@@ -1,0 +1,289 @@
+{
+  "dataset": "AmazonRatings",
+  "model": "afgrl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "afgrl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.4051935374736786,
+      "test_acc_linear": 0.4030703902244568,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4715009033679962,
+      "test_acc_knn": 0.48195329308509827,
+      "eff_rank": 161.0867462158203,
+      "wall_time_s": 774.2117712497711,
+      "val_acc_linear_alt": 0.39849746227264404,
+      "test_acc_linear_alt": 0.4012738764286041,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.46856117248535156,
+      "test_acc_knn_alt": 0.47787031531333923,
+      "eff_rank_alt": 171.24879455566406,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.4120529294013977,
+      "test_acc_linear": 0.40437695384025574,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.4732974171638489,
+      "test_acc_knn": 0.47885024547576904,
+      "eff_rank": 163.59072875976562,
+      "wall_time_s": 767.9764566421509,
+      "val_acc_linear_alt": 0.4110729992389679,
+      "test_acc_linear_alt": 0.40584680438041687,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4716642200946808,
+      "test_acc_knn_alt": 0.4716642200946808,
+      "eff_rank_alt": 174.88002014160156,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.4100930988788605,
+      "test_acc_linear": 0.4089498519897461,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.468397855758667,
+      "test_acc_knn": 0.46807119250297546,
+      "eff_rank": 165.24740600585938,
+      "wall_time_s": 763.4256427288055,
+      "val_acc_linear_alt": 0.40764331817626953,
+      "test_acc_linear_alt": 0.4033970236778259,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.46594807505607605,
+      "test_acc_knn_alt": 0.46807119250297546,
+      "eff_rank_alt": 174.705078125,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.40437695384025574,
+      "test_acc_linear": 0.40960314869880676,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4721541702747345,
+      "test_acc_knn": 0.47035765647888184,
+      "eff_rank": 160.7317352294922,
+      "wall_time_s": 776.013436794281,
+      "val_acc_linear_alt": 0.40372365713119507,
+      "test_acc_linear_alt": 0.4063367545604706,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4693777561187744,
+      "test_acc_knn_alt": 0.46382492780685425,
+      "eff_rank_alt": 171.71340942382812,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.41352277994155884,
+      "test_acc_linear": 0.40764331817626953,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.469541072845459,
+      "test_acc_knn": 0.4705209732055664,
+      "eff_rank": 164.05184936523438,
+      "wall_time_s": 778.2530555725098,
+      "val_acc_linear_alt": 0.40960314869880676,
+      "test_acc_linear_alt": 0.40584680438041687,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.47297075390815735,
+      "test_acc_knn_alt": 0.46545809507369995,
+      "eff_rank_alt": 173.4227294921875,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.40911316871643066,
+      "test_acc_linear": 0.4174424409866333,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.47182753682136536,
+      "test_acc_knn": 0.4688878059387207,
+      "eff_rank": 164.6837158203125,
+      "wall_time_s": 769.2686233520508,
+      "val_acc_linear_alt": 0.41025641560554504,
+      "test_acc_linear_alt": 0.4131961464881897,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.47444063425064087,
+      "test_acc_knn_alt": 0.46660134196281433,
+      "eff_rank_alt": 174.9479217529297,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.41776907444000244,
+      "test_acc_linear": 0.4109096825122833,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.47297075390815735,
+      "test_acc_knn": 0.4690511226654053,
+      "eff_rank": 161.25021362304688,
+      "wall_time_s": 777.6093857288361,
+      "val_acc_linear_alt": 0.41286951303482056,
+      "test_acc_linear_alt": 0.4084599018096924,
+      "probe_weight_decay_alt": 1e-05,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4710109531879425,
+      "test_acc_knn_alt": 0.46807119250297546,
+      "eff_rank_alt": 171.7616424560547,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.41401273012161255,
+      "test_acc_linear": 0.42528173327445984,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4715009033679962,
+      "test_acc_knn": 0.4715009033679962,
+      "eff_rank": 163.58004760742188,
+      "wall_time_s": 736.973845243454,
+      "val_acc_linear_alt": 0.4066633880138397,
+      "test_acc_linear_alt": 0.42152538895606995,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4731340706348419,
+      "test_acc_knn_alt": 0.47019433975219727,
+      "eff_rank_alt": 173.64508056640625,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.40650007128715515,
+      "test_acc_linear": 0.40601012110710144,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.47182753682136536,
+      "test_acc_knn": 0.4711742699146271,
+      "eff_rank": 162.7734832763672,
+      "wall_time_s": 741.5210874080658,
+      "val_acc_linear_alt": 0.405030220746994,
+      "test_acc_linear_alt": 0.4035603404045105,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.46807119250297546,
+      "test_acc_knn_alt": 0.47133758664131165,
+      "eff_rank_alt": 172.66493225097656,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.41776907444000244,
+      "test_acc_linear": 0.41776907444000244,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.4752572178840637,
+      "test_acc_knn": 0.469541072845459,
+      "eff_rank": 162.99803161621094,
+      "wall_time_s": 747.128692150116,
+      "val_acc_linear_alt": 0.4100930988788605,
+      "test_acc_linear_alt": 0.41335946321487427,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.47068431973457336,
+      "test_acc_knn_alt": 0.4674179255962372,
+      "eff_rank_alt": 172.93931579589844,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gcn/afgrl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.41110567152500155,
+      "std": 0.006994075022471445
+    },
+    "test_acc_knn": {
+      "mean": 0.4719908535480499,
+      "std": 0.004614858735912717
+    },
+    "eff_rank": {
+      "mean": 162.99939575195313,
+      "std": 1.5490557348346112
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.40828025043010713,
+      "std": 0.006112497508462162
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.46905111372470853,
+      "std": 0.003971475297311744
+    },
+    "eff_rank_alt": {
+      "mean": 173.1928924560547,
+      "std": 1.36749725411405
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T223816Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

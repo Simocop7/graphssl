@@ -1,0 +1,112 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 3,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0001222811244771034,
+    "weight_decay": 0.0007491903091636952,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "none",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.263
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.41
+        }
+      ],
+      "proj_dim": 512,
+      "lambda_param": null
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 3,
+      "norm_type": "none",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.263
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.41
+      }
+    ],
+    "proj_dim": 512,
+    "lambda_param": null
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.8763636350631714,
+      "test_acc_linear": 0.8636611700057983,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.8545454740524292,
+      "test_acc_knn": 0.840483546257019,
+      "eff_rank": 17.075265884399414,
+      "wall_time_s": 190.67445874214172
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8636611700057983,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.840483546257019,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 17.075265884399414,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261128T040857Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

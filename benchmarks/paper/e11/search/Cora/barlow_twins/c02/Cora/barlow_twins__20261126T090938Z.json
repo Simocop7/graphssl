@@ -1,0 +1,124 @@
+{
+  "dataset": "Cora",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 3,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.0010997167283510903,
+    "weight_decay": 1.7521278472424587e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.562
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.035
+        }
+      ],
+      "proj_dim": 256,
+      "lambda_param": null
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 3,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.562
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.035
+      }
+    ],
+    "proj_dim": 256,
+    "lambda_param": null
+  },
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.800000011920929,
+      "test_acc_linear": 0.8119999766349792,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.75,
+      "test_acc_knn": 0.7649999856948853,
+      "eff_rank": 198.7670135498047,
+      "wall_time_s": 72.4080080986023
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.7919999957084656,
+      "test_acc_linear": 0.8140000104904175,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7540000081062317,
+      "test_acc_knn": 0.7630000114440918,
+      "eff_rank": 196.41758728027344,
+      "wall_time_s": 68.68525576591492
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8129999935626984,
+      "std": 0.0014142375017830492
+    },
+    "test_acc_knn": {
+      "mean": 0.7639999985694885,
+      "std": 0.0014141953549345384
+    },
+    "eff_rank": {
+      "mean": 197.59230041503906,
+      "std": 1.6612952470833602
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T090938Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

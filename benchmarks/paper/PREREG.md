@@ -1,11 +1,11 @@
 # Analyses fixed in advance
 
-The rules of the seven analyses of the study that were fixed before the results they apply to,
+The rules of the analyses of the study that were fixed before the results they apply to,
 copied verbatim, by script, from the planning file as it stood at the commit that fixed each one.
 Those commits belong to a development history that also holds private notes and is not part of
 this repository. This is the authors' own record, not an external registration. What had been seen
 by then is listed in the appendix of the paper ("Analyses fixed in advance"). In this public copy,
-five personal notes about who asked for an analysis are replaced by "[omitted]"; the rules are otherwise
+six personal notes about who asked for an analysis are replaced by "[omitted]"; the rules are otherwise
 unchanged.
 
 ## Label-free prediction test
@@ -352,3 +352,121 @@ Commit `f0fb47d`, 2026-11-19 14:46 UTC.
 > - *Cost.* From E1's per-seed times on the Mac CPU: about 3.1 h of training (PubMed's GraphCL and
 >   AFGRL most of it), a few minutes of scoring. Preflight first (every objective, 3 steps, each
 >   dataset).
+
+## Label budgets, heterophilous graphs and joint tuning (E9, E10, E11)
+
+Commit `8afa4a5`, 2026-11-26 06:03 UTC. The configurations of E11's search were drawn and
+committed in the same commit (`benchmarks/paper/e11/configs.json`).
+
+> ## E9, E10, E11: the three edges of C10 (added 2026-11-26, fixed before their runs)
+>
+> *Why.* After the 21 Nov revision the paper rests on C10 (with a GCN, the average objective does
+> not exceed logistic regression on Â²X). [omitted]: each of the three
+> tests below attacks C10 from the side a reviewer would take, and each can change what the paper
+> says. Nothing else is run.
+>
+> | | Objection to C10 | Test | Changes the paper if |
+> |---|---|---|---|
+> | E9 | "SSL is for few labels; 20 per class or 10% is plenty" | the saved models refitted with 1–20 labels per class | pretraining leads Â²X at some budget on most graphs |
+> | E10 | "Â²X only works where labels follow edges" (already the scope sentence) | three heterophilous graphs, every objective and backbone | an objective adds beyond the best parameter-free filter |
+> | E11 | "the shared protocol is untuned" (E3/E5 tuned lr, optimizer and budget only) | a joint random search per objective, GCN, six datasets | tuned objectives exceed Â²X |
+>
+> Common to the three: valsel = for each representation (and each fit), the regularized probe with
+> the best validation score (ties: the first listed); bootstrap = 2,000 replicates, seed 0,
+> percentile interval, seeds (E9: seed–draw indices) resampled jointly for every objective and the
+> reference; a cell *favors pretraining* when its D ≥ 1.0 point and the interval's lower bound > 0.
+>
+> ### E9: label budgets
+>
+> - *Design.* The seven graphs with node-level E1 models: Cora, CiteSeer, PubMed, Amazon Computers,
+>   Amazon Photo, Coauthor CS (`models/`, `models_untrained/`) and WikiCS (`models_e6*`). Rows: every
+>   saved SSL model (8 objectives × 3 backbones × 10 seeds), the untrained encoders (running
+>   statistics, and again with graph statistics), raw X, Â²X and PCA-256 of Â²X. Supervised models
+>   are excluded (their encoders saw the standard training labels). No training.
+> - *Budgets.* K ∈ {1, 2, 5, 10, 20} labelled nodes per class, from the pool of nodes outside the
+>   standard validation and test sets; 10 draws, nested across K (draw i permutes each class with
+>   seed 10,000 + i and takes the first K; a class with fewer than K pool nodes gives all it has).
+>   A model of seed s is scored on draw s; the input rows on every draw. Test: the standard test set.
+> - *Probe.* valsel over {ours, ours standardized with every node's statistics (`graphssl_alln`),
+>   liblinear}, L2 / C chosen on the standard validation set. Added because our probe standardizes
+>   with the training rows, which K per class cannot estimate (smoke run below). Also reported: the
+>   same with a validation set of K per class drawn from the pool ("small", no rule).
+> - *Rule.* D_gK = mean over the eight GCN objectives of mean over i of (accuracy of seed i on draw i
+>   − accuracy of Â²X on draw i). 𝒦 = the budgets at which at least 4 of the 7 graphs favor
+>   pretraining. If 𝒦 is empty, C10 extends to 1–20 labels per class. Otherwise C10 is stated for the
+>   standard budgets and the paper reports that with K ∈ 𝒦 labels per class the average pretrained
+>   GCN exceeds Â²X; then, for each K ∈ 𝒦, the same test against PCA-256 of Â²X: if at least 4 of 7
+>   graphs still favor pretraining, the low-label advantage is attributed to pretraining, otherwise
+>   to the dimension (a label-free 256-d compression of Â²X recovers it).
+> - *Reported, no rule:* the same for GIN and the Transformer; the gain over the untrained encoder per
+>   K (both statistics); models above Â²X per K; the small-validation variant.
+> - *Seen before fixing this rule:* a smoke run on Cora (draws 0–2, K ∈ {1, 5, 20}, standard
+>   validation): Â²X 41.5 / 71.4 / 81.4 (liblinear; ours 21.5 / 46.0 / 68.7, which motivated
+>   `graphssl_alln`), PCA-256 of Â²X 54.2 / 70.9 / 81.2, raw X 26.5 / 41.3 / 61.5; GCN GraphCL seeds 0 and
+>   1 and DGI seed 2 at K = 1: 63.1 / 54.7 / 59.3, untrained GCN seed 0: 40.9 (valsel of the probes
+>   then available). The PCA attribution was planned before the smoke run.
+> - *Cost.* Probes only, Mac CPU: about 2,300 rows × 5 budgets × 2 validation sets × 3 probes.
+>
+> ### E10: heterophilous graphs
+>
+> - *Design.* Roman-empire, Amazon-ratings (accuracy) and Minesweeper (ROC-AUC) of Platonov et al.
+>   (ICLR 2023), as PyG distributes them; their split 0 is the standard split, their 10 fixed splits
+>   the split check. E1's shared protocol unchanged: 8 objectives × GCN, GIN, Transformer × 10 seeds,
+>   plus the untrained encoder (`--epochs 0`), models saved (`models_e10*`), results in
+>   `benchmarks/paper/e10/`. No supervised references (Platonov et al.'s are cited). Not run, for
+>   cost, decided from timings before any score: Questions (GraphCL's and AFGRL's O(N²) cost on its 49k
+>   nodes, 9 s per GraphCL step on the A2, equals the other graphs together) and Tolokers (1M edges:
+>   DGI with the Transformer does not fit the A2's 15 GB even alone, the other Transformer objectives
+>   need 8–10 GB, so the graph would hold the GPU alone for about 10 h; on the Mac GPU about 46 h).
+> - *Devices.* All three graphs train on the VM's A2, one stream per graph.
+> - *Scoring.* `compare_probes.py`: rows raw X, ÂX, Â²X, [X, ÂX, Â²X] side by side (a linear probe on it
+>   fits any polynomial filter of degree 2, low- or high-pass), the untrained and trained encoders;
+>   ours and liblinear on split 0 (valsel), ours on the 10 fixed splits; then ours with graph
+>   statistics for every encoder.
+> - *Reference.* R* = the input row among {X, Â²X, [X, ÂX, Â²X]} with the best valsel validation score,
+>   per graph.
+> - *Rule Q1 (C10 beyond homophily).* D1 = mean over the eight GCN objectives of (seed-mean test score
+>   − Â²X). If at least 2 of the 3 graphs favor pretraining, the paper states that C10 does not extend
+>   to heterophilous graphs (as its scope sentence already says); otherwise that it holds there too.
+> - *Rule Q2 (does pretraining add beyond parameter-free filtering).* For each backbone b, D2_b = mean
+>   over the eight objectives with b of (seed-mean test score − R*). If for some backbone at least 2 of
+>   3 graphs favor pretraining, the paper states that pretraining adds beyond the best parameter-free
+>   filter with that backbone; otherwise that no backbone's average objective exceeds a linear probe on
+>   [X, ÂX, Â²X].
+> - *Reported, no rule:* the gain over the untrained encoder per backbone with running and graph
+>   statistics; the best objective per backbone; the 10 fixed splits; ÂX.
+> - *Seen before fixing this rule:* the dataset statistics; per-step timings (no score of any trained
+>   or untrained encoder); the input rows of Tolokers in a smoke run (ROC-AUC, ours / liblinear: raw X
+>   71.2 / 71.4, ÂX 73.0 / 71.9, Â²X 74.3 / 72.5, [X, ÂX, Â²X] 77.8 / 77.9). Platonov et al.'s published
+>   results (e.g. GCN 73.7 / 48.7 / 89.8 / 83.6, an MLP 65.9 / 45.9 / 50.9 / 72.9).
+> - *Cost.* From the A2 timings: about 10 h per graph for Roman-empire and Amazon-ratings, 4 h for
+>   Minesweeper, GraphCL half of it.
+>
+> ### E11: joint tuning per objective
+>
+> - *Design.* GCN, the six datasets, the eight objectives. `benchmarks/e11_search.py plan` draws once,
+>   with seed 20261126, 16 configurations per objective from a joint space (width 128/256/512, the
+>   range of the published configurations of GRACE, BGRL and DGI; depth
+>   1/2/3, normalization batch/layer/none, dropout 0/0.2, AdamW lr log-uniform 1e-4–1e-2, weight decay
+>   log-uniform 1e-6–1e-3, 100/300/1,000 steps, edge-drop U(0, 0.7) and feature-mask U(0, 0.5) for the
+>   augmentation-based objectives, and each objective's own hyperparameters), plus the shared protocol
+>   as configuration c00: `e11/configs.json`, committed with this rule. The same 17 configurations
+>   for every dataset. Views stay symmetric; the encoder stays a GCN.
+> - *Selection (validation only).* Stage 1: every configuration, seed 100, our probe on the standard
+>   validation set. Stage 2: the three best, seeds 101–102; the best mean validation accuracy over
+>   seeds 100–102 is selected (ties: lower id). Final: the selected configuration with seeds 0–4 (as
+>   E3), models saved (`models_e11/`), scored with ours and liblinear (valsel) on the standard split.
+> - *Rule.* D_tuned = mean over the eight tuned objectives of (5-seed mean test accuracy − Â²X), valsel,
+>   per dataset. If no dataset favors pretraining, C10 holds under per-objective joint tuning. If 1–3
+>   datasets do, C10 is stated for the shared protocol and the tuned exceptions are named. If 4 or more
+>   do, C10 is withdrawn as a general statement and kept only for the shared protocol.
+> - *Reported, no rule:* tuned objectives above Â²X; Â^K X with K ∈ {1, 2, 3} chosen on validation as the
+>   reference; the selected configurations; the lift over c00 on the same device.
+> - *Devices.* PubMed, Coauthor CS, Amazon Computers on the A2; Cora, CiteSeer on the Mac CPU (3
+>   threads); Amazon Photo on the Mac GPU. One device per dataset. A step that fails (e.g. out of GPU
+>   memory beside the other streams) is rerun; the selection waits for it.
+> - *Seen before fixing this rule:* every result of E1–E8 on these datasets; per-step timings. A first
+>   draw with widths 256/512/1,024 was preflighted (3-step runs, no score read) and replaced before
+>   any real run: width 1,024 ran out of the A2's memory on Amazon Computers beside the other streams.
+> - *Cost.* 28 runs per objective and dataset (17 + 6 + 5), 467 steps on average: about 12 h of A2 for
+>   PubMed and Coauthor CS each, 8 h for Amazon Computers; a few hours of Mac for the rest.

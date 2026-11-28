@@ -1,0 +1,163 @@
+{
+  "dataset": "Cora",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.00019006434299499795,
+    "weight_decay": 0.0005702390569129235,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment_teacher": [
+        {
+          "name": "edge_drop",
+          "p": 0.599
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.23
+        }
+      ],
+      "augment_student": [
+        {
+          "name": "edge_drop",
+          "p": 0.599
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.23
+        }
+      ],
+      "ema_tau_base": 0.9,
+      "head.teacher_temp": 0.07
+    }
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "ema_tau_base": 0.9,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.599
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.23
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.599
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.23
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 512,
+      "bottleneck_dim": 128,
+      "n_prototypes": 128,
+      "teacher_temp": 0.07,
+      "warmup_teacher_temp_epochs": 30
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.777999997138977,
+      "test_acc_linear": 0.8130000233650208,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7400000095367432,
+      "test_acc_knn": 0.765999972820282,
+      "eff_rank": 284.03851318359375,
+      "wall_time_s": 34.45531702041626,
+      "val_acc_linear_alt": 0.7860000133514404,
+      "test_acc_linear_alt": 0.8149999976158142,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7459999918937683,
+      "test_acc_knn_alt": 0.7689999938011169,
+      "eff_rank_alt": 284.9911804199219
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8130000233650208,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.765999972820282,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 284.03851318359375,
+      "std": 0.0
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8149999976158142,
+      "std": 0.0
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.7689999938011169,
+      "std": 0.0
+    },
+    "eff_rank_alt": {
+      "mean": 284.9911804199219,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T104816Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

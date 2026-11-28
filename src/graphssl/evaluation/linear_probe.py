@@ -35,6 +35,11 @@ class LogRegEvaluator:
     reports average precision score instead of accuracy. Labels are expected
     as float tensors possibly containing NaN for missing values.
 
+    ``metric="roc_auc"`` scores a binary task by the area under the ROC curve of the
+    class-1 score (the logit difference), for imbalanced labels where accuracy says little
+    (the binary heterophilous benchmarks of Platonov et al., 2023). The L2 strength is then
+    selected on validation ROC-AUC. Pure PyTorch, ties counted as one half.
+
     Args:
         weight_decay: L2 strength, or the values to select among on the validation split.
         max_iter: Budget of L-BFGS iterations and of loss evaluations for each fit.
@@ -42,9 +47,11 @@ class LogRegEvaluator:
         standardize: Rescale every feature to zero mean and unit variance, with the
             statistics of the training rows only.
         multilabel: If True, treats the task as multilabel classification.
+        metric: ``"acc"`` (default) or ``"roc_auc"`` (binary single-label tasks only).
 
     ``evaluate()`` returns ``val_acc`` / ``test_acc`` (``val_ap`` / ``test_ap`` when
-    multilabel), the selected ``weight_decay`` and ``converged``.
+    multilabel, ``val_auc`` / ``test_auc`` with ``metric="roc_auc"``), the selected
+    ``weight_decay`` and ``converged``.
     """
 
     def __init__(
@@ -54,7 +61,12 @@ class LogRegEvaluator:
         max_iter: int = 5000,
         standardize: bool = True,
         multilabel: bool = False,
+        metric: str = "acc",
     ):
+        if metric not in ("acc", "roc_auc"):
+            raise ValueError(f"metric must be 'acc' or 'roc_auc', got {metric!r}")
+        if metric == "roc_auc" and multilabel:
+            raise ValueError("metric='roc_auc' is for binary single-label tasks, not multilabel")
         values = [weight_decay] if isinstance(weight_decay, (int, float)) else list(weight_decay)
         if not values or any(v < 0 for v in values):
             raise ValueError(f"weight_decay must be one or more values >= 0, got {weight_decay!r}")
@@ -66,6 +78,7 @@ class LogRegEvaluator:
         self.max_iter = max_iter
         self.standardize = standardize
         self.multilabel = multilabel
+        self.metric = metric
 
     def evaluate(
         self,
@@ -81,6 +94,8 @@ class LogRegEvaluator:
                 "Selecting weight_decay on a multilabel task needs average precision: "
                 "install scikit-learn, or pass a single weight_decay."
             )
+        if self.metric == "roc_auc" and num_classes != 2:
+            raise ValueError(f"metric='roc_auc' needs a binary task, got num_classes={num_classes}")
         device = embeddings.device
         out_dim = labels.size(1) if (self.multilabel and labels.dim() > 1) else num_classes
 
@@ -104,7 +119,7 @@ class LogRegEvaluator:
         nn.init.zeros_(classifier.weight)
         nn.init.zeros_(classifier.bias)
 
-        metric = "ap" if self.multilabel else "acc"
+        metric = "ap" if self.multilabel else ("auc" if self.metric == "roc_auc" else "acc")
         results: Dict[str, float] = {}
         for weight_decay in self.weight_decays:
             converged = self._fit(classifier, x["train"], y["train"], weight_decay)
@@ -159,7 +174,9 @@ class LogRegEvaluator:
         return evals < self.max_iter
 
     def _score(self, logits: Tensor, y: Tensor) -> float:
-        """Accuracy, or mean average precision over the labels for multilabel targets."""
+        """Accuracy, ROC-AUC (binary) or mean average precision over multilabel targets."""
+        if self.metric == "roc_auc":
+            return roc_auc(logits[:, 1] - logits[:, 0], y)
         if not self.multilabel:
             return (logits.argmax(dim=-1) == y).float().mean().item()
         if not HAS_SKLEARN:
@@ -175,3 +192,28 @@ class LogRegEvaluator:
             if col.sum() > 0:
                 ap_scores.append(average_precision_score(y_np[col, i], probs[col, i]))
         return float(np.mean(ap_scores)) if ap_scores else float("nan")
+
+
+def roc_auc(scores: Tensor, labels: Tensor) -> float:
+    """Area under the ROC curve of ``scores`` for binary ``labels`` (1 = positive).
+
+    The Mann-Whitney statistic with average ranks, so tied scores count one half; equal to
+    scikit-learn's ``roc_auc_score``. NaN when one class is absent.
+    """
+    scores = scores.detach().double().flatten().cpu()
+    positive = labels.detach().flatten().cpu() == 1
+    n_pos = int(positive.sum())
+    n_neg = positive.numel() - n_pos
+    if n_pos == 0 or n_neg == 0:
+        return float("nan")
+    sorted_scores, order = torch.sort(scores)
+    # Average rank (1-based) of each run of tied scores.
+    _, inverse, counts = torch.unique_consecutive(
+        sorted_scores, return_inverse=True, return_counts=True
+    )
+    ends = torch.cumsum(counts, 0).double()
+    avg_rank = (ends - (counts.double() - 1) / 2)[inverse]
+    ranks = torch.empty_like(avg_rank)
+    ranks[order] = avg_rank
+    rank_sum = ranks[positive].sum().item()
+    return (rank_sum - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)

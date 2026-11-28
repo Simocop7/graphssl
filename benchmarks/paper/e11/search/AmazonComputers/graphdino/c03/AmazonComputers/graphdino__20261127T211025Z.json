@@ -1,0 +1,182 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 1,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.00890887935372418,
+    "weight_decay": 1.2004787196284825e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment_teacher": [
+        {
+          "name": "edge_drop",
+          "p": 0.132
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.493
+        }
+      ],
+      "augment_student": [
+        {
+          "name": "edge_drop",
+          "p": 0.132
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.493
+        }
+      ],
+      "ema_tau_base": 0.9,
+      "head.teacher_temp": 0.07
+    }
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 1,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 100,
+    "ema_tau_base": 0.9,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.132
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.493
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.132
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.493
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 512,
+      "bottleneck_dim": 128,
+      "n_prototypes": 128,
+      "teacher_temp": 0.07,
+      "warmup_teacher_temp_epochs": 25
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.8916363716125488,
+      "test_acc_linear": 0.8772041201591492,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8530908823013306,
+      "test_acc_knn": 0.8393019437789917,
+      "eff_rank": 193.49969482421875,
+      "wall_time_s": 127.57894110679626,
+      "val_acc_linear_alt": 0.8952727317810059,
+      "test_acc_linear_alt": 0.8808398246765137,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8552727103233337,
+      "test_acc_knn_alt": 0.8416651487350464,
+      "eff_rank_alt": 184.20480346679688
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.8989090919494629,
+      "test_acc_linear": 0.8859298229217529,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8603636622428894,
+      "test_acc_knn": 0.8518451452255249,
+      "eff_rank": 194.41781616210938,
+      "wall_time_s": 111.81518483161926,
+      "val_acc_linear_alt": 0.9003636240959167,
+      "test_acc_linear_alt": 0.8868387341499329,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8705454468727112,
+      "test_acc_knn_alt": 0.8552990555763245,
+      "eff_rank_alt": 187.53802490234375
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.881566971540451,
+      "std": 0.00617000359405531
+    },
+    "test_acc_knn": {
+      "mean": 0.8455735445022583,
+      "std": 0.00886938280063254
+    },
+    "eff_rank": {
+      "mean": 193.95875549316406,
+      "std": 0.6492098239745264
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8838392794132233,
+      "std": 0.0042418695683789295
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.8484821021556854,
+      "std": 0.00964062798153339
+    },
+    "eff_rank_alt": {
+      "mean": 185.8714141845703,
+      "std": 2.356943480271554
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T211025Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

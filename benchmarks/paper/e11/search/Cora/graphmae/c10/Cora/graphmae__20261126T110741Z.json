@@ -1,0 +1,94 @@
+{
+  "dataset": "Cora",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 3,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0001529317954877908,
+    "weight_decay": 2.1945379532393107e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "none",
+      "encoder.drop": 0.0,
+      "mask_rate": 0.568,
+      "replace_rate": 0.05,
+      "alpha": 3.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 3,
+      "norm_type": "none",
+      "pool": false,
+      "drop": 0.0
+    },
+    "mask_rate": 0.568,
+    "replace_rate": 0.05,
+    "alpha": 3.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.7900000214576721,
+      "test_acc_linear": 0.8149999976158142,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.7580000162124634,
+      "test_acc_knn": 0.7910000085830688,
+      "eff_rank": 55.2001838684082,
+      "wall_time_s": 7.461787939071655
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8149999976158142,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.7910000085830688,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 55.2001838684082,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T110741Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

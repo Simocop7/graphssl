@@ -1,0 +1,300 @@
+{
+  "dataset": "Minesweeper",
+  "model": "bgrl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 0,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "metric": "roc_auc"
+  },
+  "model_config": {
+    "name": "bgrl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.99,
+    "ema_tau_end": 1.0,
+    "total_steps": 0,
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "pred_hidden": 256
+  },
+  "alt_encoder": "target",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.880839,
+      "test_acc_linear": 0.891789,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8108000159263611,
+      "test_acc_knn": 0.8116000294685364,
+      "eff_rank": 44.6971435546875,
+      "wall_time_s": 0.022114038467407227,
+      "val_acc_linear_alt": 0.879086,
+      "test_acc_linear_alt": 0.892672,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8144000172615051,
+      "test_acc_knn_alt": 0.8100000023841858,
+      "eff_rank_alt": 52.980323791503906,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.878153,
+      "test_acc_linear": 0.887541,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8076000213623047,
+      "test_acc_knn": 0.8123999834060669,
+      "eff_rank": 53.714111328125,
+      "wall_time_s": 0.0062830448150634766,
+      "val_acc_linear_alt": 0.884434,
+      "test_acc_linear_alt": 0.895564,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8148000240325928,
+      "test_acc_knn_alt": 0.8155999779701233,
+      "eff_rank_alt": 52.05319595336914,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.88414,
+      "test_acc_linear": 0.893549,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8184000253677368,
+      "test_acc_knn": 0.8144000172615051,
+      "eff_rank": 52.391632080078125,
+      "wall_time_s": 0.006131172180175781,
+      "val_acc_linear_alt": 0.882444,
+      "test_acc_linear_alt": 0.89559,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8148000240325928,
+      "test_acc_knn_alt": 0.8119999766349792,
+      "eff_rank_alt": 48.98601150512695,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.881317,
+      "test_acc_linear": 0.88579,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8091999888420105,
+      "test_acc_knn": 0.8087999820709229,
+      "eff_rank": 47.26173400878906,
+      "wall_time_s": 0.005113840103149414,
+      "val_acc_linear_alt": 0.882485,
+      "test_acc_linear_alt": 0.893679,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8144000172615051,
+      "test_acc_knn_alt": 0.8140000104904175,
+      "eff_rank_alt": 51.5473747253418,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.884698,
+      "test_acc_linear": 0.892966,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8172000050544739,
+      "test_acc_knn": 0.8116000294685364,
+      "eff_rank": 50.77825927734375,
+      "wall_time_s": 0.00506591796875,
+      "val_acc_linear_alt": 0.880726,
+      "test_acc_linear_alt": 0.891317,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8068000078201294,
+      "test_acc_knn_alt": 0.8116000294685364,
+      "eff_rank_alt": 52.05223083496094,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.879106,
+      "test_acc_linear": 0.892155,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8136000037193298,
+      "test_acc_knn": 0.8100000023841858,
+      "eff_rank": 48.869171142578125,
+      "wall_time_s": 0.0074710845947265625,
+      "val_acc_linear_alt": 0.881156,
+      "test_acc_linear_alt": 0.89415,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8064000010490417,
+      "test_acc_knn_alt": 0.8011999726295471,
+      "eff_rank_alt": 51.87918472290039,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.879991,
+      "test_acc_linear": 0.894213,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8119999766349792,
+      "test_acc_knn": 0.8095999956130981,
+      "eff_rank": 50.512939453125,
+      "wall_time_s": 0.008329153060913086,
+      "val_acc_linear_alt": 0.87719,
+      "test_acc_linear_alt": 0.885556,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8083999752998352,
+      "test_acc_knn_alt": 0.8176000118255615,
+      "eff_rank_alt": 49.39562225341797,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.876721,
+      "test_acc_linear": 0.888003,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8172000050544739,
+      "test_acc_knn": 0.8151999711990356,
+      "eff_rank": 49.05485153198242,
+      "wall_time_s": 0.005647897720336914,
+      "val_acc_linear_alt": 0.883102,
+      "test_acc_linear_alt": 0.891831,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8112000226974487,
+      "test_acc_knn_alt": 0.8199999928474426,
+      "eff_rank_alt": 48.62104797363281,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.88609,
+      "test_acc_linear": 0.888103,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.823199987411499,
+      "test_acc_knn": 0.8136000037193298,
+      "eff_rank": 48.57990264892578,
+      "wall_time_s": 0.005362033843994141,
+      "val_acc_linear_alt": 0.88605,
+      "test_acc_linear_alt": 0.894329,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8180000185966492,
+      "test_acc_knn_alt": 0.8208000063896179,
+      "eff_rank_alt": 50.1258544921875,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.881082,
+      "test_acc_linear": 0.889976,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8100000023841858,
+      "test_acc_knn": 0.8131999969482422,
+      "eff_rank": 49.77035140991211,
+      "wall_time_s": 0.005987882614135742,
+      "val_acc_linear_alt": 0.879263,
+      "test_acc_linear_alt": 0.892913,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.8104000091552734,
+      "test_acc_knn_alt": 0.8203999996185303,
+      "eff_rank_alt": 50.40840530395508,
+      "checkpoint": "benchmarks/paper/models_e10_untrained/Minesweeper/gin/bgrl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8904085,
+      "std": 0.0029188225270551462
+    },
+    "test_acc_knn": {
+      "mean": 0.8120400011539459,
+      "std": 0.002120376487238458
+    },
+    "eff_rank": {
+      "mean": 49.563009643554686,
+      "std": 2.5458811450893513
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.8927601000000001,
+      "std": 0.002905622842008232
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.8143199980258942,
+      "std": 0.006030447349282278
+    },
+    "eff_rank_alt": {
+      "mean": 50.80492515563965,
+      "std": 1.4994014246994574
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T183719Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

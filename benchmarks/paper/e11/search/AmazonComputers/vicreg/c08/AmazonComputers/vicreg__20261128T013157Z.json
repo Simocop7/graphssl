@@ -1,0 +1,112 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0014202071293970481,
+    "weight_decay": 2.090220015808538e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "none",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.621
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.102
+        }
+      ],
+      "proj_dim": 256,
+      "invariance": 25.0
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "none",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.621
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.102
+      }
+    ],
+    "proj_dim": 256,
+    "invariance": 25.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.906181812286377,
+      "test_acc_linear": 0.8871114253997803,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8981817960739136,
+      "test_acc_knn": 0.8826577067375183,
+      "eff_rank": 65.19877624511719,
+      "wall_time_s": 369.65483117103577
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8871114253997803,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.8826577067375183,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 65.19877624511719,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261128T013157Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

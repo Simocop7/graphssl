@@ -1,0 +1,212 @@
+{
+  "dataset": "AmazonRatings",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.42642495036125183,
+      "test_acc_linear": 0.4282214641571045,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.46121183037757874,
+      "test_acc_knn": 0.46545809507369995,
+      "eff_rank": 91.66265869140625,
+      "wall_time_s": 309.41746973991394,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.4195655584335327,
+      "test_acc_linear": 0.42952799797058105,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.455495685338974,
+      "test_acc_knn": 0.46643802523612976,
+      "eff_rank": 90.7091293334961,
+      "wall_time_s": 322.80766439437866,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.41401273012161255,
+      "test_acc_linear": 0.4211987555027008,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4603952169418335,
+      "test_acc_knn": 0.4636616110801697,
+      "eff_rank": 90.65685272216797,
+      "wall_time_s": 321.0564339160919,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.41891229152679443,
+      "test_acc_linear": 0.4282214641571045,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.4636616110801697,
+      "test_acc_knn": 0.47297075390815735,
+      "eff_rank": 90.3201675415039,
+      "wall_time_s": 304.64146280288696,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.4125428795814514,
+      "test_acc_linear": 0.42103543877601624,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.46480482816696167,
+      "test_acc_knn": 0.463008314371109,
+      "eff_rank": 91.515869140625,
+      "wall_time_s": 322.19342017173767,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.4148293435573578,
+      "test_acc_linear": 0.4265882670879364,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.46496814489364624,
+      "test_acc_knn": 0.4639882445335388,
+      "eff_rank": 91.05660247802734,
+      "wall_time_s": 328.9610102176666,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.41711580753326416,
+      "test_acc_linear": 0.42479178309440613,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.461865097284317,
+      "test_acc_knn": 0.468397855758667,
+      "eff_rank": 89.20586395263672,
+      "wall_time_s": 321.83354568481445,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.4216887056827545,
+      "test_acc_linear": 0.4239751696586609,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4613751471042633,
+      "test_acc_knn": 0.46643802523612976,
+      "eff_rank": 92.14013671875,
+      "wall_time_s": 327.68127179145813,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.4174424409866333,
+      "test_acc_linear": 0.42103543877601624,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4576188027858734,
+      "test_acc_knn": 0.4679078757762909,
+      "eff_rank": 90.59583282470703,
+      "wall_time_s": 328.7522323131561,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.42462843656539917,
+      "test_acc_linear": 0.4265882670879364,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.46333497762680054,
+      "test_acc_knn": 0.46496814489364624,
+      "eff_rank": 89.9338150024414,
+      "wall_time_s": 321.86617732048035,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/gin/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.4251184046268463,
+      "std": 0.003217003419596236
+    },
+    "test_acc_knn": {
+      "mean": 0.4663236945867538,
+      "std": 0.0029276622117361028
+    },
+    "eff_rank": {
+      "mean": 90.77969284057617,
+      "std": 0.8632338633923002
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T054501Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

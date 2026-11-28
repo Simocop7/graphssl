@@ -86,6 +86,7 @@ from node_datasets import (
     FEATURES,
     FULL_BATCH_DATASETS,
     load_node_dataset,
+    metric_of,
 )
 from torch.optim import SGD, Adam, AdamW
 
@@ -204,6 +205,13 @@ def parse_args() -> argparse.Namespace:
         "Repeatable; unknown fields are an error",
     )
     p.add_argument("--seeds", type=int, default=5)
+    p.add_argument(
+        "--first-seed",
+        type=int,
+        default=0,
+        help="seeds are first-seed ... first-seed + seeds - 1 (E11's search uses seeds from 100, "
+        "kept apart from the seeds 0-9 of its final runs)",
+    )
     p.add_argument("--knn-k", type=int, default=5)
     p.add_argument("--data-dir", default="data")
     p.add_argument(
@@ -417,8 +425,13 @@ def evaluate_embeddings(
     test_idx: torch.Tensor,
     knn_k: int,
     suffix: str = "",
+    metric: str = "acc",
 ) -> dict:
     """Linear probe + kNN accuracy and effective rank of frozen embeddings.
+
+    ``metric="roc_auc"`` (binary heterophilous graphs, E10): the ``*_acc_linear`` fields hold
+    the probe's ROC-AUC, selected on validation ROC-AUC (``hyperparameters.metric`` says so);
+    kNN stays accuracy.
 
     Non-finite embeddings (training diverged: DGI with SGD at lr 5e-2 / 1e-1 in E3 ends with
     NaN parameters) are recorded as ``diverged`` with null metrics instead of crashing the
@@ -446,15 +459,16 @@ def evaluate_embeddings(
     threads = torch.get_num_threads()
     torch.set_num_threads(min(threads, PROBE_THREADS))
     try:
-        lin = LogRegEvaluator().evaluate(
+        lin = LogRegEvaluator(metric=metric).evaluate(
             z, y, train_idx, val_idx, test_idx, num_classes=num_classes
         )
     finally:
         torch.set_num_threads(threads)
+    key = "auc" if metric == "roc_auc" else "acc"
     knn = KNNEvaluator(k=knn_k).evaluate(z, y, train_idx, val_idx, test_idx)
     return {
-        f"val_acc_linear{suffix}": lin["val_acc"],
-        f"test_acc_linear{suffix}": lin["test_acc"],
+        f"val_acc_linear{suffix}": lin[f"val_{key}"],
+        f"test_acc_linear{suffix}": lin[f"test_{key}"],
         f"probe_weight_decay{suffix}": lin["weight_decay"],
         f"probe_converged{suffix}": lin["converged"],
         f"val_acc_knn{suffix}": knn["val_acc"],
@@ -476,7 +490,15 @@ class TrajectoryCallback(Callback):
     of every step.
     """
 
-    def __init__(self, steps: list[int], dm: DataModule, splits: tuple, device: torch.device):
+    def __init__(
+        self,
+        steps: list[int],
+        dm: DataModule,
+        splits: tuple,
+        device: torch.device,
+        metric: str = "acc",
+    ):
+        self.metric = metric
         self.steps = set(steps)
         self.dm = dm
         self.splits = splits
@@ -501,7 +523,11 @@ class TrajectoryCallback(Callback):
         other = [] if self.device.type == "cpu" else [self.device]
         with torch.random.fork_rng(devices=other, device_type=self.device.type):
             z, y = extract_embeddings(model, self.dm, device=self.device)
-            point = {"step": step, "loss": loss, **evaluate_embeddings(z, y, *self.splits)}
+            point = {
+                "step": step,
+                "loss": loss,
+                **evaluate_embeddings(z, y, *self.splits, metric=self.metric),
+            }
         if self.z0 is None:
             self.z0 = z
         if torch.isfinite(z).all():
@@ -544,9 +570,10 @@ def run_one(
     loader = dm.train_dataloader()
 
     splits = (num_classes, train_idx, val_idx, test_idx, args.knn_k)
+    metric = getattr(args, "metric", "acc")
     trajectory = None
     if args.trajectory is not None:
-        trajectory = TrajectoryCallback(args.trajectory, dm, splits, device)
+        trajectory = TrajectoryCallback(args.trajectory, dm, splits, device, metric)
     trainer = DINOTrainer(
         grad_clip_norm=None, device=device, callbacks=[trajectory] if trajectory else None
     )
@@ -570,11 +597,15 @@ def run_one(
         save_model(model, checkpoint, config, data.num_features, num_classes)
 
     z, y = extract_embeddings(model, dm, device=device)
-    result = {"seed": seed, **evaluate_embeddings(z, y, *splits), "wall_time_s": wall_time_s}
+    result = {
+        "seed": seed,
+        **evaluate_embeddings(z, y, *splits, metric=metric),
+        "wall_time_s": wall_time_s,
+    }
     alt = ALT_ENCODER.get(model_name)
     if alt is not None:
         z_alt, _ = extract_embeddings(model, dm, encoder_source=alt, device=device)
-        result.update(evaluate_embeddings(z_alt, y, *splits, suffix="_alt"))
+        result.update(evaluate_embeddings(z_alt, y, *splits, suffix="_alt", metric=metric))
     if isinstance(model, Supervised):
         result.update(head_accuracy(model, data, val_idx, test_idx, device))
     if best_epoch is not None:
@@ -711,6 +742,8 @@ def save_result(
     }
     if args.features != "raw":  # recorded only when it differs: older JSONs used raw features
         hyperparameters["features"] = args.features
+    if getattr(args, "metric", "acc") != "acc":  # *_acc_linear hold this metric (E10)
+        hyperparameters["metric"] = args.metric
     if args.optimizer == "sgd":
         hyperparameters.update(momentum=args.momentum, nesterov=True)
     if model_name == "supervised_reg":
@@ -769,6 +802,7 @@ def main() -> None:
         data, num_classes, train_idx, val_idx, test_idx = load_node_dataset(
             dataset_name, args.data_dir, features=args.features
         )
+        args.metric = metric_of(dataset_name)
         print(
             f"\n=== {dataset_name} | nodes={data.num_nodes:,} edges={data.num_edges:,} "
             f"features={data.num_features} classes={num_classes} ==="
@@ -787,7 +821,7 @@ def main() -> None:
             config = make_config(model_name, args)
             print(f"\n--- {dataset_name} / {model_name} ({args.seeds} seeds) ---")
             per_seed = []
-            for seed in range(args.seeds):
+            for seed in range(args.first_seed, args.first_seed + args.seeds):
                 t0 = time.time()
                 checkpoint = None
                 if args.save_models is not None:

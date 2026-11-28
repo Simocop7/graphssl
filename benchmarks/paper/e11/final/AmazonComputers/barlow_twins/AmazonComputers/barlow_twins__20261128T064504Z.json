@@ -1,0 +1,165 @@
+{
+  "dataset": "AmazonComputers",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 3,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.0010997167283510903,
+    "weight_decay": 1.7521278472424587e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.562
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.035
+        }
+      ],
+      "proj_dim": 256,
+      "lambda_param": null
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 3,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.562
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.035
+      }
+    ],
+    "proj_dim": 256,
+    "lambda_param": null
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.8894545435905457,
+      "test_acc_linear": 0.8837484121322632,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8603636622428894,
+      "test_acc_knn": 0.8522995710372925,
+      "eff_rank": 131.85231018066406,
+      "wall_time_s": 191.49285507202148,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8930909037590027,
+      "test_acc_linear": 0.8853845000267029,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8530908823013306,
+      "test_acc_knn": 0.8508452773094177,
+      "eff_rank": 129.39642333984375,
+      "wall_time_s": 169.58083510398865,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.8967272639274597,
+      "test_acc_linear": 0.881294310092926,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8552727103233337,
+      "test_acc_knn": 0.8503908514976501,
+      "eff_rank": 131.37684631347656,
+      "wall_time_s": 160.2984540462494,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.893818199634552,
+      "test_acc_linear": 0.8726595044136047,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.861090898513794,
+      "test_acc_knn": 0.8543900847434998,
+      "eff_rank": 132.5462188720703,
+      "wall_time_s": 161.63735795021057,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.8923636078834534,
+      "test_acc_linear": 0.8835666179656982,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.861090898513794,
+      "test_acc_knn": 0.8565715551376343,
+      "eff_rank": 133.5597381591797,
+      "wall_time_s": 176.2115318775177,
+      "checkpoint": "benchmarks/paper/models_e11/AmazonComputers/gcn/barlow_twins_seed4.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.881330668926239,
+      "std": 0.005061346482862804
+    },
+    "test_acc_knn": {
+      "mean": 0.8528994679450989,
+      "std": 0.0025777361549130426
+    },
+    "eff_rank": {
+      "mean": 131.74630737304688,
+      "std": 1.5490386261830855
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261128T064504Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

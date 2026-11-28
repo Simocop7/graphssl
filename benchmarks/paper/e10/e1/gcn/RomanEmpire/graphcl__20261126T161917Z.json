@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.46354809403419495,
+      "test_acc_linear": 0.4714083969593048,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3115622103214264,
+      "test_acc_knn": 0.30603599548339844,
+      "eff_rank": 146.0235595703125,
+      "wall_time_s": 2833.639484167099,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.46460723876953125,
+      "test_acc_linear": 0.46081891655921936,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.3089143931865692,
+      "test_acc_knn": 0.2984468638896942,
+      "eff_rank": 146.4232940673828,
+      "wall_time_s": 2920.1100776195526,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.46284201741218567,
+      "test_acc_linear": 0.46487823128700256,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.30520740151405334,
+      "test_acc_knn": 0.3002117872238159,
+      "eff_rank": 145.62367248535156,
+      "wall_time_s": 2925.7451593875885,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.4591350257396698,
+      "test_acc_linear": 0.46134838461875916,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.31032657623291016,
+      "test_acc_knn": 0.3070949614048004,
+      "eff_rank": 145.1575164794922,
+      "wall_time_s": 2876.956195831299,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.4640776813030243,
+      "test_acc_linear": 0.46487823128700256,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.313680499792099,
+      "test_acc_knn": 0.29932934045791626,
+      "eff_rank": 144.8777313232422,
+      "wall_time_s": 2982.9037590026855,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.45984113216400146,
+      "test_acc_linear": 0.461701363325119,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.30750221014022827,
+      "test_acc_knn": 0.30268266797065735,
+      "eff_rank": 147.07147216796875,
+      "wall_time_s": 2702.1801433563232,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.4623124301433563,
+      "test_acc_linear": 0.4542887508869171,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.31032657623291016,
+      "test_acc_knn": 0.3028591573238373,
+      "eff_rank": 144.66380310058594,
+      "wall_time_s": 2480.7235782146454,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.45984113216400146,
+      "test_acc_linear": 0.4680550694465637,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.30944395065307617,
+      "test_acc_knn": 0.30497705936431885,
+      "eff_rank": 146.47454833984375,
+      "wall_time_s": 2163.966413497925,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.46654897928237915,
+      "test_acc_linear": 0.4666431248188019,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.30714917182922363,
+      "test_acc_knn": 0.3002117872238159,
+      "eff_rank": 145.9189453125,
+      "wall_time_s": 1807.8556869029999,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.469902902841568,
+      "test_acc_linear": 0.4719378650188446,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.31403353810310364,
+      "test_acc_knn": 0.3025061786174774,
+      "eff_rank": 145.3138885498047,
+      "wall_time_s": 2325.111529111862,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gcn/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.4645958334207535,
+      "std": 0.005333943665171723
+    },
+    "test_acc_knn": {
+      "mean": 0.3024355798959732,
+      "std": 0.002921690670966051
+    },
+    "eff_rank": {
+      "mean": 145.75484313964844,
+      "std": 0.7692414441469512
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T161917Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

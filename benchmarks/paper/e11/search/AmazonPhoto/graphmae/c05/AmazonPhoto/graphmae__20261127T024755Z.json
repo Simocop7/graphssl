@@ -1,0 +1,94 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 1,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.003810282343859137,
+    "weight_decay": 1.4265502443714689e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.446,
+      "replace_rate": 0.0,
+      "alpha": 3.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.446,
+    "replace_rate": 0.0,
+    "alpha": 3.0
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.9124183058738708,
+      "test_acc_linear": 0.9179738759994507,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.9084967374801636,
+      "test_acc_knn": 0.9058823585510254,
+      "eff_rank": 51.00843811035156,
+      "wall_time_s": 124.38907098770142
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9179738759994507,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.9058823585510254,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 51.00843811035156,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T024755Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6711385846138,
+      "test_acc_linear": 0.6660783886909485,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6333627700805664,
+      "test_acc_knn": 0.6307801008224487,
+      "eff_rank": 62.8959846496582,
+      "wall_time_s": 3040.913626909256,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6697263717651367,
+      "test_acc_linear": 0.6704906225204468,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.62559574842453,
+      "test_acc_knn": 0.6298976540565491,
+      "eff_rank": 58.9678840637207,
+      "wall_time_s": 2764.5660614967346,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6623124480247498,
+      "test_acc_linear": 0.6644899249076843,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6250662207603455,
+      "test_acc_knn": 0.6274267435073853,
+      "eff_rank": 57.75897216796875,
+      "wall_time_s": 2493.337590456009,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6552515625953674,
+      "test_acc_linear": 0.6539004445075989,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6225948929786682,
+      "test_acc_knn": 0.6304271221160889,
+      "eff_rank": 56.56796646118164,
+      "wall_time_s": 2053.9429745674133,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.6769638061523438,
+      "test_acc_linear": 0.6738439798355103,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6340688467025757,
+      "test_acc_knn": 0.6318390369415283,
+      "eff_rank": 63.098541259765625,
+      "wall_time_s": 2024.0984830856323,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.6526036858558655,
+      "test_acc_linear": 0.6579597592353821,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6225948929786682,
+      "test_acc_knn": 0.632721483707428,
+      "eff_rank": 58.08646011352539,
+      "wall_time_s": 2377.3207969665527,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6653133034706116,
+      "test_acc_linear": 0.6657253503799438,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.634774923324585,
+      "test_acc_knn": 0.6362513303756714,
+      "eff_rank": 59.63359832763672,
+      "wall_time_s": 1996.8997089862823,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.6600176692008972,
+      "test_acc_linear": 0.6593716740608215,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6245366334915161,
+      "test_acc_knn": 0.6357218623161316,
+      "eff_rank": 54.049774169921875,
+      "wall_time_s": 2282.7344064712524,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.6541923880577087,
+      "test_acc_linear": 0.6597246527671814,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6285966634750366,
+      "test_acc_knn": 0.6341333985328674,
+      "eff_rank": 60.364715576171875,
+      "wall_time_s": 2468.534581184387,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.6464254260063171,
+      "test_acc_linear": 0.658136248588562,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6263018250465393,
+      "test_acc_knn": 0.6238969564437866,
+      "eff_rank": 57.06314468383789,
+      "wall_time_s": 2200.216874599457,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/graphcl_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6629721045494079,
+      "std": 0.006223361848220822
+    },
+    "test_acc_knn": {
+      "mean": 0.6313095688819885,
+      "std": 0.0037596232383732293
+    },
+    "eff_rank": {
+      "mean": 58.848704147338864,
+      "std": 2.7999681743936127
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T191013Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "dataset": "PubMed",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    }
+  },
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.800000011920929,
+      "test_acc_linear": 0.8100000023841858,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.7639999985694885,
+      "test_acc_knn": 0.7319999933242798,
+      "eff_rank": 166.2102508544922,
+      "wall_time_s": 81.36081051826477
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.8119999766349792,
+      "test_acc_linear": 0.8130000233650208,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7699999809265137,
+      "test_acc_knn": 0.7289999723434448,
+      "eff_rank": 164.72071838378906,
+      "wall_time_s": 86.95407819747925
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8115000128746033,
+      "std": 0.0021213351792503184
+    },
+    "test_acc_knn": {
+      "mean": 0.7304999828338623,
+      "std": 0.0021213351792503184
+    },
+    "eff_rank": {
+      "mean": 165.46548461914062,
+      "std": 1.053258510831732
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T232322Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

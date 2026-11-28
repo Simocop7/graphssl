@@ -1,0 +1,318 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "ema_tau_base": 0.996,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 256,
+      "bottleneck_dim": 64,
+      "n_prototypes": 128,
+      "teacher_temp": 0.04,
+      "warmup_teacher_temp_epochs": 30
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7023830413818359,
+      "test_acc_linear": 0.6971408128738403,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6690202951431274,
+      "test_acc_knn": 0.6703141331672668,
+      "eff_rank": 149.97012329101562,
+      "wall_time_s": 364.58922481536865,
+      "val_acc_linear_alt": 0.7046778202056885,
+      "test_acc_linear_alt": 0.6950229406356812,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6589584946632385,
+      "test_acc_knn_alt": 0.6639604568481445,
+      "eff_rank_alt": 139.3065643310547,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.7127978801727295,
+      "test_acc_linear": 0.6992587447166443,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6732568144798279,
+      "test_acc_knn": 0.6639604568481445,
+      "eff_rank": 147.82778930664062,
+      "wall_time_s": 356.522483587265,
+      "val_acc_linear_alt": 0.7113857269287109,
+      "test_acc_linear_alt": 0.7038475275039673,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6635481119155884,
+      "test_acc_knn_alt": 0.6703141331672668,
+      "eff_rank_alt": 138.09117126464844,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7050309181213379,
+      "test_acc_linear": 0.7033180594444275,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6623124480247498,
+      "test_acc_knn": 0.6681962609291077,
+      "eff_rank": 149.6259765625,
+      "wall_time_s": 323.3980848789215,
+      "val_acc_linear_alt": 0.7073256969451904,
+      "test_acc_linear_alt": 0.7003176808357239,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6635481119155884,
+      "test_acc_knn_alt": 0.6561948657035828,
+      "eff_rank_alt": 140.433837890625,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.7023830413818359,
+      "test_acc_linear": 0.6969643235206604,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6661959290504456,
+      "test_acc_knn": 0.6600776314735413,
+      "eff_rank": 149.68084716796875,
+      "wall_time_s": 269.91335940361023,
+      "val_acc_linear_alt": 0.7000882625579834,
+      "test_acc_linear_alt": 0.6973173022270203,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6526036858558655,
+      "test_acc_knn_alt": 0.6577832698822021,
+      "eff_rank_alt": 139.6324920654297,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7007943391799927,
+      "test_acc_linear": 0.6950229406356812,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6672551035881042,
+      "test_acc_knn": 0.6613131165504456,
+      "eff_rank": 147.4907989501953,
+      "wall_time_s": 330.57381296157837,
+      "val_acc_linear_alt": 0.7034422159194946,
+      "test_acc_linear_alt": 0.6962583661079407,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6600176692008972,
+      "test_acc_knn_alt": 0.6602541208267212,
+      "eff_rank_alt": 137.46998596191406,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.7020300030708313,
+      "test_acc_linear": 0.7017295956611633,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6739629507064819,
+      "test_acc_knn": 0.6784327626228333,
+      "eff_rank": 147.56431579589844,
+      "wall_time_s": 378.9991250038147,
+      "val_acc_linear_alt": 0.7000882625579834,
+      "test_acc_linear_alt": 0.6978468298912048,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.662135899066925,
+      "test_acc_knn_alt": 0.6706671118736267,
+      "eff_rank_alt": 137.9313201904297,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.7029126286506653,
+      "test_acc_linear": 0.6980233192443848,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.663901150226593,
+      "test_acc_knn": 0.6713731288909912,
+      "eff_rank": 146.90956115722656,
+      "wall_time_s": 371.88782930374146,
+      "val_acc_linear_alt": 0.702206552028656,
+      "test_acc_linear_alt": 0.7015531063079834,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6600176692008972,
+      "test_acc_knn_alt": 0.6595481634140015,
+      "eff_rank_alt": 137.03627014160156,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.7057369947433472,
+      "test_acc_linear": 0.7020825743675232,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6642541885375977,
+      "test_acc_knn": 0.6680197715759277,
+      "eff_rank": 147.48777770996094,
+      "wall_time_s": 386.799369096756,
+      "val_acc_linear_alt": 0.7041482925415039,
+      "test_acc_linear_alt": 0.7024355530738831,
+      "probe_weight_decay_alt": 0.001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6548985242843628,
+      "test_acc_knn_alt": 0.6584892272949219,
+      "eff_rank_alt": 136.4617919921875,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.7064430713653564,
+      "test_acc_linear": 0.6895517110824585,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6709620356559753,
+      "test_acc_knn": 0.6630780100822449,
+      "eff_rank": 147.368408203125,
+      "wall_time_s": 386.6671862602234,
+      "val_acc_linear_alt": 0.7002648115158081,
+      "test_acc_linear_alt": 0.7013766169548035,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6596646308898926,
+      "test_acc_knn_alt": 0.6574302911758423,
+      "eff_rank_alt": 135.89756774902344,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.7097970247268677,
+      "test_acc_linear": 0.7036710381507874,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6669020056724548,
+      "test_acc_knn": 0.6687257289886475,
+      "eff_rank": 147.39828491210938,
+      "wall_time_s": 378.8361704349518,
+      "val_acc_linear_alt": 0.7161518335342407,
+      "test_acc_linear_alt": 0.7068478465080261,
+      "probe_weight_decay_alt": 0.0001,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6589584946632385,
+      "test_acc_knn_alt": 0.6630780100822449,
+      "eff_rank_alt": 137.07626342773438,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/transformer/graphdino_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6986763119697571,
+      "std": 0.0043471322200745975
+    },
+    "test_acc_knn": {
+      "mean": 0.667349100112915,
+      "std": 0.005476483654286503
+    },
+    "eff_rank": {
+      "mean": 148.13238830566405,
+      "std": 1.1482511764395928
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.7002823770046234,
+      "std": 0.0036794188589115745
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.6617719650268554,
+      "std": 0.005190556525463816
+    },
+    "eff_rank_alt": {
+      "mean": 137.93372650146483,
+      "std": 1.4573224894038188
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T041700Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

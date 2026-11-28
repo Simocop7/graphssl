@@ -1,0 +1,318 @@
+{
+  "dataset": "AmazonRatings",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "transformer",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "transformer",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "ema_tau_base": 0.996,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 256,
+      "bottleneck_dim": 64,
+      "n_prototypes": 128,
+      "teacher_temp": 0.04,
+      "warmup_teacher_temp_epochs": 30
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.40323370695114136,
+      "test_acc_linear": 0.40062060952186584,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4136860966682434,
+      "test_acc_knn": 0.4293646812438965,
+      "eff_rank": 161.04605102539062,
+      "wall_time_s": 119.20985841751099,
+      "val_acc_linear_alt": 0.40160050988197327,
+      "test_acc_linear_alt": 0.40225380659103394,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4164625108242035,
+      "test_acc_knn_alt": 0.4174424409866333,
+      "eff_rank_alt": 157.02133178710938,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.3991507291793823,
+      "test_acc_linear": 0.3981708288192749,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4192389249801636,
+      "test_acc_knn": 0.42087212204933167,
+      "eff_rank": 160.639404296875,
+      "wall_time_s": 118.17165279388428,
+      "val_acc_linear_alt": 0.3955577313899994,
+      "test_acc_linear_alt": 0.38837170600891113,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4180957078933716,
+      "test_acc_knn_alt": 0.4104197323322296,
+      "eff_rank_alt": 155.58387756347656,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.4029070734977722,
+      "test_acc_linear": 0.3950677812099457,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.42038217186927795,
+      "test_acc_knn": 0.41776907444000244,
+      "eff_rank": 161.42161560058594,
+      "wall_time_s": 118.04708123207092,
+      "val_acc_linear_alt": 0.39898741245269775,
+      "test_acc_linear_alt": 0.39261800050735474,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4087865352630615,
+      "test_acc_knn_alt": 0.41727912425994873,
+      "eff_rank_alt": 155.8574981689453,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.40388697385787964,
+      "test_acc_linear": 0.40160050988197327,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.4131961464881897,
+      "test_acc_knn": 0.4301812946796417,
+      "eff_rank": 161.76881408691406,
+      "wall_time_s": 117.97124576568604,
+      "val_acc_linear_alt": 0.40535685420036316,
+      "test_acc_linear_alt": 0.40388697385787964,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4019271731376648,
+      "test_acc_knn_alt": 0.4244651198387146,
+      "eff_rank_alt": 158.16513061523438,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.40160050988197327,
+      "test_acc_linear": 0.4007839262485504,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.4254450500011444,
+      "test_acc_knn": 0.42299526929855347,
+      "eff_rank": 160.47044372558594,
+      "wall_time_s": 118.01510548591614,
+      "val_acc_linear_alt": 0.3983341455459595,
+      "test_acc_linear_alt": 0.40111055970191956,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4143393635749817,
+      "test_acc_knn_alt": 0.4213620722293854,
+      "eff_rank_alt": 155.94439697265625,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.40486690402030945,
+      "test_acc_linear": 0.4045402705669403,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.412706196308136,
+      "test_acc_knn": 0.4239751696586609,
+      "eff_rank": 160.78662109375,
+      "wall_time_s": 118.06388068199158,
+      "val_acc_linear_alt": 0.40437695384025574,
+      "test_acc_linear_alt": 0.40323370695114136,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4180957078933716,
+      "test_acc_knn_alt": 0.4164625108242035,
+      "eff_rank_alt": 155.6074676513672,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.39686429500579834,
+      "test_acc_linear": 0.3922913670539856,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.40976646542549133,
+      "test_acc_knn": 0.42413848638534546,
+      "eff_rank": 159.70175170898438,
+      "wall_time_s": 118.03252744674683,
+      "val_acc_linear_alt": 0.400947242975235,
+      "test_acc_linear_alt": 0.3981708288192749,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4071533679962158,
+      "test_acc_knn_alt": 0.4104197323322296,
+      "eff_rank_alt": 154.84124755859375,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.406173437833786,
+      "test_acc_linear": 0.3942511975765228,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.42299526929855347,
+      "test_acc_knn": 0.42675158381462097,
+      "eff_rank": 161.1649627685547,
+      "wall_time_s": 118.04628825187683,
+      "val_acc_linear_alt": 0.40225380659103394,
+      "test_acc_linear_alt": 0.4002939760684967,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.41678914427757263,
+      "test_acc_knn_alt": 0.4180957078933716,
+      "eff_rank_alt": 155.4552001953125,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.39947739243507385,
+      "test_acc_linear": 0.39735424518585205,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.41515597701072693,
+      "test_acc_knn": 0.4228319525718689,
+      "eff_rank": 159.46775817871094,
+      "wall_time_s": 118.08289766311646,
+      "val_acc_linear_alt": 0.3996407091617584,
+      "test_acc_linear_alt": 0.39849746227264404,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.41237956285476685,
+      "test_acc_knn_alt": 0.41613587737083435,
+      "eff_rank_alt": 152.58566284179688,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.4007839262485504,
+      "test_acc_linear": 0.39147475361824036,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.41760575771331787,
+      "test_acc_knn": 0.4239751696586609,
+      "eff_rank": 159.97727966308594,
+      "wall_time_s": 118.06117963790894,
+      "val_acc_linear_alt": 0.3953944146633148,
+      "test_acc_linear_alt": 0.3955577313899994,
+      "probe_weight_decay_alt": 0.1,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.4148293435573578,
+      "test_acc_knn_alt": 0.41450268030166626,
+      "eff_rank_alt": 155.110595703125,
+      "checkpoint": "benchmarks/paper/models_e10/AmazonRatings/transformer/graphdino_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.39761554896831514,
+      "std": 0.004309467136798206
+    },
+    "test_acc_knn": {
+      "mean": 0.4242854803800583,
+      "std": 0.003723002309009531
+    },
+    "eff_rank": {
+      "mean": 160.64447021484375,
+      "std": 0.7505045801619805
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.39839947521686553,
+      "std": 0.004959798544521254
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.4166584998369217,
+      "std": 0.0043325096430064
+    },
+    "eff_rank_alt": {
+      "mean": 155.61724090576172,
+      "std": 1.4416331107620053
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T162007Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

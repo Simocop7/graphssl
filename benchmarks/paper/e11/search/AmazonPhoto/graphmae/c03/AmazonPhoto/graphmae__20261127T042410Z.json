@@ -1,0 +1,106 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "graphmae",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 1,
+    "epochs": 1000,
+    "optimizer": "adamw",
+    "lr": 0.0005091735900382388,
+    "weight_decay": 2.127191252950814e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.2,
+      "mask_rate": 0.361,
+      "replace_rate": 0.1,
+      "alpha": 2.0
+    }
+  },
+  "model_config": {
+    "name": "graphmae",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 1,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.2
+    },
+    "mask_rate": 0.361,
+    "replace_rate": 0.1,
+    "alpha": 2.0
+  },
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.9189542531967163,
+      "test_acc_linear": 0.9292483925819397,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.8941176533699036,
+      "test_acc_knn": 0.9114379286766052,
+      "eff_rank": 288.114990234375,
+      "wall_time_s": 842.3268640041351
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.9215686321258545,
+      "test_acc_linear": 0.9241830110549927,
+      "probe_weight_decay": 0.001,
+      "probe_converged": true,
+      "val_acc_knn": 0.8967320322990417,
+      "test_acc_knn": 0.909967303276062,
+      "eff_rank": 283.2890319824219,
+      "wall_time_s": 920.393372297287
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9267157018184662,
+      "std": 0.0035817656270013074
+    },
+    "test_acc_knn": {
+      "mean": 0.9107026159763336,
+      "std": 0.0010398891933092885
+    },
+    "eff_rank": {
+      "mean": 285.70201110839844,
+      "std": 3.4124678056792317
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T042410Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

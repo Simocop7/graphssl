@@ -1,0 +1,212 @@
+{
+  "dataset": "RomanEmpire",
+  "model": "vicreg",
+  "hyperparameters": {
+    "encoder": "gin",
+    "hidden_dim": 256,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0005,
+    "weight_decay": 1e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    }
+  },
+  "model_config": {
+    "name": "vicreg",
+    "encoder": {
+      "name": "gin",
+      "hidden_dim": 256,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.5
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.2
+      }
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.6224183440208435,
+      "test_acc_linear": 0.6270737648010254,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6227713823318481,
+      "test_acc_knn": 0.6221320033073425,
+      "eff_rank": 76.70751190185547,
+      "wall_time_s": 185.14262676239014,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.6187114119529724,
+      "test_acc_linear": 0.6260148286819458,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6261253356933594,
+      "test_acc_knn": 0.6240734457969666,
+      "eff_rank": 81.81401062011719,
+      "wall_time_s": 200.88059902191162,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.6368932127952576,
+      "test_acc_linear": 0.6390751600265503,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6367166638374329,
+      "test_acc_knn": 0.6242499351501465,
+      "eff_rank": 80.21961212158203,
+      "wall_time_s": 272.11365580558777,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.6188879013061523,
+      "test_acc_linear": 0.6242499351501465,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6259487867355347,
+      "test_acc_knn": 0.6244264245033264,
+      "eff_rank": 80.21253204345703,
+      "wall_time_s": 272.483425617218,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.61182701587677,
+      "test_acc_linear": 0.6111895442008972,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6178287863731384,
+      "test_acc_knn": 0.6180726885795593,
+      "eff_rank": 76.46057891845703,
+      "wall_time_s": 268.4262933731079,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.6305384039878845,
+      "test_acc_linear": 0.632721483707428,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6349514722824097,
+      "test_acc_knn": 0.6341333985328674,
+      "eff_rank": 78.9304428100586,
+      "wall_time_s": 276.1989200115204,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.6277140378952026,
+      "test_acc_linear": 0.6314860582351685,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.6287731528282166,
+      "test_acc_knn": 0.6268972754478455,
+      "eff_rank": 73.85445404052734,
+      "wall_time_s": 275.53391337394714,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.6319505572319031,
+      "test_acc_linear": 0.6328979730606079,
+      "probe_weight_decay": 1e-05,
+      "probe_converged": true,
+      "val_acc_knn": 0.619064450263977,
+      "test_acc_knn": 0.6198376417160034,
+      "eff_rank": 75.79786682128906,
+      "wall_time_s": 271.0635826587677,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.6324801445007324,
+      "test_acc_linear": 0.6332509517669678,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6319505572319031,
+      "test_acc_knn": 0.6302506327629089,
+      "eff_rank": 75.98625946044922,
+      "wall_time_s": 267.8184018135071,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.618358314037323,
+      "test_acc_linear": 0.6205435991287231,
+      "probe_weight_decay": 0.0001,
+      "probe_converged": true,
+      "val_acc_knn": 0.6165931224822998,
+      "test_acc_knn": 0.6157783269882202,
+      "eff_rank": 75.32295989990234,
+      "wall_time_s": 259.24469661712646,
+      "checkpoint": "benchmarks/paper/models_e10/RomanEmpire/gin/vicreg_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.627850329875946,
+      "std": 0.007926705525865142
+    },
+    "test_acc_knn": {
+      "mean": 0.6239851772785187,
+      "std": 0.005517058891290359
+    },
+    "eff_rank": {
+      "mean": 77.53062286376954,
+      "std": 2.5890411595754097
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T012811Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

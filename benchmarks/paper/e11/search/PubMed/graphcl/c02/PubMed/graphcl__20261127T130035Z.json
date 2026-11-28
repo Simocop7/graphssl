@@ -1,0 +1,124 @@
+{
+  "dataset": "PubMed",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 128,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0011748351885163524,
+    "weight_decay": 1.2374278904739673e-05,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "batch",
+      "encoder.drop": 0.0,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.437
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.414
+        }
+      ],
+      "tau": 0.53,
+      "proj_dim": 128
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 128,
+      "num_layers": 2,
+      "norm_type": "batch",
+      "pool": false,
+      "drop": 0.0
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.437
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.414
+      }
+    ],
+    "tau": 0.53,
+    "proj_dim": 128
+  },
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.8500000238418579,
+      "test_acc_linear": 0.8130000233650208,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7900000214576721,
+      "test_acc_knn": 0.7480000257492065,
+      "eff_rank": 63.572479248046875,
+      "wall_time_s": 416.13427662849426
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.8460000157356262,
+      "test_acc_linear": 0.8109999895095825,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7979999780654907,
+      "test_acc_knn": 0.7519999742507935,
+      "eff_rank": 62.825218200683594,
+      "wall_time_s": 415.65229892730713
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8120000064373016,
+      "std": 0.0014142375017830492
+    },
+    "test_acc_knn": {
+      "mean": 0.75,
+      "std": 0.002828390709869077
+    },
+    "eff_rank": {
+      "mean": 63.198848724365234,
+      "std": 0.528393353907138
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261127T130035Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 4,
+    "device": "cuda",
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "torch_geometric": "2.8.0.post1"
+    }
+  }
+}

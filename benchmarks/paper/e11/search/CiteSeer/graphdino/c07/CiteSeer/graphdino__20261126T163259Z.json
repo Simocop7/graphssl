@@ -1,0 +1,182 @@
+{
+  "dataset": "CiteSeer",
+  "model": "graphdino",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 2,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.00019006434299499795,
+    "weight_decay": 0.0005702390569129235,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "layer",
+      "encoder.drop": 0.2,
+      "augment_teacher": [
+        {
+          "name": "edge_drop",
+          "p": 0.599
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.23
+        }
+      ],
+      "augment_student": [
+        {
+          "name": "edge_drop",
+          "p": 0.599
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.23
+        }
+      ],
+      "ema_tau_base": 0.9,
+      "head.teacher_temp": 0.07
+    }
+  },
+  "model_config": {
+    "name": "graphdino",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 2,
+      "norm_type": "layer",
+      "pool": false,
+      "drop": 0.2
+    },
+    "ema_tau": 0.996,
+    "ema_tau_end": 1.0,
+    "total_steps": 300,
+    "ema_tau_base": 0.9,
+    "freeze_last_layer_epochs": 1,
+    "augment_teacher": [
+      {
+        "name": "edge_drop",
+        "p": 0.599
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.23
+      }
+    ],
+    "augment_student": [
+      {
+        "name": "edge_drop",
+        "p": 0.599
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.23
+      }
+    ],
+    "head": {
+      "name": "dino",
+      "proj_hidden": 512,
+      "bottleneck_dim": 128,
+      "n_prototypes": 128,
+      "teacher_temp": 0.07,
+      "warmup_teacher_temp_epochs": 30
+    }
+  },
+  "alt_encoder": "student",
+  "seeds": [
+    101,
+    102
+  ],
+  "per_seed": [
+    {
+      "seed": 101,
+      "val_acc_linear": 0.7239999771118164,
+      "test_acc_linear": 0.7039999961853027,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6980000138282776,
+      "test_acc_knn": 0.6729999780654907,
+      "eff_rank": 304.3800048828125,
+      "wall_time_s": 144.49200320243835,
+      "val_acc_linear_alt": 0.722000002861023,
+      "test_acc_linear_alt": 0.6600000262260437,
+      "probe_weight_decay_alt": 0.01,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.7039999961853027,
+      "test_acc_knn_alt": 0.6779999732971191,
+      "eff_rank_alt": 301.39801025390625
+    },
+    {
+      "seed": 102,
+      "val_acc_linear": 0.699999988079071,
+      "test_acc_linear": 0.6919999718666077,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.6880000233650208,
+      "test_acc_knn": 0.6740000247955322,
+      "eff_rank": 305.9736022949219,
+      "wall_time_s": 146.22073316574097,
+      "val_acc_linear_alt": 0.6919999718666077,
+      "test_acc_linear_alt": 0.6909999847412109,
+      "probe_weight_decay_alt": 1.0,
+      "probe_converged_alt": true,
+      "val_acc_knn_alt": 0.6740000247955322,
+      "test_acc_knn_alt": 0.6650000214576721,
+      "eff_rank_alt": 302.140380859375
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.6979999840259552,
+      "std": 0.008485298570152762
+    },
+    "test_acc_knn": {
+      "mean": 0.6735000014305115,
+      "std": 0.0007071398243157801
+    },
+    "eff_rank": {
+      "mean": 305.1768035888672,
+      "std": 1.1268435365838723
+    },
+    "test_acc_linear_alt": {
+      "mean": 0.6755000054836273,
+      "std": 0.021920280882576408
+    },
+    "test_acc_knn_alt": {
+      "mean": 0.6714999973773956,
+      "std": 0.009192354100771521
+    },
+    "eff_rank_alt": {
+      "mean": 301.7691955566406,
+      "std": 0.5249352892805162
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T163259Z",
+    "git": {
+      "commit": "52ca9075bb7fbe5ce628ad7850f65ce1512be537",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

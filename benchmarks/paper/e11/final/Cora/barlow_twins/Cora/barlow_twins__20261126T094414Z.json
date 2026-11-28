@@ -1,0 +1,230 @@
+{
+  "dataset": "Cora",
+  "model": "barlow_twins",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 3,
+    "epochs": 300,
+    "optimizer": "adamw",
+    "lr": 0.0001718671912244507,
+    "weight_decay": 1.0964189066534893e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "none",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.155
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.424
+        }
+      ],
+      "proj_dim": 1024,
+      "lambda_param": null
+    }
+  },
+  "model_config": {
+    "name": "barlow_twins",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 3,
+      "norm_type": "none",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.155
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.424
+      }
+    ],
+    "proj_dim": 1024,
+    "lambda_param": null
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "per_seed": [
+    {
+      "seed": 0,
+      "val_acc_linear": 0.7960000038146973,
+      "test_acc_linear": 0.8320000171661377,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7200000286102295,
+      "test_acc_knn": 0.7480000257492065,
+      "eff_rank": 201.86749267578125,
+      "wall_time_s": 180.0584638118744,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed0.pt"
+    },
+    {
+      "seed": 1,
+      "val_acc_linear": 0.8019999861717224,
+      "test_acc_linear": 0.8299999833106995,
+      "probe_weight_decay": 10.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7379999756813049,
+      "test_acc_knn": 0.7480000257492065,
+      "eff_rank": 202.24266052246094,
+      "wall_time_s": 188.01418232917786,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed1.pt"
+    },
+    {
+      "seed": 2,
+      "val_acc_linear": 0.7960000038146973,
+      "test_acc_linear": 0.8159999847412109,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.7519999742507935,
+      "test_acc_knn": 0.7620000243186951,
+      "eff_rank": 202.421142578125,
+      "wall_time_s": 179.73335719108582,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed2.pt"
+    },
+    {
+      "seed": 3,
+      "val_acc_linear": 0.8100000023841858,
+      "test_acc_linear": 0.8149999976158142,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7419999837875366,
+      "test_acc_knn": 0.765999972820282,
+      "eff_rank": 201.85342407226562,
+      "wall_time_s": 174.9590139389038,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed3.pt"
+    },
+    {
+      "seed": 4,
+      "val_acc_linear": 0.7919999957084656,
+      "test_acc_linear": 0.8270000219345093,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7440000176429749,
+      "test_acc_knn": 0.7540000081062317,
+      "eff_rank": 201.63890075683594,
+      "wall_time_s": 154.40622401237488,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed4.pt"
+    },
+    {
+      "seed": 5,
+      "val_acc_linear": 0.7979999780654907,
+      "test_acc_linear": 0.8009999990463257,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.722000002861023,
+      "test_acc_knn": 0.7179999947547913,
+      "eff_rank": 204.17701721191406,
+      "wall_time_s": 159.30416321754456,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed5.pt"
+    },
+    {
+      "seed": 6,
+      "val_acc_linear": 0.7860000133514404,
+      "test_acc_linear": 0.796999990940094,
+      "probe_weight_decay": 0.1,
+      "probe_converged": true,
+      "val_acc_knn": 0.7020000219345093,
+      "test_acc_knn": 0.7139999866485596,
+      "eff_rank": 200.65243530273438,
+      "wall_time_s": 137.04962396621704,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed6.pt"
+    },
+    {
+      "seed": 7,
+      "val_acc_linear": 0.8019999861717224,
+      "test_acc_linear": 0.828000009059906,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7459999918937683,
+      "test_acc_knn": 0.746999979019165,
+      "eff_rank": 202.63641357421875,
+      "wall_time_s": 150.35628008842468,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed7.pt"
+    },
+    {
+      "seed": 8,
+      "val_acc_linear": 0.7820000052452087,
+      "test_acc_linear": 0.8230000138282776,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7419999837875366,
+      "test_acc_knn": 0.7459999918937683,
+      "eff_rank": 201.26283264160156,
+      "wall_time_s": 146.5136330127716,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed8.pt"
+    },
+    {
+      "seed": 9,
+      "val_acc_linear": 0.8080000281333923,
+      "test_acc_linear": 0.8270000219345093,
+      "probe_weight_decay": 1.0,
+      "probe_converged": true,
+      "val_acc_knn": 0.7400000095367432,
+      "test_acc_knn": 0.7440000176429749,
+      "eff_rank": 202.2552947998047,
+      "wall_time_s": 147.22685718536377,
+      "checkpoint": "benchmarks/paper/models_e11/Cora/gcn/barlow_twins_seed9.pt"
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.8196000039577485,
+      "std": 0.012222027249861198
+    },
+    "test_acc_knn": {
+      "mean": 0.7447000026702881,
+      "std": 0.016746811078943265
+    },
+    "eff_rank": {
+      "mean": 202.10076141357422,
+      "std": 0.9353014887323473
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T094414Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 3,
+    "device": "cpu",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}

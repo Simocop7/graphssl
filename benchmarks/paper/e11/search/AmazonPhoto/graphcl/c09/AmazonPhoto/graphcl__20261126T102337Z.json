@@ -1,0 +1,112 @@
+{
+  "dataset": "AmazonPhoto",
+  "model": "graphcl",
+  "hyperparameters": {
+    "encoder": "gcn",
+    "hidden_dim": 512,
+    "num_layers": 2,
+    "epochs": 100,
+    "optimizer": "adamw",
+    "lr": 0.000571896348194045,
+    "weight_decay": 3.603440615856876e-06,
+    "knn_k": 5,
+    "linear_probe": {
+      "standardize": true,
+      "weight_decays": [
+        10.0,
+        1.0,
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "max_iter": 5000
+    },
+    "overrides": {
+      "encoder.norm_type": "none",
+      "encoder.drop": 0.2,
+      "augment": [
+        {
+          "name": "edge_drop",
+          "p": 0.63
+        },
+        {
+          "name": "feat_mask",
+          "p": 0.364
+        }
+      ],
+      "tau": 0.346,
+      "proj_dim": 128
+    }
+  },
+  "model_config": {
+    "name": "graphcl",
+    "encoder": {
+      "name": "gcn",
+      "hidden_dim": 512,
+      "num_layers": 2,
+      "norm_type": "none",
+      "pool": false,
+      "drop": 0.2
+    },
+    "augment": [
+      {
+        "name": "edge_drop",
+        "p": 0.63
+      },
+      {
+        "name": "feat_mask",
+        "p": 0.364
+      }
+    ],
+    "tau": 0.346,
+    "proj_dim": 128
+  },
+  "seeds": [
+    100
+  ],
+  "per_seed": [
+    {
+      "seed": 100,
+      "val_acc_linear": 0.9071895480155945,
+      "test_acc_linear": 0.9227124452590942,
+      "probe_weight_decay": 0.01,
+      "probe_converged": true,
+      "val_acc_knn": 0.9111111164093018,
+      "test_acc_knn": 0.9133986830711365,
+      "eff_rank": 73.0622787475586,
+      "wall_time_s": 79.75606799125671
+    }
+  ],
+  "aggregate": {
+    "test_acc_linear": {
+      "mean": 0.9227124452590942,
+      "std": 0.0
+    },
+    "test_acc_knn": {
+      "mean": 0.9133986830711365,
+      "std": 0.0
+    },
+    "eff_rank": {
+      "mean": 73.0622787475586,
+      "std": 0.0
+    }
+  },
+  "provenance": {
+    "timestamp_utc": "20261126T102337Z",
+    "git": {
+      "commit": "f9105056db76e2270091797be644ded827ec5d20",
+      "dirty": false
+    },
+    "torch_threads": 2,
+    "device": "mps",
+    "versions": {
+      "python": "3.12.15",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "torch": "2.14.1",
+      "torch_geometric": "2.8.1"
+    }
+  }
+}
