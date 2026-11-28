@@ -86,7 +86,7 @@ def write(root: Path, exp: str, rows: list[dict], verdict: list[str]) -> None:
     out = root / "analysis" / exp
     out.mkdir(parents=True, exist_ok=True)
     with (out / "cells.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
     (out / "verdict.txt").write_text("\n".join(verdict) + "\n")
@@ -96,11 +96,11 @@ def write(root: Path, exp: str, rows: list[dict], verdict: list[str]) -> None:
 # ---------------------------------------------------------------------------- E9
 
 
-def e9(root: Path) -> None:
+def e9(root: Path, datasets: list[str] | None = None) -> None:
     probes = ["graphssl", "graphssl_alln", "liblinear"]
     rows, verdict = [], []
     favorable: dict[tuple[str, int, str], list[str]] = defaultdict(list)
-    for dataset in E9_DATASETS:
+    for dataset in datasets or E9_DATASETS:
         result = latest(root / "e9" / dataset)
         # scores[(val_mode, k)][(backbone, objective)][index] and refs[(val_mode, k)][name][index]
         scores: dict = defaultdict(lambda: defaultdict(dict))
@@ -116,17 +116,25 @@ def e9(root: Path) -> None:
                     backbone, objective, seed = key
                     assert fit["draw"] == seed, (row["name"], fit["draw"])
                     scores[cell][(backbone, objective)][seed] = value
+        graph_reference = latest(root / "e9" / f"{dataset}_graph")
+        for row in graph_reference["rows"]:
+            backbone, objective, seed = parse(row)
+            if objective != "untrained":
+                raise ValueError(f"Expected a graph-calibrated untrained checkpoint: {row['name']}")
+            for fit in row["label_budgets"]:
+                assert fit["draw"] == seed
+                scores[(fit["val"], fit["k"])][(backbone, "untrained_graph")][seed] = valsel(
+                    fit, probes
+                )
         for (mode, k), per_model in sorted(scores.items()):
             for backbone in BACKBONES:
-                models = np.array(
-                    [[per_model[(backbone, o)][i] for i in range(10)] for o in OBJECTIVES]
-                )
-                untrained = np.array([per_model[(backbone, "untrained")][i] for i in range(10)])
-                for ref_name in (A2X, PCA, RAW, "untrained"):
-                    if ref_name == "untrained":
-                        ref = untrained
+                idx = common_seeds(per_model, backbone, 10)
+                models = matrix(per_model, backbone, idx)
+                for ref_name in (A2X, PCA, RAW, "untrained", "untrained_graph"):
+                    if ref_name in ("untrained", "untrained_graph"):
+                        ref = np.array([per_model[(backbone, ref_name)][i] for i in idx])
                     elif ref_name in refs[(mode, k)]:
-                        ref = np.array([refs[(mode, k)][ref_name][i] for i in range(10)])
+                        ref = np.array([refs[(mode, k)][ref_name][i] for i in idx])
                     else:
                         continue
                     d, lo, hi = bootstrap_d(models, ref)
@@ -134,6 +142,7 @@ def e9(root: Path) -> None:
                     rows.append(
                         {
                             "dataset": dataset, "k": k, "val": mode, "backbone": backbone,
+                            "n_index": len(idx),
                             "reference": ref_name, "D": round(d, 3), "lo": round(lo, 3),
                             "hi": round(hi, 3), "favors": fav,
                             "models_above_ref": int((models.mean(1) > ref.mean()).sum()),
@@ -190,30 +199,44 @@ def split0_table(result: dict, probes: list[str]) -> tuple[dict, dict, dict]:
     return models, inputs, inputs_val
 
 
-def matrix(models: dict, backbone: str, seeds: int = 10) -> np.ndarray:
-    return np.array([[models[(backbone, o)][s] for s in range(seeds)] for o in OBJECTIVES])
+def common_seeds(models: dict, backbone: str, expected: int) -> list[int]:
+    """The seeds every objective of ``backbone`` has; a warning when they are not ``expected``."""
+    sets = [set(models[(backbone, o)]) for o in OBJECTIVES]
+    seeds = sorted(set.intersection(*sets))
+    if len(seeds) != expected or any(len(x) != len(seeds) for x in sets):
+        print(
+            f"WARNING {backbone}: seeds {seeds} (expected {expected}), per objective "
+            f"{[len(x) for x in sets]}"
+        )
+    return seeds
 
 
-def e10(root: Path) -> None:
+def matrix(models: dict, backbone: str, seeds: list[int]) -> np.ndarray:
+    return np.array([[models[(backbone, o)][s] for s in seeds] for o in OBJECTIVES])
+
+
+def e10(root: Path, datasets: list[str] | None = None) -> None:
     probes = ["graphssl", "liblinear"]
     rows, verdict = [], []
     q1, q2 = [], defaultdict(list)
-    for dataset in E10_DATASETS:
+    for dataset in datasets or E10_DATASETS:
         result = latest(root / "e10" / "probes" / dataset)
         models, inputs, inputs_val = split0_table(result, probes)
         r_star = max((RAW, A2X, CONCAT), key=lambda n: inputs_val[n])
         for backbone in BACKBONES:
-            m = matrix(models, backbone)
-            for ref_name in (A2X, r_star, "untrained"):
+            seeds = common_seeds(models, backbone, 10)
+            m = matrix(models, backbone, seeds)
+            for ref_name in dict.fromkeys((A2X, r_star, "untrained")):
                 if ref_name == "untrained":
-                    ref = np.array([models[(backbone, "untrained")][s] for s in range(10)])
+                    ref = np.array([models[(backbone, "untrained")][s] for s in seeds])
                 else:
-                    ref = np.full(10, inputs[ref_name])
+                    ref = np.full(len(seeds), inputs[ref_name])
                 d, lo, hi = bootstrap_d(m, ref)
                 fav = favors(d, lo)
                 rows.append(
                     {
                         "dataset": dataset, "metric": result["metric"], "backbone": backbone,
+                        "n_seeds": len(seeds),
                         "reference": ref_name, "is_r_star": ref_name == r_star, "D": round(d, 3),
                         "lo": round(lo, 3), "hi": round(hi, 3), "favors": fav,
                         "models_above_ref": int((m.mean(1) > ref.mean()).sum()),
@@ -253,16 +276,22 @@ def e10(root: Path) -> None:
 # ---------------------------------------------------------------------------- E11
 
 
-def e11(root: Path) -> None:
+def e11(root: Path, datasets: list[str] | None = None) -> None:
     probes = ["graphssl", "liblinear"]
     rows, verdict, favorable = [], [], []
-    for dataset in E11_DATASETS:
+    for dataset in datasets or E11_DATASETS:
         result = latest(root / "e11" / "probes" / dataset)
         models, inputs, inputs_val = split0_table(result, probes)
-        m = matrix(models, "gcn", seeds=5)
+        # The rule's final seeds are 0-4; finals run before 26 Nov 20:00 HKT also have 5-9.
+        models = defaultdict(
+            dict, {k: {s: v for s, v in per.items() if s < 5} for k, per in models.items()}
+        )
+        seeds = common_seeds(models, "gcn", 5)
+        m = matrix(models, "gcn", seeds)
         k_best = max(("propagated A^1X", A2X, "propagated A^3X"), key=lambda n: inputs_val[n])
-        for ref_name in (A2X, k_best):
-            ref = np.full(5, inputs[ref_name])
+        first_row = len(rows)
+        for ref_name in dict.fromkeys((A2X, k_best)):
+            ref = np.full(len(seeds), inputs[ref_name])
             d, lo, hi = bootstrap_d(m, ref)
             fav = favors(d, lo)
             rows.append(
@@ -277,7 +306,7 @@ def e11(root: Path) -> None:
             if ref_name == A2X and fav:
                 favorable.append(dataset)
         verdict.append(
-            f"{dataset}: D_tuned = {rows[-2]['D']:+.2f} [{rows[-2]['lo']:+.2f}, {rows[-2]['hi']:+.2f}] "
+            f"{dataset}: D_tuned = {rows[first_row]['D']:+.2f} [{rows[first_row]['lo']:+.2f}, {rows[first_row]['hi']:+.2f}] "
             f"vs A^2X {inputs[A2X]:.2f}; A^K X chosen on validation: {k_best}"
         )
     n = len(favorable)
@@ -301,8 +330,9 @@ def main() -> None:
     )
     p.add_argument("experiment", choices=["e9", "e10", "e11"])
     p.add_argument("--root", default="benchmarks/paper", type=Path)
+    p.add_argument("--datasets", nargs="+", default=None, help="a subset (checks only)")
     a = p.parse_args()
-    {"e9": e9, "e10": e10, "e11": e11}[a.experiment](a.root)
+    {"e9": e9, "e10": e10, "e11": e11}[a.experiment](a.root, a.datasets)
 
 
 if __name__ == "__main__":

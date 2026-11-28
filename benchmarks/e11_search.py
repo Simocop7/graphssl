@@ -10,7 +10,7 @@ Selection uses validation labels only:
 2. stage 2   the ``TOP`` best configurations of stage 1, two more seeds (101, 102); the one with
              the best mean validation accuracy over the three seeds is selected (ties: the lower
              configuration id)
-3. final     the selected configuration with seeds 0-9 (never seen by the selection), models saved
+3. final     the selected configuration with seeds 0-4 (never seen by the selection), models saved
 4. probe     the final models and the input-feature rows scored as in E6 (our probe and
              liblinear on the standard split; the analysis picks per representation on validation)
 
@@ -52,7 +52,9 @@ DATASETS = ["Cora", "CiteSeer", "PubMed", "AmazonComputers", "AmazonPhoto", "Coa
 N_CONFIGS = 16
 TOP = 3
 SPACE_SEED = 20261126
-SEARCH_SEED, STAGE2_SEEDS, FINAL_SEEDS = 100, 2, 10
+# FINAL_SEEDS was 10 until 26 Nov 20:00 HKT although the rule (PLAN.md, committed with this file)
+# says seeds 0-4: finals already run keep seeds 5-9, which the probe and the analysis ignore.
+SEARCH_SEED, STAGE2_SEEDS, FINAL_SEEDS = 100, 2, 5
 AUGMENTED = {"graphcl", "vicreg", "barlow_twins", "bgrl", "graphdino"}
 
 # The shared protocol of E1: the anchor every search contains.
@@ -234,7 +236,7 @@ def run(args) -> None:
             json.dumps({"selected": best, "config": configs[objective][best], **scores}, indent=1)
             + "\n"
         )
-        # Final: seeds 0-9, models saved.
+        # Final: seeds 0-4, models saved.
         final = E11 / "final" / args.dataset / objective
         if len(results(final)) < FINAL_SEEDS:
             cmd = runner(
@@ -250,7 +252,9 @@ def run(args) -> None:
 
 def probe(args) -> None:
     checkpoints = sorted(
-        str(p.relative_to(REPO_ROOT)) for p in (MODELS / args.dataset / "gcn").glob("*.pt")
+        str(p.relative_to(REPO_ROOT))
+        for p in (MODELS / args.dataset / "gcn").glob("*.pt")
+        if int(p.stem.rsplit("_seed", 1)[1]) < FINAL_SEEDS
     )
     expected = len(OBJECTIVES) * FINAL_SEEDS
     if len(checkpoints) != expected:
